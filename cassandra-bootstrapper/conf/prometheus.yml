@@ -1,0 +1,96 @@
+lowercaseOutputLabelNames: true
+lowercaseOutputName: true
+whitelistObjectNames: [
+      "org.apache.cassandra.metrics:type=ClientRequest,scope=Read,*",
+      "org.apache.cassandra.metrics:type=ClientRequest,scope=Write,*",
+      "org.apache.cassandra.metrics:type=Table,name=ReadLatency,*",
+      "org.apache.cassandra.metrics:type=Table,name=WriteLatency,*",
+      "org.apache.cassandra.metrics:type=Table,name=LiveDiskSpaceUsed,*",
+      "org.apache.cassandra.metrics:type=Table,name=LiveSSTableCount,*",
+      "org.apache.cassandra.metrics:type=Table,name=AllMemtablesHeapSize,*",
+      "org.apache.cassandra.metrics:type=Table,name=AllMemtablesLiveDataSize,*",
+      "org.apache.cassandra.metrics:type=Table,name=MaxPartitionSize,*",
+      "org.apache.cassandra.metrics:type=Table,name=EstimatedPartitionCount,*",
+      "org.apache.cassandra.metrics:type=Table,name=PendingCompactions,*",
+      "org.apache.cassandra.metrics:type=Table,name=SpeculativeRetries,*",
+      "org.apache.cassandra.metrics:type=Table,name=LiveScannedHistogram,*",
+      "org.apache.cassandra.metrics:type=Table,name=TombstoneScannedHistogram,*",
+      "org.apache.cassandra.metrics:type=Cache,scope=KeyCache,*",
+      "org.apache.cassandra.metrics:type=ThreadPools,name=CurrentlyBlockedTasks,*",
+      "org.apache.cassandra.metrics:type=ThreadPools,name=TotalBlockedTasks,*",
+      "org.apache.cassandra.metrics:type=ThreadPools,name=PendingTasks,*",
+      "org.apache.cassandra.metrics:type=ThreadPools,name=ActiveTasks,*",
+      "org.apache.cassandra.metrics:type=Connection,*",
+      "org.apache.cassandra.metrics:type=DroppedMessage,*"]
+rules:
+- pattern: org.apache.cassandra.metrics<type=ClientRequest, scope=(Read|Write), name=(Latency|Timeouts|Unavailables)><>(Count)
+  name: cassandra_clientrequest_$1_$2_$3
+  type: COUNTER
+- pattern: org.apache.cassandra.metrics<type=ClientRequest, scope=(Read|Write), name=(Latency)><>(50thPercentile|99thPercentile|999thPercentile|Max)
+  name: cassandra_clientrequest_$1_$2_$3
+  type: GAUGE
+- pattern: org.apache.cassandra.metrics<type=Table, name=(ReadLatency|WriteLatency|LiveScannedHistogram|TombstoneScannedHistogram)><>(50thPercentile|99thPercentile|999thPercentile|Max)
+  name: cassandra_table_all_$1_$2
+  type: GAUGE
+- pattern: org.apache.cassandra.metrics<type=Table, name=(AllMemtablesHeapSize|AllMemtablesLiveDataSize|MaxPartitionSize|PendingCompactions|SpeculativeRetries|LiveDiskSpaceUsed|LiveSSTableCount)><>Value
+  name: cassandra_table_all_$1
+  type: GAUGE
+- pattern: org.apache.cassandra.metrics<type=Table, keyspace=(\S*), scope=(\S*), name=(ReadLatency|WriteLatency)><>(Count)
+  name: cassandra_table_$3_$4
+  type: COUNTER
+  labels:
+    keyspace: "$1"
+    table: "$2"
+- pattern: org.apache.cassandra.metrics<type=Table, keyspace=(\S*), scope=(\S*), name=(MaxPartitionSize|EstimatedPartitionCount)><>Value
+  name: cassandra_table_$3
+  type: GAUGE
+  labels:
+    keyspace: "$1"
+    table: "$2"
+- pattern: org.apache.cassandra.metrics<type=Table, keyspace=(\S*), scope=(\S*), name=(ReadLatency|WriteLatency|LiveScannedHistogram|TombstoneScannedHistogram)><>(50thPercentile|999thPercentile)
+  name: cassandra_table_$3_$4
+  type: GAUGE
+  labels:
+    keyspace: "$1"
+    table: "$2"
+- pattern: org.apache.cassandra.metrics<type=Table, keyspace=(\S*), scope=(\S*), name=(LiveDiskSpaceUsed)><>Count
+  name: cassandra_table_$3
+  type: GAUGE
+  labels:
+    keyspace: "$1"
+    table: "$2"
+- pattern: org.apache.cassandra.metrics<type=Table, keyspace=(\S*), scope=(\S*), name=(LiveSSTableCount)><>Value
+  name: cassandra_table_$3
+  type: GAUGE
+  labels:
+    keyspace: "$1"
+    table: "$2"
+- pattern: org.apache.cassandra.metrics<type=Cache, scope=(KeyCache), name=(Hits)><>(Count)
+  name: cassandra_cache_$1_$2_$3
+  type: COUNTER
+- pattern: org.apache.cassandra.metrics<type=ThreadPools, path=(\S*), scope=(\S*), name=(CurrentlyBlockedTasks|TotalBlockedTasks)><>(Count)
+  name: cassandra_tps_$3_$4
+  type: COUNTER
+  labels:
+    pool_name: "$2"
+- pattern: org.apache.cassandra.metrics<type=ThreadPools, path=(\S*), scope=(\S*), name=(PendingTasks|ActiveTasks)><>Value
+  name: cassandra_tps_$3
+  type: GAUGE
+  labels:
+    pool_name: "$2"
+- pattern: org.apache.cassandra.metrics<type=Connection, scope=(\S*), name=(\S*)><>(Count)
+  name: cassandra_connection_$2_$3
+  type: COUNTER
+  labels:
+    address: "$1"
+- pattern: org.apache.cassandra.metrics<type=Connection, scope=(\S*), name=(\S*)><>Value
+  name: cassandra_connection_$2
+  type: GAUGE
+  labels:
+    address: "$1"
+- pattern: org.apache.cassandra.metrics<type=DroppedMessage, scope=(\S*), name=(\S*)><>(Count)
+  name: cassandra_droppedmessage_$2_$3
+  type: COUNTER
+  labels:
+    message_type: "$1"
+

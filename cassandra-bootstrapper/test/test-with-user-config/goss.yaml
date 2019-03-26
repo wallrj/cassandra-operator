@@ -1,0 +1,3 @@
+file:
+  /etc/cassandra/test-file:
+    exists: true

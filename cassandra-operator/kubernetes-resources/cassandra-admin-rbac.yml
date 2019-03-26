@@ -1,0 +1,23 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cassandra-admin
+rules:
+- apiGroups: ["core.sky.uk"]
+  resources: ["cassandras"]
+  verbs: ["*"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cassandra-admin-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cassandra-admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: $CASSANDRA_ADMIN_GROUP
+  namespace: $TARGET_NAMESPACE

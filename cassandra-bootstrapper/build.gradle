@@ -1,0 +1,23 @@
+apply plugin: 'java'
+
+configurations {
+    // extraLib is used to acquire the dependencies for inclusion into the extra library directory. The dependencies
+    // are used at runtime by Cassandra.
+    extraLib {
+        transitive = false
+    }
+}
+
+dependencies {
+    extraLib 'io.prometheus.jmx:jmx_prometheus_javaagent:0.3.1'
+    extraLib 'org.jolokia:jolokia-jvm:1.6.0:agent'
+    extraLib project(path: "seed-provider", configuration: 'shadow')
+}
+
+task exportStagedLib(type: Copy) {
+    into "$buildDir/extraLib"
+    from configurations.extraLib {
+        // Strip version number from jar
+        rename '(.*)-\\d+.\\d+.\\d+(-.*)?.jar', '$1$2.jar'
+    }
+}

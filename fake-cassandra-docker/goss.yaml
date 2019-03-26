@@ -1,0 +1,58 @@
+addr:
+  # internode
+  tcp://localhost:7000:
+    reachable: true
+  # jmx exporter
+  tcp://localhost:7070:
+    reachable: true
+  # cassandra jmx port
+  tcp://localhost:7199:
+    reachable: true
+  # jolokia rest service
+  tcp://localhost:7777:
+    reachable: true
+  # client
+  tcp://localhost:9042:
+    reachable: true
+http:
+  "http://localhost:7070/metrics":
+    status: 200
+    body: ["cassandra_clientrequest_write_latency_count"]
+  "http://localhost:7777/jolokia/read/java.lang:type=Memory/HeapMemoryUsage":
+    status: 200
+    body: ["status\":403"]
+  "http://localhost:7777/jolokia/exec/org.apache.cassandra.db:type=EndpointSnitchInfo/getRack/localhost":
+    status: 200
+    body: ["status\":200"]
+  "http://localhost:7777/jolokia/exec/org.apache.cassandra.db:type=EndpointSnitchInfo/getDatacenter/localhost":
+    status: 200
+    body: ["status\":403"]
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/LiveNodes,UnreachableNodes,JoiningNodes,LeavingNodes,MovingNodes":
+    status: 200
+    body: ["status\":200"]
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/ClusterName":
+    status: 200
+    body: ["status\":403"]
+  "http://localhost:7777/jolokia/list":
+    status: 200
+    body: ["status\":403"]
+  "http://localhost:7777/jolokia/search/org.apache.cassandra.db:type=StorageService":
+    status: 200
+    body: ["status\":403"]
+package:
+  # used by pod readiness probes
+  curl:
+    installed: true
+command:
+  # jmx process is PID 1
+  "lsof -ti :7070":
+    exit-status: 0
+    stdout: [1]
+  # jolokia process is PID 1
+  "lsof -ti :7777":
+    exit-status: 0
+    stdout: [1]
+  # cassandra process is PID 1
+  "lsof -ti :9042":
+    exit-status: 0
+    stdout: [1]

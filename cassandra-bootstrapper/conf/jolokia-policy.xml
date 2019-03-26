@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<restrict>
+
+    <http>
+        <method>get</method>
+    </http>
+
+    <!-- Empty command restricts all commands by default, except MBeans in the `allow` section
+         Empty command is not the same as no commands element at all.
+         No commands element would mean all commands are allowed by default -->
+    <commands/>
+
+    <allow>
+        <mbean>
+            <name>org.apache.cassandra.db:type=EndpointSnitchInfo</name>
+            <operation>getRack</operation>
+        </mbean>
+        <mbean>
+            <name>org.apache.cassandra.db:type=StorageService</name>
+            <attribute>LiveNodes</attribute>
+            <attribute>UnreachableNodes</attribute>
+            <attribute>JoiningNodes</attribute>
+            <attribute>LeavingNodes</attribute>
+            <attribute>MovingNodes</attribute>
+        </mbean>
+    </allow>
+</restrict>

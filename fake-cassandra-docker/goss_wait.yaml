@@ -1,0 +1,4 @@
+addr:
+  # client
+  tcp://localhost:9042:
+    reachable: true

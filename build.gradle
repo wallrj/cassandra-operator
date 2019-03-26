@@ -1,0 +1,32 @@
+allprojects {
+    buildscript {
+        repositories {
+            jcenter()
+        }
+    }
+
+    apply plugin: 'idea'
+    apply plugin: 'java'
+
+    repositories {
+        mavenCentral()
+    }
+
+    buildscript {
+        dependencies {
+            classpath "com.github.jengelman.gradle.plugins:shadow:2.0.3"
+        }
+    }
+
+    test {
+        outputs.upToDateWhen {
+            false
+        }
+        reports.junitXml.setDestination(file('build/junit-reports'))
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.5.1'
+}
+

@@ -1,0 +1,60 @@
+addr:
+  # internode
+  tcp://{{.Env.HOSTNAME}}:7000:
+    reachable: true
+  # jmx exporter
+  tcp://{{.Env.HOSTNAME}}:7070:
+    reachable: true
+  # cassandra jmx port
+  tcp://localhost:7199:
+    reachable: true
+  tcp://{{.Env.HOSTNAME}}:7199:
+    reachable: false
+    timeout: 500
+  # jolokia rest service
+  tcp://{{.Env.HOSTNAME}}:7777:
+    reachable: true
+  # client
+  tcp://{{.Env.HOSTNAME}}:9042:
+    reachable: true
+http:
+  "http://localhost:7070/metrics":
+    status: 200
+    body: ["cassandra_clientrequest_write_latency_count"]
+  "http://localhost:7777/jolokia/read/java.lang:type=Memory/HeapMemoryUsage":
+    status: 200
+    body: ["status\":403"]
+  "http://localhost:7777/jolokia/exec/org.apache.cassandra.db:type=EndpointSnitchInfo/getRack/localhost":
+    status: 200
+    body: ["status\":200"]
+  "http://localhost:7777/jolokia/exec/org.apache.cassandra.db:type=EndpointSnitchInfo/getDatacenter/localhost":
+    status: 200
+    body: ["status\":403"]
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/LiveNodes,UnreachableNodes,JoiningNodes,LeavingNodes,MovingNodes":
+    status: 200
+    body: ["status\":200"]
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/ClusterName":
+    status: 200
+    body: ["status\":403"]
+  "http://localhost:7777/jolokia/list":
+    status: 200
+    body: ["status\":403"]
+  "http://localhost:7777/jolokia/search/org.apache.cassandra.db:type=StorageService":
+    status: 200
+    body: ["status\":403"]
+file:
+  /etc/cassandra/jvm.options:
+    exists: true
+    contains: ["javaagent"]
+  /etc/cassandra/cassandra.yaml:
+    exists: true
+  /etc/cassandra/jolokia-policy.xml:
+    exists: true
+  /etc/cassandra/prometheus.yml:
+    exists: true
+  /extra-lib/jolokia-jvm-agent.jar:
+    exists: true
+  /extra-lib/jmx_prometheus_javaagent.jar:
+    exists: true
+  /extra-lib/cassandra-seed-provider.jar:
+    exists: true

@@ -1,0 +1,4 @@
+include 'cassandra-bootstrapper'
+include 'cassandra-bootstrapper:seed-provider'
+include 'cassandra-bootstrapper:bootstrapper'
+include 'fake-cassandra-docker'

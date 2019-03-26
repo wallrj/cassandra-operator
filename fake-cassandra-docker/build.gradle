@@ -1,0 +1,29 @@
+
+apply plugin: 'java'
+apply plugin: 'groovy'
+apply plugin: 'application'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+// Needs to be before the application of the shadow plugin - see https://github.com/johnrengelman/shadow/issues/336
+mainClassName = 'com.sky.core.operators.fake.FakeCassandra'
+
+dependencies {
+    compile 'org.yaml:snakeyaml:1.20'
+    compile 'org.slf4j:slf4j-api:1.7.25'
+    compile 'org.slf4j:slf4j-simple:1.7.25'
+    compile 'org.nanohttpd:nanohttpd:2.2.0'
+
+    testCompile 'org.assertj:assertj-core:3.3.0'
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.mockito:mockito-core:1.10.19'
+    testCompile 'pl.pragmatists:JUnitParams:1.1.1'
+    testCompile 'org.apache.cassandra:cassandra-all:3.11.2'
+}
+
+shadowJar {
+    baseName = 'fake-cassandra'
+    version = ''
+    classifier = ''
+}
+
+task doShadowJar(dependsOn: ['shadowJar', 'check'])
