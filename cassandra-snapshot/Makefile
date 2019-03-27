@@ -1,20 +1,20 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image
+.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
-USE_MOCK ?= false
+USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
-TEST_REGISTRY ?= localhost:5000
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 k8ResourcesDir := $(projectDir)/../cassandra-operator/kubernetes-resources
 buildDir := $(projectDir)/build
-gitRev := $(shell git rev-parse --short HEAD)
+image := cassandra-snapshot
 junitReportDir = $(buildDir)/junit-reports
 pkgs := $(shell go list ./... | grep -v /vendor/ | grep -v /test/e2e)
 testPkgs := $(shell go list ./... | grep /test/e2e)
-testRunOptions := IMAGE_UNDER_TEST=$(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev) FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) KUBE_CONTEXT=$(KUBE_CONTEXT) USE_MOCK=$(USE_MOCK)
+
+include $(projectDir)/../MakefileDocker
 
 travis: clean install check
 
@@ -72,27 +72,24 @@ test: ensure-test-report-dir-exists
 
 e2e-test: ensure-test-report-dir-exists push-image kubernetes-resources
 	@echo "== e2e-test"
-	$(testRunOptions) ginkgo -r --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
+	IMAGE_UNDER_TEST=$(dockerTestImage) \
+        FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
+        KUBE_CONTEXT=$(KUBE_CONTEXT) \
+        USE_MOCK=$(USE_MOCK) \
+        ginkgo -r --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
 
 kubernetes-resources:
 	@echo "== kubernetes-resources"
 	sed -e "s@\$$TARGET_NAMESPACE@test-cassandra-operator@g" $(k8ResourcesDir)/cassandra-snapshot.yml > ${buildDir}/cassandra-snapshot.yml
 	kubectl --context $(KUBE_CONTEXT) -n test-cassandra-operator apply -f ${buildDir}/cassandra-snapshot.yml
 
-docker-image: go-build
-	@echo "== docker-image"
-	@echo "Building image v$(gitRev)"
-	docker build . -t $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
+docker-image: go-build common-docker-build
 
-push-image: docker-image
-	@echo "== push-image"
-	docker push $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
-#	@docker login -u $(DOCKER_USERNAME) -p $(DOCKER_PASSWORD)
-#	docker tag $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev) skyuk/cassandra-operator:cassandra-snapshot-v$(gitRev)
-#	docker push skyuk/cassandra-operator:cassandra-snapshot-v$(gitRev)
+push-image: docker-image common-docker-push
 
-clean:
+clean: common-docker-clean
 	@echo "== clean"
-	docker rm $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev) || true
 	rm $(shell go env GOPATH)/bin/cassandra-snapshot || true
 	rm -rfv $(buildDir)
+
+release: travis common-docker-release

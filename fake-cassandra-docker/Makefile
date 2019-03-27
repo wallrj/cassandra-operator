@@ -1,12 +1,11 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean setup build install jar check dgoss docker-image push-image
-
-TEST_REGISTRY ?= localhost:5000
+.PHONY: travis clean setup build install jar check dgoss docker-image push-image release
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
-buildDir := $(projectDir)/build
 gradle := $(projectDir)/../gradlew
-gitRev := $(shell git rev-parse --short HEAD)
+image := fake-cassandra
+
+include $(projectDir)/../MakefileDocker
 
 travis: clean install check
 
@@ -30,19 +29,16 @@ jar:
 	@echo "== jar"
 	$(gradle) :fake-cassandra-docker:shadowJar
 
-docker-image: jar
-	@echo "== docker-image"
-	docker build . -t $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
+docker-image: jar common-docker-build
 
-push-image: docker-image
-	@echo "== push-image"
-	docker push $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
+push-image: docker-image common-docker-push
 
 dgoss:
 	@echo "== dgoss"
-	dgoss run $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
+	dgoss run $(dockerTestImage)
 
-clean:
+clean: common-docker-clean
 	@echo "== clean"
-	docker rm $(TEST_REGISTRY)/fake-cassandra:v$(gitRev) || true
 	$(gradle) :fake-cassandra-docker:clean
+
+release: travis common-docker-release

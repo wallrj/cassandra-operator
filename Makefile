@@ -16,6 +16,8 @@ travis: clean-all build-all
 
 setup: setup-all recreate-dind-cluster
 
+release: release-all
+
 build-all:
 	@echo "== build-all"
 	$(MAKE) -C cassandra-bootstrapper
@@ -40,3 +42,10 @@ setup-all:
 recreate-dind-cluster:
 	@echo "== recreate dind cluster"
 	$(projectDir)/test-kubernetes-cluster/recreate-dind-cluster.sh
+
+release-all:
+	@echo "== release-all"
+	$(MAKE) -C fake-cassandra-docker release
+	$(MAKE) -C cassandra-bootstrapper release
+	$(MAKE) -C cassandra-snapshot release
+	$(MAKE) -C cassandra-operator release

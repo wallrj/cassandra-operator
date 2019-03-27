@@ -1,0 +1,40 @@
+.DEFAULT_GOAL := travis
+.PHONY: common-docker-build common-docker-push common-docker-clean common-docker-release
+
+TEST_REGISTRY ?= localhost:5000
+RELEASE_REGISTRY ?= skyuk
+
+gitRev := $(shell git rev-parse --short HEAD)
+gitTag := $(shell git tag --points-at=$(gitRev))
+
+# Variables recursively expanded, so $(image) can be set before/after including this file
+dockerTestImage = $(TEST_REGISTRY)/$(image):v$(gitRev)
+dockerReleaseImage = $(RELEASE_REGISTRY)/$(image):v$(gitTag)
+dockerReleaseLatestImage = $(RELEASE_REGISTRY)/$(image):latest
+
+common-docker-build:
+	@echo "== common-docker-build"
+	@echo "Building image $(dockerTestImage)"
+	docker build . -t $(dockerTestImage)
+
+common-docker-push:
+	@echo "== common-docker-push"
+	@echo "Pushing image $(dockerTestImage)"
+	docker push $(dockerTestImage)
+
+common-docker-clean:
+	@echo "== common-docker-clean"
+	docker rm $(dockerTestImage) || true
+
+common-docker-release:
+	@echo "== common-docker-release"
+ifeq ($(strip $(gitTag)),)
+	@echo "no tag on $(gitRev), skipping release"
+else
+	@echo "Releasing $(dockerReleaseImage)"
+	@docker login -u $(DOCKER_USERNAME) -p $(DOCKER_PASSWORD)
+	docker tag $(dockerTestImage) $(dockerReleaseImage)
+	docker tag $(dockerTestImage) $(dockerReleaseLatestImage)
+	docker push $(dockerReleaseImage)
+	docker push $(dockerReleaseLatestImage)
+endif

@@ -1,12 +1,11 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean setup build install jar check dgoss docker-image push-image
-
-TEST_REGISTRY ?= localhost:5000
+.PHONY: travis clean setup build install jar check dgoss docker-image push-image release
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
-buildDir := $(projectDir)/build
 gradle := $(projectDir)/../gradlew
-gitRev := $(shell git rev-parse --short HEAD)
+image := cassandra-bootstrapper
+
+include $(projectDir)/../MakefileDocker
 
 travis: clean install check
 
@@ -30,19 +29,16 @@ jar:
 	@echo "== jar"
 	$(gradle) :cassandra-bootstrapper:exportStagedLib :cassandra-bootstrapper:bootstrapper:shadowJar
 
-docker-image: jar
-	@echo "== docker-image"
-	docker build . -t $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
+docker-image: jar common-docker-build
 
-push-image: docker-image
-	@echo "== push-image"
-	docker push $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
+push-image: docker-image common-docker-push
 
 dgoss:
 	@echo "== dgoss"
-	IMAGE_TO_TEST=$(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev) ${projectDir}/test/runChecks.sh
+	IMAGE_TO_TEST=$(dockerTestImage) ${projectDir}/test/runChecks.sh
 
-clean:
+clean: common-docker-clean
 	@echo "== clean"
-	docker rm $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev) || true
 	$(gradle) :cassandra-bootstrapper:clean :cassandra-bootstrapper:bootstrapper:clean :cassandra-bootstrapper:seed-provider:clean
+
+release: travis common-docker-release
