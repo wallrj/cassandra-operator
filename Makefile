@@ -12,18 +12,29 @@ CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 gitRev := $(shell git rev-parse --short HEAD)
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 
-travis: clean-all build-all
+travis: make-all
 
 setup: setup-all recreate-dind-cluster
 
+install: install-all
+
+clean: clean-all
+
 release: release-all
 
-build-all:
-	@echo "== build-all"
+make-all:
+	@echo "== make-all"
 	$(MAKE) -C cassandra-bootstrapper
 	$(MAKE) -C fake-cassandra-docker
 	KUBE_CONTEXT=$(KUBE_CONTEXT) TEST_REGISTRY=$(TEST_REGISTRY) FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) USE_MOCK=$(USE_MOCK) $(MAKE) -C cassandra-snapshot
 	KUBE_CONTEXT=$(KUBE_CONTEXT) TEST_REGISTRY=$(TEST_REGISTRY) FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) USE_MOCK=$(USE_MOCK) POD_START_TIMEOUT=$(POD_START_TIMEOUT) $(MAKE) -C cassandra-operator
+
+install-all:
+	@echo "== install-all"
+	$(MAKE) -C fake-cassandra-docker install
+	$(MAKE) -C cassandra-bootstrapper install
+	$(MAKE) -C cassandra-snapshot install
+	$(MAKE) -C cassandra-operator install
 
 clean-all:
 	@echo "== clean-all"

@@ -9,6 +9,7 @@ FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 DOMAIN ?= localhost
+E2E_TEST ?= test/e2e
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 buildDir := $(projectDir)/build
@@ -72,7 +73,7 @@ e2e-test: ensure-test-report-dir-exists deploy-operator
 	    USE_MOCK=$(USE_MOCK) \
 	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
 	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
-	    ginkgo -p -r --v --progress -stream -timeout=30m test/e2e/parallel/modification -- -junit-report-dir $(junitReportDir)
+	    ginkgo -p -r --v --progress -stream -timeout=30m $(E2E_TEST) -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 

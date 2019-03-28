@@ -5,6 +5,7 @@
 KUBE_CONTEXT ?= dind
 USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
+E2E_TEST ?= test/e2e
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 k8ResourcesDir := $(projectDir)/../cassandra-operator/kubernetes-resources
@@ -76,7 +77,7 @@ e2e-test: ensure-test-report-dir-exists push-image kubernetes-resources
         FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
         KUBE_CONTEXT=$(KUBE_CONTEXT) \
         USE_MOCK=$(USE_MOCK) \
-        ginkgo -r --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
+        ginkgo -r --v --progress $(E2E_TEST) -- -junit-report-dir $(junitReportDir)
 
 kubernetes-resources:
 	@echo "== kubernetes-resources"
