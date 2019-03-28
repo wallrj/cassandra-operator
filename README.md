@@ -1,2 +1,57 @@
-# cassandra-operator
-Kubernetes operator that manages Cassandra clusters inside Kubernetes
+# Cassandra Operator
+
+The Cassandra Operator is a Kubernetes operator that manages Cassandra clusters inside Kubernetes.
+
+The project is `alpha` status and can be used in development environments.
+It is not yet recommended for use in production environments.
+
+## Main features
+
+* rack awareness
+* scaling out (more racks, more pods per rack)
+* scheduled backups with retention policy
+* works with official Cassandra Docker images
+* deployable per namespace with RBAC permissions limited to it
+* deployable cluster-wide
+* customisable Cassandra config (`cassandra.yaml`, `jvm.options`, extra libs)
+* customisable liveness / readiness probes
+* automated rolling update of Cassandra cluster definition changes 
+* cluster and node level metrics
+* a comprehensive e2e test suite
+
+These are described in more details on the [WIKI](https://github.com/sky-uk/cassandra-operator/wiki)  
+
+## Project structure
+
+This project is composed of several sub-modules that are either part of the Cassandra Operator or used by it:
+- [cassandra-bootstrapper](cassandra-bootstrapper/README.md): a component responsible for configuring the Cassandra node before it can be started
+- [cassandra-operator](cassandra-operator/README.md): the Kubernetes operator that manages the Cassandra clusters lifecycle inside Kubernetes
+- [cassandra-snapshot](cassandra-snapshot/README.md): a component responsible for taking and deleting snapshots given a schedule and retention policy
+- [fake-cassandra-docker](fake-cassandra-docker/README.md): a fake Cassandra image used by the cassandra-operator and cassandra-snapshot to speed it up end-to-end testing
+- [test-kubernetes-cluster](test-kubernetes-cluster/README.md): a [Kubernetes Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster) cluster used by the cassandra-operator and cassandra-snapshot to facilitate end-to-end testing
+
+## Design
+
+The Cassandra Operator and the components it uses are described here: [Cassandra Operator Design](cassandra-operator-design.md) 
+
+## Supported versions
+
+We test the Cassandra Operator against the following Kubernetes / Cassandra versions.
+
+Other Kubernetes versions are likely to work, but we do not actively test against them.
+
+Cassandra Operator | Kubernetes | Cassandra
+--- | --- | ---
+0.70.0-alpha | 1.10 | 3.11
+
+## Questions or Problems?
+
+- If you have a general question about this project, please create an issue for it. The issue title should be the
+  question itself, with any follow-up information in a comment. Add the "question" tag to the issue.
+
+- If you think you have found a bug in this project, please create an issue for it. Use the issue title to summarise
+  the problems, and supply full steps to reproduce in a comment. Add the "bug" tag to the issue.
+
+## Contributions
+
+See [CONTRIBUTING.md](CONTRIBUTING.md)

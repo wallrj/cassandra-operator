@@ -1,8 +1,6 @@
 # Fake Cassandra Docker image
 
-## About
-
-A Docker image which "fakes" the properties of the [real cassandra-docker image](../cassandra-docker/README.md)
+A Docker image which "fakes" the properties of the [real Cassandra image](https://hub.docker.com/_/cassandra)
 sufficiently to pass the Goss tests and be usable in place of a real Cassandra image within operator managed clusters.
 
 The motivation for this image is to allow certain of the end-to-end tests which don't actually test the properties of

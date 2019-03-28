@@ -2,7 +2,7 @@
 
 The bootstrapper image contains runs as an init-container on each Cassandra pod. It is responsible for:
 
-- Making the custom [seed-provider/README.md](Kubernetes seed provider) available to Cassandra
+- Making the custom [Kubernetes seed provider](seed-provider/README.md) available to Cassandra
 - Modifying the Cassandra config to reflect the configuration specified through Kubernetes (e.g. DC name, cluster name etc)
 
 It works as follows:
