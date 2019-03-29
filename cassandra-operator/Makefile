@@ -99,4 +99,4 @@ generate-types:
 	@echo "== generate-types"
 	$(projectDir)/hack/update-codegen.sh
 
-release: travis common-docker-release
+release: common-docker-release

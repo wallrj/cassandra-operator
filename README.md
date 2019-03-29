@@ -19,7 +19,9 @@ It is not yet recommended for use in production environments.
 * cluster and node level metrics
 * a comprehensive e2e test suite
 
-These are described in more details on the [WIKI](https://github.com/sky-uk/cassandra-operator/wiki)  
+## How to use it?
+
+Instructions on how to deploy the Cassandra Operator and provision Cassandra clusters can be found on the [WIKI](https://github.com/sky-uk/cassandra-operator/wiki)  
 
 ## Project structure
 

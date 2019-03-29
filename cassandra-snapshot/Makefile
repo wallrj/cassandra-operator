@@ -93,4 +93,4 @@ clean: common-docker-clean
 	rm $(shell go env GOPATH)/bin/cassandra-snapshot || true
 	rm -rfv $(buildDir)
 
-release: travis common-docker-release
+release: common-docker-release

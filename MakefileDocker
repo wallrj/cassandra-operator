@@ -9,7 +9,7 @@ gitTag := $(shell git tag --points-at=$(gitRev))
 
 # Variables recursively expanded, so $(image) can be set before/after including this file
 dockerTestImage = $(TEST_REGISTRY)/$(image):v$(gitRev)
-dockerReleaseImage = $(RELEASE_REGISTRY)/$(image):v$(gitTag)
+dockerReleaseImage = $(RELEASE_REGISTRY)/$(image):$(gitTag)
 dockerReleaseLatestImage = $(RELEASE_REGISTRY)/$(image):latest
 
 common-docker-build:

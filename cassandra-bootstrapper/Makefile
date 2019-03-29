@@ -41,4 +41,4 @@ clean: common-docker-clean
 	@echo "== clean"
 	$(gradle) :cassandra-bootstrapper:clean :cassandra-bootstrapper:bootstrapper:clean :cassandra-bootstrapper:seed-provider:clean
 
-release: travis common-docker-release
+release: common-docker-release
