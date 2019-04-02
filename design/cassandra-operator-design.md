@@ -1,6 +1,11 @@
 # Overview
 
-The Cassandra operator allows users to run Cassandra clusters within Kubernetes without needing to manually perform tasks
+The Cassandra Operator is primarily composed of 3 components:
+- [cassandra-operator](../cassandra-operator/README.md): the operator responsible for the lifecycle of the clusters in Kubernetes
+- [cassandra-bootstrapper](../cassandra-bootstrapper/README.md): a component responsible for configuring the Cassandra node before it can be started
+- [cassandra-snapshot](../cassandra-snapshot/README.md): a component responsible for taking and deleting snapshots given a retention policy 
+
+It allows users to run Cassandra clusters within Kubernetes without needing to manually perform tasks
 such as creating `StatefulSet` resources or manually configuring Cassandra when new members are added. The user can specify
 their requirements for what the operator should create by using the [Custom Resource Definition](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) (CRD) provided.
 These definitions are stored and retrieved from the Kubernetes API Server and must be setup in the cluster before they can be used.
@@ -37,63 +42,17 @@ operator interacts with each Pod to extract metrics which are then exposed by th
 format. Each pod of the cluster uses a custom Cassandra seed-provider to discover other members by interacting with the
 Kubernetes API Server. The following diagram shows how these components interact.
 
-```
-                             +-------------------------+
-                             |                         |   List Pods with Label
-             StatefulSet     |                         <-------------------------+
-                 Service +--->  Kubernetes API Server  |                         |
-                 CronJob |   |                         |                         |
-                         |   |                         <---+                     |
- +----------------+      |   +-------------------------+   |                     |
- |                |      |                                 |                     |
- |   Prometheus   +--+   |   +-------------------------+   | Watch ConfigMap     |
- |                |  |   +---+                         |   | Watch Cassandra CRD |
- +----------------+  |       |                         |   |                     |
-                     +------->   Cassandra  Operator   +---+                     |
-                     Metrics |                         |                         |
-     +-----------------------+                         |                         |
-     |                       +-------------------------+                         |
-     |                                                                           |
-     |                            Zone A StatefulSet                             |
-     |                                                                           |
-     |              +------------------------------------------------------------+
-     |              |                                 |                          |
-     |    +-------------------------------+ +-------------------------------+    |
-     |    |         |                     | |         |                     |    |
-     |    | Pod 0   |                     | | Pod 1   |                     |    |
-     |    |         |                     | |         |                     |    |
-     |    | +---------------+ +---------+ | | +---------------+ +---------+ |    |
-     |    | | Seed Provider | | Jolokia | | | | Seed Provider | | Jolokia | |    |
-     |    | +---------------+ +----^----+ | | +---------------+ +----^----+ |    |
-     |    |                        |      | |                        |      |    |
-     |    +-------------------------------+ +-------------------------------+    |
-     |                             |                                 |           |
-     +---------------------------------------------------------------+           |
-     |                                                                           |
-     |                            Zone B StatefulSet                             |
-     |                                                                           |
-     |              +------------------------------------------------------------+
-     |              |
-     |    +-------------------------------+
-     |    |         |                     |
-     |    | Pod 0   |                     |
-     |    |         |                     |
-     |    | +---------------+ +---------+ |
-     |    | | Seed Provider | | Jolokia | |
-     |    | +---------------+ +----^----+ |
-     |    |                        |      |
-     |    +-------------------------------+
-     |                             |
-     +------------------------------
-```
+The following diagram illustrates how the components interact together when the Operator manages a 4-node cluster with snapshot enabled:
 
-# Cassandra Resource
+![System Overview](diagrams/system-overview.png)
+
+### Cassandra Resource
 
 The operator uses a Custom Resource Definition to allows users of the operator to define requirements for Cassandra clusters they
 wish to create. This approach allows users to interact with the operator in a way similar to managing `Deployment` and `StatefulSet` resources.
 That is, commands such as `kubectl get cassandra` are supported. An example of a Cassandra resource is available on the [WIKI](https://github.com/sky-uk/cassandra-operator-wiki).
 
-# Stateful Sets
+### Stateful Sets
 
 The operator uses `StatefulSet` resources as each Cassandra instance must maintain an identity, that is pods should have the same cluster ID
 and dataset even if a pod is restarted. 
@@ -125,37 +84,8 @@ to IP Addresses. If the DNS lookup fails (for example if the pod has not been cr
 
 # Cassandra Instances
 
-```
-+----------------------------+-----------------------------------------+
-| INIT 1                     | INIT 2                                  |
-|                            |                                         |
-| +------------------------+ |      +------------------------+         |      +----------------------------+
-| |                        | |      |                        |         |      |                            |
-| |       Init Config      | |      |      Bootstrapper      |         |      |          Cassandra         |
-| |                        +-------->                        +---------------->                            |
-| +------------------------+ |      +------------------------+         |      +----------------------------+
-| |  USER CASSANDRA IMAGE  | |      | CASSANDRA BOOTSTRAPPER |         |      |    USER CASSANDRA IMAGE    |
-| +-----------+------------+ |      +--+------------+--------+         |      +--+----------+-----------+--+
-|             |              |         |            |                  |         |          |           |
-|             | Copies       |         | Modifies   |                  |         | Reads    |           |
-|             | Config       |         | Config     |                  |         | Config   |           |
-|             |              |         |            |                  |         |          |           |
-|     +-------v-------+      | +-------v-------+    | Distributes:     | +-------v-------+  | On        |
-|     |               |      | |               |    | - Jolokia Agent  | |               |  | Classpath |
-|     | configuration |      | | configuration |    | - Prometheus JMX | | configuration |  |           |
-|     |      EMPTY DIR|      | |      EMPTY DIR|    |   Exporter Agent | |      EMPTY DIR|  |           |
-|     +---------------+      | +---------------+    | - Seed Provider  | +---------------+  |           |
-|                            | +---------------+    |                  | +---------------+  |           |
-|                            | |               |    |                  | |               |  |           |
-|                            | |   extra-lib   <----+                  | |   extra-lib   <--+           |
-|                            | |      EMPTY DIR|                       | |      EMPTY DIR|              |
-|                            | +---------------+                       | +---------------+              |
-+----------------------------+-----------------------------------------+ +---------------+         Data |
-                                                                         |               |    Snapshots |
-                                                                         |    storage    <--------------+
-                                                                         |EMPTY DIR / PVC|
-                                                                         +---------------+
-```
+![Cassandra pod](diagrams/cassandra-pod.png)
+
 
 Each cassandra instance is created as a Kubernetes Pod, which in turn is managed by a `StatefulSet`. The pod consists of
 two [Init Containers](https://kubernetes.io/docs/concepts/workloads/pods/init-containers/) and a single container.
@@ -179,8 +109,8 @@ The init-containers run in the following order:
   1. `init-config`: copies the configuration from the `/etc/cassandra` directory of the cluster's base Cassandra image
       into the `configuration` volume.
 
-  2. `cassandra-bootstrapper`: runs the [cassandra-bootstrapper](cassandra-bootstrapper/README.md) utility using the data in the `configuration` volume. Amongst other changes, this allows
-     the [seed-provider](cassandra-bootstrapper/seed-provider/README.md) to be added to the classpath and for the
+  2. `cassandra-bootstrapper`: runs the [cassandra-bootstrapper](../cassandra-bootstrapper/README.md) utility using the data in the `configuration` volume. Amongst other changes, this allows
+     the [seed-provider](../cassandra-bootstrapper/seed-provider/README.md) to be added to the classpath and for the
      Jolokia and Prometheus JMX exporter agents to be configured as Java agents. This results in the files within
      `configuration` being updated and the jar files for the two agents and the seed-provider being copied into the
      `extra-lib` directory.
@@ -202,8 +132,8 @@ However, in order to be compatible with the initialisation process outlined abov
 The initialisation process has been designed to be compatible with the [Apache Cassandra image](https://hub.docker.com/_/cassandra) and has been tested with version 3.11, which is also the default.
 Other 3.x versions are likely to be compatible but are not currently being tested with the operator.
  
-Each Cassandra instance is configured by the [cassandra-bootstrapper](cassandra-bootstrapper/README.md) to use a custom seed provider.
-This [seed-provider](cassandra-bootstrapper/seed-provider/README.md) uses the Kubernetes API Server to discover the other Cassandra instances.
+Each Cassandra instance is configured by the [cassandra-bootstrapper](../cassandra-bootstrapper/README.md) to use a custom seed provider.
+This [seed-provider](../cassandra-bootstrapper/seed-provider/README.md) uses the Kubernetes API Server to discover the other Cassandra instances.
 
 # Configuration
 
@@ -211,7 +141,7 @@ The default configuration from the cassandra image may be changed by setting up 
 The operator watches for `ConfigMap` creations, updates and deletions. If a `ConfigMap` matching this naming convention is found, it will be mounted
 into the `bootstrapper` init-container, which will use any files present in the `ConfigMap` to overwrite the default configuration. For example, if a
 `cassandra.yaml` key is specified within the `{{cluster-name}}-config` `ConfigMap`, it will overwrite the `cassandra.yaml` copied from `/etc/cassandra`
-before the [cassandra-bootstrapper](cassandra-bootstrapper/README.md) is run. This means that any configuration specified within the `ConfigMap` will
+before the [cassandra-bootstrapper](../cassandra-bootstrapper/README.md) is run. This means that any configuration specified within the `ConfigMap` will
 still be modified by the bootstrapper utility in order to configure the seed-provider.
 
 When a `ConfigMap` for a cluster is created or updated the operator updates a label on the `StatefulSet` containing a

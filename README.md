@@ -34,7 +34,7 @@ This project is composed of several sub-modules that are either part of the Cass
 
 ## Design
 
-The Cassandra Operator and the components it uses are described here: [Cassandra Operator Design](cassandra-operator-design.md) 
+The Cassandra Operator and the components it uses are described here: [Cassandra Operator Design](design/cassandra-operator-design.md) 
 
 ## Supported versions
 
