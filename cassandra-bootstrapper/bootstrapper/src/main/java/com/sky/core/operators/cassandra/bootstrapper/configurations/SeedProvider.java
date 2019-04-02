@@ -41,7 +41,7 @@ public class SeedProvider extends ConfigurationAction {
         customSeedProviderParams.put("clusterName", clusterName);
 
         Map<String, Object> customSeedProvider = new HashMap<>();
-        customSeedProvider.put("class_name", "com.sky.core.operators.KubernetesSeedProvider");
+        customSeedProvider.put("class_name", "com.sky.core.operators.cassandra.seedprovider.KubernetesSeedProvider");
         customSeedProvider.put("parameters", Collections.singletonList(customSeedProviderParams));
 
         Yaml yaml = new Yaml();

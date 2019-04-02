@@ -18,7 +18,7 @@ func TestCleanup(t *testing.T) {
 
 var _ = Describe("Cleanup", func() {
 	BeforeEach(func() {
-		DeleteCassandraPodsInNamespace(Namespace)
+		DeleteCassandraResourcesInNamespace(Namespace)
 	})
 
 	It("should delete any snapshots which are older than the retention period across all pods in the cluster", func() {
@@ -35,7 +35,7 @@ var _ = Describe("Cleanup", func() {
 			"-n", Namespace,
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, "mycluster-1", "app", "mycluster-1"),
 			"-k", "system_auth,system_traces")
-		Eventually(PodIsTerminatedSuccessfully(snapshotPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedSuccessfully(snapshotPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 
 		BackdateSnapshotsForPods(clusterPods, time.Hour)
 
@@ -47,7 +47,7 @@ var _ = Describe("Cleanup", func() {
 			"-n", Namespace,
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, "mycluster-1", "app", "mycluster-1"),
 			"-r", "30m")
-		Eventually(PodIsTerminatedSuccessfully(cleanupPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedSuccessfully(cleanupPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 
 		// then
 		for _, pod := range clusterPods {
@@ -66,7 +66,7 @@ var _ = Describe("Cleanup", func() {
 			"-n", Namespace,
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, "mycluster-1", "app", "mycluster-1"),
 			"-k", "system_auth,system_traces")
-		Eventually(PodIsTerminatedSuccessfully(snapshotPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedSuccessfully(snapshotPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 		snapshotsBeforeCleanup, err := SnapshotListForPod(clusterPod)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(snapshotsBeforeCleanup).ToNot(BeEmpty())
@@ -79,7 +79,7 @@ var _ = Describe("Cleanup", func() {
 			"-n", Namespace,
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, "mycluster-1", "app", "mycluster-1"),
 			"-r", "30m")
-		Eventually(PodIsTerminatedSuccessfully(cleanupPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedSuccessfully(cleanupPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 
 		// then
 		snapshotsAfterCleanup, err := SnapshotListForPod(clusterPod)
@@ -98,7 +98,7 @@ var _ = Describe("Cleanup", func() {
 			"-n", Namespace,
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, "mycluster-1", "app", "mycluster-1"),
 			"-k", "system_auth")
-		Eventually(PodIsTerminatedSuccessfully(snapshotPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedSuccessfully(snapshotPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 
 		RenameSnapshotsForPod(clusterPod, "another_snapshot")
 
@@ -109,7 +109,7 @@ var _ = Describe("Cleanup", func() {
 			"-L", "debug",
 			"-n", Namespace,
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, "mycluster-1", "app", "mycluster-1"))
-		Eventually(PodIsTerminatedSuccessfully(cleanupPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedSuccessfully(cleanupPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 
 		// then
 		snapshots, err := SnapshotListForPod(clusterPod)
@@ -122,7 +122,7 @@ var _ = Describe("Cleanup", func() {
 
 	It("should fail with a non-zero exit code when an invalid command is supplied", func() {
 		snapshotPod := RunCommandInCassandraSnapshotPod("mycluster-1", "/cassandra-snapshot", "cleanup", "-L", "debug", "-n", "invalid-namespace")
-		Eventually(PodIsTerminatedUnsuccessfully(snapshotPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedUnsuccessfully(snapshotPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 	})
 
 })

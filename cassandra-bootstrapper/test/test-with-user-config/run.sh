@@ -34,6 +34,7 @@ docker run \
 
 runCommonChecks
 
+# check using test specific `goss.yaml`
 GOSS_SLEEP=0 dgoss run \
     -v ${CONFIG_EMPTY_DIR}:/etc/cassandra \
     -v ${EXTRA_LIB_EMPTY_DIR}:/extra-lib \

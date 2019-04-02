@@ -19,7 +19,7 @@ func TestCreate(t *testing.T) {
 var _ = Describe("Create", func() {
 
 	BeforeEach(func() {
-		DeleteCassandraPodsInNamespace(Namespace)
+		DeleteCassandraResourcesInNamespace(Namespace)
 	})
 
 	It("should create a snapshot for each specified keyspace on each node of the cluster", func() {
@@ -39,7 +39,7 @@ var _ = Describe("Create", func() {
 			"-n", Namespace,
 			"-k", "system_auth,system_traces",
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, "mycluster-1", "app", "mycluster-1"))
-		Eventually(PodIsTerminatedSuccessfully(snapshotPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedSuccessfully(snapshotPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 		stopTime := time.Now()
 
 		// then
@@ -69,7 +69,7 @@ var _ = Describe("Create", func() {
 			"-L", "debug",
 			"-n", Namespace,
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, "mycluster-1", "app", "mycluster-1"))
-		Eventually(PodIsTerminatedSuccessfully(snapshotPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedSuccessfully(snapshotPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 		stopTime := time.Now()
 
 		// then
@@ -87,6 +87,6 @@ var _ = Describe("Create", func() {
 
 	It("should fail with a non-zero exit code when an invalid command is supplied", func() {
 		snapshotPod := RunCommandInCassandraSnapshotPod("mycluster-1", "/cassandra-snapshot", "create", "-L", "debug", "-n", "invalid-namespace")
-		Eventually(PodIsTerminatedUnsuccessfully(snapshotPod), TestCompletionTimeout, 2*time.Second).Should(BeTrue())
+		Eventually(PodIsTerminatedUnsuccessfully(snapshotPod), NodeTerminationDuration, 2*time.Second).Should(BeTrue())
 	})
 })

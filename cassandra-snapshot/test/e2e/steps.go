@@ -8,24 +8,44 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"runtime"
+	"path/filepath"
+	"io/ioutil"
 )
 
 const (
-	Namespace             = "test-cassandra-operator"
-	OperatorLabel         = "cassandra-snapshot-test"
-	TestCompletionTimeout = 60 * time.Second
-	podStartTimeout       = 90 * time.Second
+	Namespace     = "test-cassandra-operator"
+	OperatorLabel = "cassandra-snapshot-test"
+)
+
+var (
+	TerminateImmediately = int64(0)
 )
 
 func CassandraPodExistsWithLabels(labelsAndValues ...string) *v1.Pod {
+	podName := fmt.Sprintf("cassandra-pod-%s", randomString(5))
 	labels := make(map[string]string)
 	for i := 0; i < len(labelsAndValues)-1; i += 2 {
 		labels[labelsAndValues[i]] = labelsAndValues[i+1]
 	}
 
-	pod, err := KubeClientset.CoreV1().Pods(Namespace).Create(&v1.Pod{
+	var pod *v1.Pod
+	var err error
+	if ResourceRequirements != nil {
+		pod, err = createCassandraPodWithCustomConfig(labels, podName)
+	} else {
+		pod, err = createCassandraPod(labels, podName)
+	}
+
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	gomega.Eventually(PodIsReady(pod), NodeStartDuration, 2*time.Second).Should(gomega.BeTrue())
+	return pod
+}
+
+func createCassandraPod(labels map[string]string, podName string) (*v1.Pod, error) {
+	return KubeClientset.CoreV1().Pods(Namespace).Create(&v1.Pod{
 		ObjectMeta: metaV1.ObjectMeta{
-			Name:      fmt.Sprintf("cassandra-pod-%s", randomString(5)),
+			Name:      podName,
 			Namespace: Namespace,
 			Labels:    labels,
 		},
@@ -35,15 +55,76 @@ func CassandraPodExistsWithLabels(labelsAndValues ...string) *v1.Pod {
 					Name:           "cassandra",
 					Image:          CassandraImageName,
 					ReadinessProbe: CassandraReadinessProbe,
-					Resources:      ResourceRequirements,
+				},
+			},
+			TerminationGracePeriodSeconds: &TerminateImmediately,
+		},
+	})
+}
+
+func createCassandraPodWithCustomConfig(labels map[string]string, podName string) (*v1.Pod, error) {
+	configMap, err := cassandraConfigMap(Namespace, podName)
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+
+	return KubeClientset.CoreV1().Pods(Namespace).Create(&v1.Pod{
+		ObjectMeta: metaV1.ObjectMeta{
+			Name:      podName,
+			Namespace: Namespace,
+			Labels:    labels,
+		},
+		Spec: v1.PodSpec{
+			InitContainers: []v1.Container{
+				{
+					Name: "copy-default-cassandra-config",
+					Image: CassandraImageName,
+					Command: []string{"sh", "-c", "cp -vr /etc/cassandra/* /config"},
+					VolumeMounts:   []v1.VolumeMount{
+						{Name: "config", MountPath: "/config"},
+					},
+				},
+				{
+					Name: "copy-custom-config",
+					Image: "busybox",
+					Command: []string{"sh", "-c", "cp -rLv /custom-config/* /config"},
+					VolumeMounts:   []v1.VolumeMount{
+						{Name: "config", MountPath: "/config"},
+						{Name: "custom-config", MountPath: "/custom-config"},
+					},
+				},
+			},
+			Containers: []v1.Container{
+				{
+					Name:           "cassandra",
+					Image:          CassandraImageName,
+					ReadinessProbe: CassandraReadinessProbe,
+					Resources:      *ResourceRequirements,
+					VolumeMounts:   []v1.VolumeMount{
+						{Name: "config", MountPath: "/etc/cassandra"},
+					},
+
+				},
+			},
+			TerminationGracePeriodSeconds: &TerminateImmediately,
+			Volumes: []v1.Volume{
+				{
+					Name: "config",
+					VolumeSource: v1.VolumeSource{
+						EmptyDir: &v1.EmptyDirVolumeSource{},
+					},
+				},
+				{
+					Name: "custom-config",
+					VolumeSource: v1.VolumeSource{
+						ConfigMap: &v1.ConfigMapVolumeSource{
+							LocalObjectReference: v1.LocalObjectReference{
+								Name: configMap.Name,
+							},
+						},
+					},
 				},
 			},
 		},
 	})
-
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
-	gomega.Eventually(PodIsReady(pod), podStartTimeout, 2*time.Second).Should(gomega.BeTrue())
-	return pod
 }
 
 func PodIsReady(podToCheck *v1.Pod) func() (bool, error) {
@@ -113,10 +194,9 @@ func RunCommandInCassandraSnapshotPod(clusterName, command string, arg ...string
 			RestartPolicy:      v1.RestartPolicyNever,
 			Containers: []v1.Container{
 				{
-					Name:      "command-runner",
-					Image:     ImageUnderTest,
-					Command:   commandToRun,
-					Resources: ResourceRequirements,
+					Name:    "command-runner",
+					Image:   ImageUnderTest,
+					Command: commandToRun,
 				},
 			},
 		},
@@ -171,4 +251,59 @@ type Snapshot struct {
 	Name         string
 	Keyspace     string
 	ColumnFamily string
+}
+
+func cassandraConfigMap(namespace, resourceName string) (*v1.ConfigMap, error) {
+	configData := make(map[string]string)
+	configDir := cassandraConfigDir()
+	configFiles := []string{"jvm.options"}
+
+	for _, configFile := range configFiles {
+		fileContent, err := readFileContent(fmt.Sprintf("%s%s%s", configDir, string(filepath.Separator), configFile))
+		if err != nil {
+			return nil, err
+		}
+		configData[configFile] = fileContent
+	}
+
+	cmClient := KubeClientset.CoreV1().ConfigMaps(namespace)
+	cm := &v1.ConfigMap{
+		ObjectMeta: metaV1.ObjectMeta{
+			Name: fmt.Sprintf("%s-config", resourceName),
+			Labels: map[string]string{
+				OperatorLabel: resourceName,
+			},
+
+		},
+		Data: configData,
+	}
+	return cmClient.Create(cm)
+}
+
+func cassandraConfigDir() string {
+	_, currentFilename, _, _ := runtime.Caller(0)
+	testDir, err := absolutePathOf("test", currentFilename)
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	return fmt.Sprintf("%s%s%s", testDir, string(filepath.Separator), "cassandra-config")
+}
+
+func absolutePathOf(target, currentDir string) (string, error) {
+	path := strings.Split(currentDir, string(filepath.Separator))
+	for i := range path {
+		if path[i] == target {
+			return strings.Join(path[:i+1], string(filepath.Separator)), nil
+		}
+	}
+
+	return "", fmt.Errorf("target %s does not exist in path %s", target, currentDir)
+}
+
+func readFileContent(fileName string) (string, error) {
+	bytes, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return "", err
+	}
+
+	fileContent := string(bytes)
+	return fileContent, err
 }

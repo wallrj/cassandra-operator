@@ -6,9 +6,16 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc" // required for connectivity into dev cluster
-	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"os/exec"
+	"time"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/client-go/tools/clientcmd"
+)
+
+const (
+	NodeStartDuration       = 120 * time.Second
+	NodeTerminationDuration = 60 * time.Second
 )
 
 var (
@@ -20,11 +27,11 @@ var (
 	kubeContext             string
 	kubeconfigLocation      string
 	ImageUnderTest          string
-	ResourceRequirements    v1.ResourceRequirements
+	ResourceRequirements    *v1.ResourceRequirements
 )
 
 func init() {
-	kubeContext = os.Getenv("KUBE_CONTEXT")
+	kubeContext := os.Getenv("KUBE_CONTEXT")
 	if kubeContext == "ignore" {
 		// This option is provided to allow the test code to be built without running any tests.
 		return
@@ -34,15 +41,8 @@ func init() {
 		panic("No Kubernetes context specified, value of KUBE_CONTEXT environment variable was empty")
 	}
 
-	UseMockedImage = os.Getenv("USE_MOCK") == "true"
-
+	var err error
 	kubeconfigLocation = fmt.Sprintf("%s/.kube/config", os.Getenv("HOME"))
-
-	ImageUnderTest = os.Getenv("IMAGE_UNDER_TEST")
-	if ImageUnderTest == "" {
-		panic("IMAGE_UNDER_TEST must be supplied")
-	}
-
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{Precedence: []string{kubeconfigLocation}},
 		&clientcmd.ConfigOverrides{CurrentContext: kubeContext},
@@ -51,9 +51,14 @@ func init() {
 	if err != nil {
 		log.Fatalf("Unable to obtain out-of-cluster config: %v", err)
 	}
-
 	KubeClientset = kubernetes.NewForConfigOrDie(config)
 
+	ImageUnderTest = os.Getenv("IMAGE_UNDER_TEST")
+	if ImageUnderTest == "" {
+		panic("IMAGE_UNDER_TEST must be supplied")
+	}
+
+	UseMockedImage = os.Getenv("USE_MOCK") == "true"
 	if UseMockedImage {
 		CassandraImageName = os.Getenv("FAKE_CASSANDRA_IMAGE")
 		if CassandraImageName == "" {
@@ -69,6 +74,14 @@ func init() {
 		}
 		RenameSnapshotCmd = "sed -i \"s/^\\w\\+ /%s /g\" /tmp/snapshots"
 	} else {
+		ResourceRequirements = &v1.ResourceRequirements{
+			Limits: v1.ResourceList{
+				v1.ResourceMemory: resource.MustParse("1Gi"),
+			},
+			Requests: v1.ResourceList{
+				v1.ResourceMemory: resource.MustParse("1Gi"),
+			},
+		}
 		CassandraImageName = "cassandra:3.11"
 		CassandraReadinessProbe = &v1.Probe{
 			Handler: v1.Handler{

@@ -26,7 +26,7 @@ build: go-build go-install docker-image
 
 install: build push-image
 
-check: fmt vet lint validate-licences test e2e-test
+check: fmt vet lint validate-licences test integration-test e2e-test
 
 setup:
 	@echo "== setup"
@@ -64,6 +64,18 @@ ensure-test-report-dir-exists: ensure-build-dir-exists
 test: ensure-test-report-dir-exists
 	@echo "== test"
 	ginkgo -p -r --v --progress pkg cmd -- -junit-report-dir $(junitReportDir)
+
+integration-test: ensure-test-report-dir-exists deploy-operator
+	@echo "== integration-test"
+ifeq ($(strip $(USE_MOCK)),true)
+	@echo "== e2e-test integration test against real cassandra"
+	KUBE_CONTEXT=$(KUBE_CONTEXT) \
+	    POD_START_TIMEOUT=5m \
+	    USE_MOCK=false \
+	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
+	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
+	    ginkgo -p -r --v --progress -stream -timeout=30m test/e2e/parallel/creation -- -junit-report-dir $(junitReportDir)
+endif
 
 e2e-test: ensure-test-report-dir-exists deploy-operator
 	@echo "== e2e-test"

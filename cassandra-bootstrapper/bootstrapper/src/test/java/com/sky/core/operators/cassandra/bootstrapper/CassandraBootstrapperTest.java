@@ -1,8 +1,6 @@
 package com.sky.core.operators.cassandra.bootstrapper;
 
-import com.sky.core.operators.cassandra.bootstrapper.CassandraBootstrapper;
-import com.sky.core.operators.cassandra.bootstrapper.ConfigurerException;
-import com.sky.core.operators.cassandra.bootstrapper.SystemEnvironmentReader;
+import com.sky.core.operators.cassandra.seedprovider.KubernetesSeedProvider;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.cassandra.config.Config;
@@ -39,7 +37,7 @@ public class CassandraBootstrapperTest {
     private static final String REFERENCE_CASSANDRA_YAML = "/cassandra.yaml";
 
     private static final List<String> SEED_PROVIDER_BLOCK = Arrays.asList(
-            "- class_name: com.sky.core.operators.KubernetesSeedProvider",
+            format("- class_name: %s", KubernetesSeedProvider.class.getName()),
             "  parameters:",
             "  - {clusterName: some-cluster, namespace: some-namespace}"
     );
@@ -193,7 +191,7 @@ public class CassandraBootstrapperTest {
         final YamlConfigurationLoader loader = new YamlConfigurationLoader();
         final Config modifiedConfig = loader.loadConfig(cassandraYaml.toURI().toURL());
 
-        assertThat(modifiedConfig.seed_provider.class_name).isEqualTo("com.sky.core.operators.KubernetesSeedProvider");
+        assertThat(modifiedConfig.seed_provider.class_name).isEqualTo(KubernetesSeedProvider.class.getName());
         assertThat(modifiedConfig.seed_provider.parameters.get("namespace")).isEqualTo(NAMESPACE);
         assertThat(modifiedConfig.seed_provider.parameters.get("clusterName")).isEqualTo(CLUSTER);
         assertThatAllRequiredChangesHaveBeenMade(Paths.get(getClass().getResource(REFERENCE_CASSANDRA_YAML).toURI()));
