@@ -45,12 +45,23 @@ func deleteCassandraResourcesWithLabel(namespace, label string) {
 }
 
 func deleteClusterDefinitionsWatchedByOperator(namespace, clusterName string) {
+	var cassandrasToDelete []string
 	if clusterName == "" {
-		if err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).DeleteCollection(&metaV1.DeleteOptions{}, metaV1.ListOptions{}); err != nil {
-			log.Infof("Error while deleting cassandra resources in namespace %s: %v", namespace, err)
+		cassandras, err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).List(metaV1.ListOptions{})
+		if err != nil {
+			log.Infof("Error while searching for cassandras in namespace %s: %v", namespace, err)
+		}
+
+		for _, cassandra := range cassandras.Items {
+			cassandrasToDelete = append(cassandrasToDelete, cassandra.Name)
 		}
 	} else {
-		if err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).Delete(clusterName, &metaV1.DeleteOptions{}); err != nil {
+		cassandrasToDelete = append(cassandrasToDelete, clusterName)
+	}
+
+	log.Infof("Deleting cassandra definitions in namespace %s: %v", namespace, cassandrasToDelete)
+	for  _, cassandraToDelete := range cassandrasToDelete {
+		if err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).Delete(cassandraToDelete, &metaV1.DeleteOptions{}); err != nil {
 			log.Infof("Error while deleting cassandra resources in namespace %s: %v", namespace, err)
 		}
 	}
