@@ -26,7 +26,9 @@ var (
 	CassandraSnapshotImageName     string
 	CassandraInitialDelay          int32
 	CassandraLivenessPeriod        int32
+	CassandraLivenessProbeFailureThreshold        int32
 	CassandraReadinessPeriod       int32
+	CassandraReadinessProbeFailureThreshold int32
 	NodeStartDuration              time.Duration
 	NodeRestartDuration            time.Duration
 	NodeTerminationDuration        time.Duration
@@ -80,11 +82,15 @@ func init() {
 		CassandraInitialDelay = 1
 		CassandraLivenessPeriod = 1
 		CassandraReadinessPeriod = 1
+		CassandraLivenessProbeFailureThreshold = 3
+		CassandraReadinessProbeFailureThreshold = 3
 	} else {
 		CassandraImageName = cluster.DefaultCassandraImage
 		CassandraInitialDelay = 30
 		CassandraLivenessPeriod = 30
 		CassandraReadinessPeriod = 15
+		CassandraLivenessProbeFailureThreshold = 4 // allow 2mins
+		CassandraReadinessProbeFailureThreshold = 8 // allow 2mins
 	}
 
 	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", cluster.DefaultCassandraBootstrapperImage)

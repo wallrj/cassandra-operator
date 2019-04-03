@@ -63,35 +63,25 @@ func SnapshotSchedule(cron string) *v1alpha1.Snapshot {
 }
 
 func clusterDefaultSpec() *v1alpha1.CassandraSpec {
-	if UseMockedImage {
-		return &v1alpha1.CassandraSpec{
-			Racks:       []v1alpha1.Rack{},
-			UseEmptyDir: false,
-			Pod: v1alpha1.Pod{
-				BootstrapperImage: CassandraBootstrapperImageName,
-				Image:             CassandraImageName,
-				Memory:            resource.MustParse(PodMemory),
-				CPU:               resource.MustParse(PodCPU),
-				StorageSize:       resource.MustParse(podStorageSize),
-				LivenessProbe: &v1alpha1.Probe{
-					InitialDelaySeconds: CassandraInitialDelay,
-					PeriodSeconds:       CassandraLivenessPeriod,
-				},
-				ReadinessProbe: &v1alpha1.Probe{
-					InitialDelaySeconds: CassandraInitialDelay,
-					PeriodSeconds:       CassandraReadinessPeriod,
-				},
-			},
-		}
-	}
 	return &v1alpha1.CassandraSpec{
 		Racks:       []v1alpha1.Rack{},
 		UseEmptyDir: false,
 		Pod: v1alpha1.Pod{
 			BootstrapperImage: CassandraBootstrapperImageName,
+			Image:             CassandraImageName,
 			Memory:            resource.MustParse(PodMemory),
 			CPU:               resource.MustParse(PodCPU),
 			StorageSize:       resource.MustParse(podStorageSize),
+			LivenessProbe: &v1alpha1.Probe{
+				FailureThreshold: CassandraLivenessProbeFailureThreshold,
+				InitialDelaySeconds: CassandraInitialDelay,
+				PeriodSeconds:       CassandraLivenessPeriod,
+			},
+			ReadinessProbe: &v1alpha1.Probe{
+				FailureThreshold: CassandraReadinessProbeFailureThreshold,
+				InitialDelaySeconds: CassandraInitialDelay,
+				PeriodSeconds:       CassandraReadinessPeriod,
+			},
 		},
 	}
 }

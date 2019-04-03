@@ -25,6 +25,7 @@ const (
 var (
 	resources          *parallel.ResourceSemaphore
 	resourcesToReclaim int
+	testStartTime time.Time
 )
 
 func TestModification(t *testing.T) {
@@ -53,8 +54,15 @@ var _ = Context("Allowable cluster modifications", func() {
 	var podWatcher watch.Interface
 
 	BeforeEach(func() {
+		testStartTime = time.Now()
 		clusterName = AClusterName()
 		podEvents, podWatcher = WatchPodEvents(Namespace, clusterName)
+	})
+
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			PrintDiagnosis(Namespace, testStartTime, clusterName)
+		}
 	})
 
 	AfterEach(func() {
@@ -81,11 +89,13 @@ var _ = Context("Allowable cluster modifications", func() {
 			Memory:            resource.MustParse("999Mi"),
 			CPU:               resource.MustParse("1m"),
 			LivenessProbe: &v1alpha1.Probe{
+				FailureThreshold: CassandraLivenessProbeFailureThreshold + 1,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraLivenessPeriod,
 				TimeoutSeconds:      6,
 			},
 			ReadinessProbe: &v1alpha1.Probe{
+				FailureThreshold: CassandraReadinessProbeFailureThreshold + 1,
 				TimeoutSeconds:      4,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraReadinessPeriod,
@@ -104,11 +114,11 @@ var _ = Context("Allowable cluster modifications", func() {
 				MemoryRequest:                  "999Mi",
 				MemoryLimit:                    "999Mi",
 				CPURequest:                     "1m",
-				LivenessProbeFailureThreshold:  3,
+				LivenessProbeFailureThreshold:  CassandraLivenessProbeFailureThreshold + 1,
 				LivenessProbeInitialDelay:      DurationSeconds(CassandraInitialDelay),
 				LivenessProbePeriod:            DurationSeconds(CassandraLivenessPeriod),
 				LivenessProbeTimeout:           6 * time.Second,
-				ReadinessProbeFailureThreshold: 3,
+				ReadinessProbeFailureThreshold: CassandraReadinessProbeFailureThreshold + 1,
 				ReadinessProbeInitialDelay:     DurationSeconds(CassandraInitialDelay),
 				ReadinessProbePeriod:           DurationSeconds(CassandraReadinessPeriod),
 				ReadinessProbeTimeout:          4 * time.Second,

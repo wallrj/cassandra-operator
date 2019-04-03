@@ -17,7 +17,14 @@ var _ = Context("Cluster untriggered modifications", func() {
 	)
 
 	BeforeEach(func() {
+		testStartTime = time.Now()
 		clusterName = AClusterName()
+	})
+
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			PrintDiagnosis(Namespace, testStartTime, clusterName)
+		}
 	})
 
 	AfterEach(func() {
@@ -44,6 +51,6 @@ var _ = Context("Cluster untriggered modifications", func() {
 })
 
 func aNodeIsOffline(namespace string, nodeName string) {
-	command, output, err := Kubectl(namespace, nodeName, "nodetool", "drain")
+	command, output, err := Kubectl(namespace, "exec", nodeName, "nodetool", "drain")
 	Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("command was %v.\nOutput of exec was:\n%s\n. Error: %v", command, output, err))
 }

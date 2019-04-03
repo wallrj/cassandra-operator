@@ -461,7 +461,7 @@ func (m *haveJVMArg) Match(actual interface{}) (success bool, err error) {
 		commandToRun = "ps auxww | grep cassandra"
 	}
 
-	command, rawOutput, err := Kubectl(pod.Namespace, pod.Name, append([]string{"--", "sh", "-c"}, commandToRun)...)
+	command, rawOutput, err := Kubectl(pod.Namespace, "exec", pod.Name, "--", "sh", "-c", commandToRun)
 
 	if err != nil {
 		return false, fmt.Errorf("command was %v.\nOutput of exec was:\n%s\n. Error: %v", command, rawOutput, err)

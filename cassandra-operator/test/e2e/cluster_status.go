@@ -249,7 +249,7 @@ func DataCenterForCluster(namespace, clusterName string) func() (string, error) 
 			return "", fmt.Errorf("no pods found for cluster %s.%s", namespace, clusterName)
 		}
 
-		command, outputBytes, err := Kubectl(namespace, pods.Items[0].Name, "--", "sh", "-c", "nodetool status | grep \"Datacenter: \"")
+		command, outputBytes, err := Kubectl(namespace, "exec", pods.Items[0].Name, "--", "sh", "-c", "nodetool status | grep \"Datacenter: \"")
 		if err != nil {
 			return "", fmt.Errorf("command was %v.\nOutput of exec was:\n%s\n. Error: %v", command, outputBytes, err)
 		}
@@ -284,7 +284,7 @@ func UniqueNodesUsed(namespace, clusterName string) ([]string, error) {
 
 func FileExistsInConfigurationDirectory(namespace string, podName string, filename string) func() (bool, error) {
 	return func() (bool, error) {
-		command, output, err := Kubectl(namespace, podName, "ls", fmt.Sprintf("/etc/cassandra/%s", filename))
+		command, output, err := Kubectl(namespace, "exec", podName, "ls", fmt.Sprintf("/etc/cassandra/%s", filename))
 		if err != nil {
 			return false, fmt.Errorf("command was %v.\nOutput of exec was:\n%s\n. Error: %v", command, output, err)
 		}
@@ -304,16 +304,22 @@ func SnapshotJobsFor(clusterName string) func() (int, error) {
 	}
 }
 
-func Kubectl(namespace, podName string, command ...string) (*exec.Cmd, []byte, error) {
+func KubectlOutputAsString(namespace string, args ...string) string {
+	command, outputBytes, err := Kubectl(namespace, args...)
+	if err != nil {
+		return fmt.Sprintf("command was %v.\nOutput was:\n%s\n. Error: %v", command, outputBytes, err)
+	}
+	return strings.TrimSpace(string(outputBytes))
+}
+
+func Kubectl(namespace string, args ...string) (*exec.Cmd, []byte, error) {
 	argList := []string{
 		fmt.Sprintf("--kubeconfig=%s", kubeconfigLocation),
 		fmt.Sprintf("--context=%s", kubeContext),
 		fmt.Sprintf("--namespace=%s", namespace),
-		"exec",
-		podName,
 	}
 
-	for _, word := range command {
+	for _, word := range args {
 		argList = append(argList, word)
 	}
 

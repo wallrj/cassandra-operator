@@ -19,6 +19,10 @@ import (
 	"time"
 )
 
+var (
+	testStartTime time.Time
+)
+
 func TestSequential(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecsWithDefaultAndCustomReporters(t, "E2E Suite (Lifecycle Tests)", test.CreateSequentialReporters("e2e_lifecycle"))
@@ -30,8 +34,15 @@ var _ = Context("When an operator is restarted", func() {
 	var clusterName string
 
 	BeforeEach(func() {
+		testStartTime = time.Now()
 		clusterName = AClusterName()
 		AClusterWithName(clusterName).AndRacks([]v1alpha1.Rack{Rack("a", 1)}).UsingEmptyDir().Exists()
+	})
+
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			PrintDiagnosis(Namespace, testStartTime, clusterName)
+		}
 	})
 
 	AfterEach(func() {

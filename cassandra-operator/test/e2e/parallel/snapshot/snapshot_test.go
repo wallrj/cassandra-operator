@@ -22,6 +22,7 @@ const (
 var (
 	resources          *parallel.ResourceSemaphore
 	resourcesToReclaim int
+	testStartTime time.Time
 )
 
 func TestSnapshot(t *testing.T) {
@@ -52,7 +53,14 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 	)
 
 	BeforeEach(func() {
+		testStartTime = time.Now()
 		clusterName = AClusterName()
+	})
+
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			PrintDiagnosis(Namespace, testStartTime, clusterName)
+		}
 	})
 
 	AfterEach(func() {

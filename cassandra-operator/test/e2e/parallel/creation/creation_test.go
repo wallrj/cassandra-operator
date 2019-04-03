@@ -1,6 +1,7 @@
 package creation
 
 import (
+	"fmt"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -8,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
@@ -17,6 +17,7 @@ import (
 var (
 	multipleRacksCluster *TestCluster
 	emptyDirCluster      *TestCluster
+	testStartTime		 time.Time
 )
 
 func TestCreation(t *testing.T) {
@@ -49,11 +50,13 @@ func createClustersInParallel(multipleRacksCluster, emptyDirCluster *TestCluster
 			CPU:               resource.MustParse("1m"),
 			StorageSize:       resource.MustParse("100Mi"),
 			LivenessProbe: &v1alpha1.Probe{
+				FailureThreshold: CassandraLivenessProbeFailureThreshold,
 				TimeoutSeconds:      7,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraLivenessPeriod,
 			},
 			ReadinessProbe: &v1alpha1.Probe{
+				FailureThreshold: CassandraReadinessProbeFailureThreshold,
 				TimeoutSeconds:      6,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraReadinessPeriod,
@@ -75,10 +78,17 @@ var _ = ParallelTestBeforeSuite(func() []TestCluster {
 var _ = Context("When a cluster with a given name doesn't already exist", func() {
 
 	BeforeEach(func() {
+		testStartTime = time.Now()
 		Eventually(PodReadyForCluster(Namespace, multipleRacksCluster.Name), 3*NodeStartDuration, CheckInterval).
 			Should(Equal(3), fmt.Sprintf("For cluster %s", multipleRacksCluster.Name))
 		Eventually(PodReadyForCluster(Namespace, emptyDirCluster.Name), NodeStartDuration, CheckInterval).
 			Should(Equal(1), fmt.Sprintf("For cluster %s", emptyDirCluster.Name))
+	})
+
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			PrintDiagnosis(Namespace, testStartTime, multipleRacksCluster.Name, emptyDirCluster.Name)
+		}
 	})
 
 	It("should create all the required Kubernetes resources according to the cassandra specs", func() {
@@ -96,12 +106,12 @@ var _ = Context("When a cluster with a given name doesn't already exist", func()
 				MemoryLimit:                    "987Mi",
 				CPURequest:                     "1m",
 				LivenessProbePeriod:            DurationSeconds(CassandraLivenessPeriod),
-				LivenessProbeFailureThreshold:  3,
+				LivenessProbeFailureThreshold:  CassandraLivenessProbeFailureThreshold,
 				LivenessProbeInitialDelay:      DurationSeconds(CassandraInitialDelay),
 				LivenessProbeTimeout:           7 * time.Second,
 				ReadinessProbeTimeout:          6 * time.Second,
 				ReadinessProbePeriod:           DurationSeconds(CassandraReadinessPeriod),
-				ReadinessProbeFailureThreshold: 3,
+				ReadinessProbeFailureThreshold: CassandraReadinessProbeFailureThreshold,
 				ReadinessProbeInitialDelay:     DurationSeconds(CassandraInitialDelay),
 				ReadinessProbeSuccessThreshold: 1,
 				ContainerPorts:                 map[string]int{"internode": 7000, "jmx-exporter": 7070, "cassandra-jmx": 7199, "jolokia": 7777, "client": 9042}})),

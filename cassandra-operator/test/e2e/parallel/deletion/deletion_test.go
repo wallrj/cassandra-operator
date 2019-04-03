@@ -16,6 +16,7 @@ import (
 var (
 	multipleNodeCluster *TestCluster
 	singleNodeCluster   *TestCluster
+	testStartTime time.Time
 )
 
 func TestDeletion(t *testing.T) {
@@ -56,6 +57,16 @@ var _ = ParallelTestBeforeSuite(func() []TestCluster {
 })
 
 var _ = Context("Cluster and node deletion", func() {
+
+	BeforeEach(func() {
+		testStartTime = time.Now()
+	})
+
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			PrintDiagnosis(Namespace, testStartTime, multipleNodeCluster.Name, singleNodeCluster.Name)
+		}
+	})
 
 	Context("when a cluster is deleted", func() {
 		It("should clean up everything related to the cluster, except for data", func() {

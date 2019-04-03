@@ -16,6 +16,7 @@ import (
 
 var (
 	multipleNodeCluster *TestCluster
+	testStartTime time.Time
 )
 
 func TestInvalidModification(t *testing.T) {
@@ -45,7 +46,15 @@ var _ = Context("forbidden cluster modifications", func() {
 	var podWatcher watch.Interface
 
 	BeforeEach(func() {
+		testStartTime = time.Now()
 		podEvents, podWatcher = WatchPodEvents(Namespace, multipleNodeCluster.Name)
+	})
+
+
+	JustAfterEach(func() {
+		if CurrentGinkgoTestDescription().Failed {
+			PrintDiagnosis(Namespace, testStartTime, multipleNodeCluster.Name)
+		}
 	})
 
 	AfterEach(func() {
