@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 )
 
 func PersistentVolumeClaimsForCluster(namespace, clusterName string) func() ([]*labelledResource, error) {
@@ -326,6 +327,14 @@ func Kubectl(namespace string, args ...string) (*exec.Cmd, []byte, error) {
 	cmd := exec.Command("kubectl", argList...)
 	output, err := cmd.CombinedOutput()
 	return cmd, output, err
+}
+
+func CassandraDefinitions(namespace string) ([]v1alpha1.Cassandra, error) {
+	cassandras, err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).List(metaV1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return cassandras.Items, nil
 }
 
 func errorUnlessNotFound(err error) error {

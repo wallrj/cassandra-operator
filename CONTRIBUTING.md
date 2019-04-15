@@ -20,15 +20,6 @@ To build and run all tests:
 ./make
 ```
 
-To build and run a specific end-to-end test,
-for instance running only `modification` tests in the `cassandra-operator`:
-
-```
-make install
-cd cassandra-operator
-E2E_TEST=test/e2e/parallel/modification make e2e-test
-```
-
 An end-to-end testing approach is used wherever possible. 
 The end-to-end tests are run in parallel in order to the reduce build time as much as possible.
 The number of parallel tests is dictated by a hardcoded value in the end-to-end test suite, which has been chosen to reflect the namespace resource quota in AWS Dev.

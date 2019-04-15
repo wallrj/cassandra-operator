@@ -9,7 +9,6 @@ FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 DOMAIN ?= localhost
-E2E_TEST ?= test/e2e
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 buildDir := $(projectDir)/build
@@ -77,15 +76,27 @@ ifeq ($(strip $(USE_MOCK)),true)
 	    ginkgo -p -r --v --progress -stream -timeout=30m test/e2e/parallel/creation -- -junit-report-dir $(junitReportDir)
 endif
 
-e2e-test: ensure-test-report-dir-exists deploy-operator
-	@echo "== e2e-test"
+e2e-test: e2e-test-parallel e2e-test-sequential
+
+e2e-test-parallel: ensure-test-report-dir-exists push-image kubernetes-resources
+	@echo "== e2e-test-parallel"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
 	    POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
 	    FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
 	    USE_MOCK=$(USE_MOCK) \
 	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
 	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
-	    ginkgo -p -r --v --progress -stream -timeout=30m $(E2E_TEST) -- -junit-report-dir $(junitReportDir)
+	    ginkgo -p -r --v --progress -stream -timeout=30m test/e2e/parallel -- -junit-report-dir $(junitReportDir)
+
+e2e-test-sequential: ensure-test-report-dir-exists push-image kubernetes-resources
+	@echo "== e2e-test-sequential"
+	KUBE_CONTEXT=$(KUBE_CONTEXT) \
+	    POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
+	    FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
+	    USE_MOCK=$(USE_MOCK) \
+	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
+	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
+	    ginkgo -r --v --progress -timeout=30m test/e2e/sequential -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 
