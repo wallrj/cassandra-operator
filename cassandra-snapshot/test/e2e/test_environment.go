@@ -6,11 +6,10 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc" // required for connectivity into dev cluster
+	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"os/exec"
 	"time"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -27,11 +26,10 @@ var (
 	kubeContext             string
 	kubeconfigLocation      string
 	ImageUnderTest          string
-	ResourceRequirements    *v1.ResourceRequirements
 )
 
 func init() {
-	kubeContext := os.Getenv("KUBE_CONTEXT")
+	kubeContext = os.Getenv("KUBE_CONTEXT")
 	if kubeContext == "ignore" {
 		// This option is provided to allow the test code to be built without running any tests.
 		return
@@ -41,7 +39,7 @@ func init() {
 		panic("No Kubernetes context specified, value of KUBE_CONTEXT environment variable was empty")
 	}
 
-	var err error
+    var err error
 	kubeconfigLocation = fmt.Sprintf("%s/.kube/config", os.Getenv("HOME"))
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{Precedence: []string{kubeconfigLocation}},
@@ -74,14 +72,6 @@ func init() {
 		}
 		RenameSnapshotCmd = "sed -i \"s/^\\w\\+ /%s /g\" /tmp/snapshots"
 	} else {
-		ResourceRequirements = &v1.ResourceRequirements{
-			Limits: v1.ResourceList{
-				v1.ResourceMemory: resource.MustParse("1Gi"),
-			},
-			Requests: v1.ResourceList{
-				v1.ResourceMemory: resource.MustParse("1Gi"),
-			},
-		}
 		CassandraImageName = "cassandra:3.11"
 		CassandraReadinessProbe = &v1.Probe{
 			Handler: v1.Handler{
@@ -97,7 +87,7 @@ func init() {
 }
 
 func Kubectl(namespace, podName string, command ...string) (*exec.Cmd, []byte, error) {
-	argList := []string{
+    argList := []string{
 		fmt.Sprintf("--kubeconfig=%s", kubeconfigLocation),
 		fmt.Sprintf("--context=%s", kubeContext),
 		fmt.Sprintf("--namespace=%s", namespace),

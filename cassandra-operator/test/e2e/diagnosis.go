@@ -37,14 +37,15 @@ func operatorDiagnosis(namespace string, logSince time.Time) string {
 
 func clusterDiagnosis(namespace, clusterName string) string {
 	var diagnosis []string
+	diagnosis = append(diagnosis, fmt.Sprintf("\n==== Cluster %s =====", clusterName))
+	diagnosis = append(diagnosis, fmt.Sprintf("%v", clusterPodsWide(namespace, clusterName)))
+
 	pods, err := KubeClientset.CoreV1().Pods(namespace).List(metaV1.ListOptions{LabelSelector: fmt.Sprintf("sky.uk/cassandra-operator=%s", clusterName)})
 	if err != nil {
 		return fmt.Sprintf("error while retrieving the pods list for cluster %s.%s: %v", namespace, clusterName, err)
 	}
 
 	for _, pod := range pods.Items {
-		diagnosis = append(diagnosis, fmt.Sprintf("\n==== Cluster %s =====", clusterName))
-		diagnosis = append(diagnosis, fmt.Sprintf("%v", clusterPodsWide(namespace, clusterName)))
 		diagnosis = append(diagnosis, fmt.Sprintf("\n==== Describing pod %s =====", pod.Name))
 		diagnosis = append(diagnosis, fmt.Sprintf("%v", podDescription(namespace, &pod)))
 		diagnosis = append(diagnosis, fmt.Sprintf("\n==== Logs for pod %s ====", pod.Name))

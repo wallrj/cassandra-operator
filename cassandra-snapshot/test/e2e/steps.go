@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"path/filepath"
 	"io/ioutil"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
@@ -31,10 +32,10 @@ func CassandraPodExistsWithLabels(labelsAndValues ...string) *v1.Pod {
 
 	var pod *v1.Pod
 	var err error
-	if ResourceRequirements != nil {
-		pod, err = createCassandraPodWithCustomConfig(labels, podName)
-	} else {
+	if UseMockedImage {
 		pod, err = createCassandraPod(labels, podName)
+	} else {
+		pod, err = createCassandraPodWithCustomConfig(labels, podName)
 	}
 
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
@@ -55,6 +56,7 @@ func createCassandraPod(labels map[string]string, podName string) (*v1.Pod, erro
 					Name:           "cassandra",
 					Image:          CassandraImageName,
 					ReadinessProbe: CassandraReadinessProbe,
+					Resources: 	resourceRequirementsOf("50Mi"),
 				},
 			},
 			TerminationGracePeriodSeconds: &TerminateImmediately,
@@ -75,18 +77,20 @@ func createCassandraPodWithCustomConfig(labels map[string]string, podName string
 		Spec: v1.PodSpec{
 			InitContainers: []v1.Container{
 				{
-					Name: "copy-default-cassandra-config",
-					Image: CassandraImageName,
+					Name:    "copy-default-cassandra-config",
+					Image:   CassandraImageName,
 					Command: []string{"sh", "-c", "cp -vr /etc/cassandra/* /config"},
-					VolumeMounts:   []v1.VolumeMount{
+					Resources: 	resourceRequirementsOf("50Mi"),
+					VolumeMounts: []v1.VolumeMount{
 						{Name: "config", MountPath: "/config"},
 					},
 				},
 				{
-					Name: "copy-custom-config",
-					Image: "busybox",
+					Name:    "copy-custom-config",
+					Image:   "busybox",
 					Command: []string{"sh", "-c", "cp -rLv /custom-config/* /config"},
-					VolumeMounts:   []v1.VolumeMount{
+					Resources: 	resourceRequirementsOf("50Mi"),
+					VolumeMounts: []v1.VolumeMount{
 						{Name: "config", MountPath: "/config"},
 						{Name: "custom-config", MountPath: "/custom-config"},
 					},
@@ -97,11 +101,10 @@ func createCassandraPodWithCustomConfig(labels map[string]string, podName string
 					Name:           "cassandra",
 					Image:          CassandraImageName,
 					ReadinessProbe: CassandraReadinessProbe,
-					Resources:      *ResourceRequirements,
-					VolumeMounts:   []v1.VolumeMount{
+					Resources: 	resourceRequirementsOf("1Gi"),
+					VolumeMounts: []v1.VolumeMount{
 						{Name: "config", MountPath: "/etc/cassandra"},
 					},
-
 				},
 			},
 			TerminationGracePeriodSeconds: &TerminateImmediately,
@@ -194,9 +197,10 @@ func RunCommandInCassandraSnapshotPod(clusterName, command string, arg ...string
 			RestartPolicy:      v1.RestartPolicyNever,
 			Containers: []v1.Container{
 				{
-					Name:    "command-runner",
-					Image:   ImageUnderTest,
-					Command: commandToRun,
+					Name:      "command-runner",
+					Image:     ImageUnderTest,
+					Command:   commandToRun,
+					Resources: resourceRequirementsOf("50Mi"),
 				},
 			},
 		},
@@ -273,7 +277,6 @@ func cassandraConfigMap(namespace, resourceName string) (*v1.ConfigMap, error) {
 			Labels: map[string]string{
 				OperatorLabel: resourceName,
 			},
-
 		},
 		Data: configData,
 	}
@@ -306,4 +309,15 @@ func readFileContent(fileName string) (string, error) {
 
 	fileContent := string(bytes)
 	return fileContent, err
+}
+
+func resourceRequirementsOf(quota string) v1.ResourceRequirements {
+	return v1.ResourceRequirements{
+		Limits: v1.ResourceList{
+			v1.ResourceMemory: resource.MustParse(quota),
+		},
+		Requests: v1.ResourceList{
+			v1.ResourceMemory: resource.MustParse(quota),
+		},
+	}
 }
