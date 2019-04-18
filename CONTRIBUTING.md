@@ -30,7 +30,6 @@ However tests can also be run against a real Cassandra image as well as against 
 For instance, if you want to run a full build against your cluster with the default `cassandra:3.11` Cassandra image, use this: 
 ```
 USE_MOCK=false POD_START_TIMEOUT=5m DOMAIN=mydomain.com KUBE_CONTEXT=k8Context TEST_REGISTRY=myregistry.com/cassandra-operator-test make
-
 ```
 ... where the available flags are:
 

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release
+.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-dep go-build go-install docker-image push-image release
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -9,6 +9,8 @@ FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 DOMAIN ?= localhost
+IMAGE_TO_DEPLOY ?= $(dockerTestImage)
+NAMESPACE ?= test-cassandra-operator
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 buildDir := $(projectDir)/build
@@ -25,7 +27,7 @@ build: go-build go-install docker-image
 
 install: build push-image
 
-check: fmt vet lint validate-licences test integration-test e2e-test
+check: fmt vet lint validate-licences test deploy-operator integration-test e2e-test
 
 setup:
 	@echo "== setup"
@@ -33,9 +35,12 @@ setup:
 	go get -v github.com/onsi/ginkgo/ginkgo && cd $$GOPATH/src/github.com/onsi/ginkgo && git checkout 'v1.6.0' && go install github.com/onsi/ginkgo/ginkgo
 	curl https://raw.githubusercontent.com/golang/dep/v0.5.1/install.sh | sh
 
-go-build: ensure-build-dir-exists
-	@echo "== build"
+go-dep:
+	@echo "== go-dep"
 	dep ensure -v -vendor-only
+
+go-build: ensure-build-dir-exists go-dep
+	@echo "== build"
 	go build -o $(buildDir)/bin/cassandra-operator -v github.com/sky-uk/cassandra-operator/cassandra-operator/cmd/operator
 	KUBE_CONTEXT=ignore go test -run xxxxx $(testPkgs) # build the test code but don't run any tests yet
 
@@ -60,11 +65,11 @@ ensure-build-dir-exists:
 ensure-test-report-dir-exists: ensure-build-dir-exists
 	mkdir -p $(junitReportDir)
 
-test: ensure-test-report-dir-exists
+test: ensure-test-report-dir-exists go-dep
 	@echo "== test"
 	ginkgo -p -r --v --progress pkg cmd -- -junit-report-dir $(junitReportDir)
 
-integration-test: ensure-test-report-dir-exists deploy-operator
+integration-test: ensure-test-report-dir-exists go-dep
 	@echo "== integration-test"
 ifeq ($(strip $(USE_MOCK)),true)
 	@echo "== e2e-test integration test against real cassandra"
@@ -78,7 +83,7 @@ endif
 
 e2e-test: e2e-test-parallel e2e-test-sequential
 
-e2e-test-parallel: ensure-test-report-dir-exists push-image kubernetes-resources
+e2e-test-parallel: ensure-test-report-dir-exists go-dep
 	@echo "== e2e-test-parallel"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
 	    POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
@@ -88,7 +93,7 @@ e2e-test-parallel: ensure-test-report-dir-exists push-image kubernetes-resources
 	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
 	    ginkgo -p -r --v --progress -stream -timeout=30m test/e2e/parallel -- -junit-report-dir $(junitReportDir)
 
-e2e-test-sequential: ensure-test-report-dir-exists push-image kubernetes-resources
+e2e-test-sequential: ensure-test-report-dir-exists go-dep
 	@echo "== e2e-test-sequential"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
 	    POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
@@ -102,9 +107,9 @@ docker-image: go-build common-docker-build
 
 push-image: docker-image common-docker-push
 
-deploy-operator: push-image
+deploy-operator:
 	@echo "== deploy-operator"
-	IMAGE=$(dockerTestImage) CONTEXT=$(KUBE_CONTEXT) NAMESPACE=test-cassandra-operator INGRESS_HOST=test-cassandra-operator.cassandra-operator.$(DOMAIN) $(projectDir)/deploy.sh
+	IMAGE=$(IMAGE_TO_DEPLOY) CONTEXT=$(KUBE_CONTEXT) NAMESPACE=$(NAMESPACE) INGRESS_HOST=$(NAMESPACE).cassandra-operator.$(DOMAIN) $(projectDir)/deploy.sh
 
 validate-licences:
 	@echo "== validate licences"
