@@ -214,8 +214,9 @@ FEATURE_GATES=${FEATURE_GATES} KUBELET_FEATURE_GATES=${KUBELET_FEATURE_GATES} NU
 # add kubectl directory to PATH
 export PATH="$HOME/.kubeadm-dind-cluster:$PATH"
 
+NAMESPACE=${NAMESPACE:-"test-cassandra-operator"}
 create_test_namespace local-volume-provisioning
-create_test_namespace test-cassandra-operator
+create_test_namespace ${NAMESPACE}
 
 deploy_local_volume_provisioner_credentials
 

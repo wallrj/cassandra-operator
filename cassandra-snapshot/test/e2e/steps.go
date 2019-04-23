@@ -3,19 +3,18 @@ package e2e
 import (
 	"fmt"
 	"github.com/onsi/gomega"
+	"io/ioutil"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
-	"runtime"
-	"path/filepath"
-	"io/ioutil"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
-	Namespace     = "test-cassandra-operator"
 	OperatorLabel = "cassandra-snapshot-test"
 )
 
@@ -56,7 +55,7 @@ func createCassandraPod(labels map[string]string, podName string) (*v1.Pod, erro
 					Name:           "cassandra",
 					Image:          CassandraImageName,
 					ReadinessProbe: CassandraReadinessProbe,
-					Resources: 	resourceRequirementsOf("50Mi"),
+					Resources:      resourceRequirementsOf("50Mi"),
 				},
 			},
 			TerminationGracePeriodSeconds: &TerminateImmediately,
@@ -77,19 +76,19 @@ func createCassandraPodWithCustomConfig(labels map[string]string, podName string
 		Spec: v1.PodSpec{
 			InitContainers: []v1.Container{
 				{
-					Name:    "copy-default-cassandra-config",
-					Image:   CassandraImageName,
-					Command: []string{"sh", "-c", "cp -vr /etc/cassandra/* /config"},
-					Resources: 	resourceRequirementsOf("50Mi"),
+					Name:      "copy-default-cassandra-config",
+					Image:     CassandraImageName,
+					Command:   []string{"sh", "-c", "cp -vr /etc/cassandra/* /config"},
+					Resources: resourceRequirementsOf("50Mi"),
 					VolumeMounts: []v1.VolumeMount{
 						{Name: "config", MountPath: "/config"},
 					},
 				},
 				{
-					Name:    "copy-custom-config",
-					Image:   "busybox",
-					Command: []string{"sh", "-c", "cp -rLv /custom-config/* /config"},
-					Resources: 	resourceRequirementsOf("50Mi"),
+					Name:      "copy-custom-config",
+					Image:     "busybox",
+					Command:   []string{"sh", "-c", "cp -rLv /custom-config/* /config"},
+					Resources: resourceRequirementsOf("50Mi"),
 					VolumeMounts: []v1.VolumeMount{
 						{Name: "config", MountPath: "/config"},
 						{Name: "custom-config", MountPath: "/custom-config"},
@@ -101,7 +100,7 @@ func createCassandraPodWithCustomConfig(labels map[string]string, podName string
 					Name:           "cassandra",
 					Image:          CassandraImageName,
 					ReadinessProbe: CassandraReadinessProbe,
-					Resources: 	resourceRequirementsOf("1Gi"),
+					Resources:      resourceRequirementsOf("1Gi"),
 					VolumeMounts: []v1.VolumeMount{
 						{Name: "config", MountPath: "/etc/cassandra"},
 					},

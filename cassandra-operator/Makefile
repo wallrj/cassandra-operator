@@ -74,6 +74,7 @@ integration-test: ensure-test-report-dir-exists go-dep
 ifeq ($(strip $(USE_MOCK)),true)
 	@echo "== e2e-test integration test against real cassandra"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
+	    NAMESPACE=$(NAMESPACE) \
 	    POD_START_TIMEOUT=5m \
 	    USE_MOCK=false \
 	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
@@ -86,6 +87,7 @@ e2e-test: e2e-test-parallel e2e-test-sequential
 e2e-test-parallel: ensure-test-report-dir-exists go-dep
 	@echo "== e2e-test-parallel"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
+	    NAMESPACE=$(NAMESPACE) \
 	    POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
 	    FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
 	    USE_MOCK=$(USE_MOCK) \
@@ -96,6 +98,7 @@ e2e-test-parallel: ensure-test-report-dir-exists go-dep
 e2e-test-sequential: ensure-test-report-dir-exists go-dep
 	@echo "== e2e-test-sequential"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
+	    NAMESPACE=$(NAMESPACE) \
 	    POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
 	    FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
 	    USE_MOCK=$(USE_MOCK) \

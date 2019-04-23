@@ -26,6 +26,7 @@ var (
 	kubeContext             string
 	kubeconfigLocation      string
 	ImageUnderTest          string
+	Namespace               string
 )
 
 func init() {
@@ -39,7 +40,7 @@ func init() {
 		panic("No Kubernetes context specified, value of KUBE_CONTEXT environment variable was empty")
 	}
 
-    var err error
+	var err error
 	kubeconfigLocation = fmt.Sprintf("%s/.kube/config", os.Getenv("HOME"))
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{Precedence: []string{kubeconfigLocation}},
@@ -83,11 +84,16 @@ func init() {
 		RenameSnapshotCmd = "find /var/lib/cassandra/data/ -type d -path \"*/snapshots/*\" | xargs -I {} sh -c 'snapshot_name={}; snapshot_dir=$(dirname $snapshot_name); mv $snapshot_name $snapshot_dir/%s' \\;"
 	}
 
-	log.Infof("Running tests using Cassandra image: %v", CassandraImageName)
+	Namespace = os.Getenv("NAMESPACE")
+	if Namespace == "" {
+		Namespace = "test-cassandra-operator"
+	}
+
+	log.Infof("Running tests using Cassandra image: %s in namespace: %s", CassandraImageName, Namespace)
 }
 
 func Kubectl(namespace, podName string, command ...string) (*exec.Cmd, []byte, error) {
-    argList := []string{
+	argList := []string{
 		fmt.Sprintf("--kubeconfig=%s", kubeconfigLocation),
 		fmt.Sprintf("--context=%s", kubeContext),
 		fmt.Sprintf("--namespace=%s", namespace),

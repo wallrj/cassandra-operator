@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	Namespace          = "test-cassandra-operator"
 	PodMemory          = "1Gi"
 	PodCPU             = "0"
 	podStorageSize     = "1Gi"

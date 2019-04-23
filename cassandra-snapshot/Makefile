@@ -82,6 +82,7 @@ ifeq ($(strip $(USE_MOCK)),true)
 	@echo "== e2e-test integration test against real cassandra"
 	IMAGE_UNDER_TEST=$(dockerTestImage) \
         KUBE_CONTEXT=$(KUBE_CONTEXT) \
+        NAMESPACE=$(NAMESPACE) \
         USE_MOCK=false \
         ginkgo -r --v --progress test/e2e/create -- -junit-report-dir $(junitReportDir)
 endif
@@ -91,6 +92,7 @@ e2e-test: ensure-test-report-dir-exists go-dep
 	IMAGE_UNDER_TEST=$(IMAGE_UNDER_TEST) \
         FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
         KUBE_CONTEXT=$(KUBE_CONTEXT) \
+        NAMESPACE=$(NAMESPACE) \
         USE_MOCK=$(USE_MOCK) \
         ginkgo -r --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
 

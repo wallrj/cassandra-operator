@@ -8,6 +8,7 @@ USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
+NAMESPACE ?= test-cassandra-operator
 
 gitRev := $(shell git rev-parse --short HEAD)
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
@@ -52,7 +53,7 @@ setup-all:
 
 recreate-dind-cluster:
 	@echo "== recreate dind cluster"
-	$(projectDir)/test-kubernetes-cluster/recreate-dind-cluster.sh
+	NAMESPACE=$(NAMESPACE) $(projectDir)/test-kubernetes-cluster/recreate-dind-cluster.sh
 
 release-all:
 	@echo "== release-all"

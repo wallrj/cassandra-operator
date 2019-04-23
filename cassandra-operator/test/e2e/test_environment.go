@@ -32,6 +32,7 @@ var (
 	NodeStartDuration              time.Duration
 	NodeRestartDuration            time.Duration
 	NodeTerminationDuration        time.Duration
+	Namespace                      string
 )
 
 func init() {
@@ -96,9 +97,15 @@ func init() {
 	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", cluster.DefaultCassandraBootstrapperImage)
 	CassandraSnapshotImageName = getEnvOrDefault("CASSANDRA_SNAPSHOT_IMAGE", cluster.DefaultCassandraSnapshotImage)
 
+	Namespace = os.Getenv("NAMESPACE")
+	if Namespace == "" {
+		Namespace = "test-cassandra-operator"
+	}
+
 	log.Infof(
-		"Running tests against Kubernetes context:%s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s",
+		"Running tests against Kubernetes context:%s in namespace: %s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s",
 		kubeContext,
+		Namespace,
 		CassandraImageName,
 		CassandraBootstrapperImageName,
 		CassandraBootstrapperImageName,
