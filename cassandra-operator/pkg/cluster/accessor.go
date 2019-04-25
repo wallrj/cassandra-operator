@@ -134,7 +134,7 @@ func (h *Accessor) WaitUntilRackChangeApplied(cluster *Cluster, statefulSet *v1b
 	time.Sleep(timeBeforeFirstCheck)
 
 	if err := wait.PollImmediateInfinite(timeBetweenChecks, h.statefulSetChangeApplied(cluster, statefulSet)); err != nil {
-		return fmt.Errorf("error while waiting for stateful set creation to complete")
+		return fmt.Errorf("error while waiting for stateful set %s.%s creation to complete: %v", statefulSet.Namespace, statefulSet.Name, err)
 	}
 
 	log.Infof("stateful set %s.%s is ready", statefulSet.Namespace, statefulSet.Name)

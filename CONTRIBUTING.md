@@ -45,6 +45,8 @@ Flag | Meaning | Default
 `TEST_REGISTRY`                | The name of the docker registry where test images created via the build will be pushed| `localhost:5000`
 `DOCKER_USERNAME`              | The docker username allowed to push to the release registry | (provided as encrypted variable in `.travis.yml`)
 `DOCKER_PASSWORD`              | The password for the docker username allowed to push to the release registry | (provided as encrypted variable in `.travis.yml`)
+`GINKGO_COMPILERS`             | Ginkgo `-compilers` value to use when compiling multiple tests suite | `0`, equivalent to not setting the option at all
+`GINKGO_NODES`                 | Ginkgo `-nodes` value to use when running tests suite in parallel | `0`, equivalent to not setting the option at all
 
  
 ## What to work on

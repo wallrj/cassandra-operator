@@ -13,7 +13,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const CheckInterval = 5 * time.Second
+const (
+	CheckInterval = 5 * time.Second
+	// max number of 1Gi mem nodes that can fit within the namespace resource quota
+	MaxCassandraNodesPerNamespace = 6
+)
 
 var (
 	KubeClientset                  *kubernetes.Clientset
@@ -108,7 +112,7 @@ func init() {
 		Namespace,
 		CassandraImageName,
 		CassandraBootstrapperImageName,
-		CassandraBootstrapperImageName,
+		CassandraSnapshotImageName,
 	)
 }
 

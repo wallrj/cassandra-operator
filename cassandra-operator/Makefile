@@ -11,6 +11,8 @@ CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 DOMAIN ?= localhost
 IMAGE_TO_DEPLOY ?= $(dockerTestImage)
 NAMESPACE ?= test-cassandra-operator
+GINKGO_NODES ?= 0
+GINKGO_COMPILERS ?= 0
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 buildDir := $(projectDir)/build
@@ -67,7 +69,7 @@ ensure-test-report-dir-exists: ensure-build-dir-exists
 
 test: ensure-test-report-dir-exists go-dep
 	@echo "== test"
-	ginkgo -p -r --v --progress pkg cmd -- -junit-report-dir $(junitReportDir)
+	ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress pkg cmd -- -junit-report-dir $(junitReportDir)
 
 integration-test: ensure-test-report-dir-exists go-dep
 	@echo "== integration-test"
@@ -79,7 +81,7 @@ ifeq ($(strip $(USE_MOCK)),true)
 	    USE_MOCK=false \
 	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
 	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
-	    ginkgo -p -r --v --progress -stream -timeout=30m test/e2e/parallel/creation -- -junit-report-dir $(junitReportDir)
+	    ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress -stream -timeout=30m test/e2e/parallel/creation -- -junit-report-dir $(junitReportDir)
 endif
 
 e2e-test: e2e-test-parallel e2e-test-sequential
@@ -93,7 +95,7 @@ e2e-test-parallel: ensure-test-report-dir-exists go-dep
 	    USE_MOCK=$(USE_MOCK) \
 	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
 	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
-	    ginkgo -p -r --v --progress -stream -timeout=30m test/e2e/parallel -- -junit-report-dir $(junitReportDir)
+	    ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress -stream -timeout=30m test/e2e/parallel -- -junit-report-dir $(junitReportDir)
 
 e2e-test-sequential: ensure-test-report-dir-exists go-dep
 	@echo "== e2e-test-sequential"
@@ -104,7 +106,7 @@ e2e-test-sequential: ensure-test-report-dir-exists go-dep
 	    USE_MOCK=$(USE_MOCK) \
 	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
 	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
-	    ginkgo -r --v --progress -timeout=30m test/e2e/sequential -- -junit-report-dir $(junitReportDir)
+	    ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress -timeout=30m test/e2e/sequential -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 

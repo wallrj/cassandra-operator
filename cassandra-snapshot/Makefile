@@ -7,6 +7,8 @@ USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 IMAGE_UNDER_TEST ?= $(dockerTestImage)
 NAMESPACE ?= test-cassandra-operator
+GINKGO_NODES ?= 0
+GINKGO_COMPILERS ?= 0
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 k8ResourcesDir := $(projectDir)/../cassandra-operator/kubernetes-resources
@@ -74,7 +76,7 @@ ensure-test-report-dir-exists: ensure-build-dir-exists
 
 test: ensure-test-report-dir-exists go-dep
 	@echo "== test"
-	ginkgo -r --v --progress pkg cmd -- -junit-report-dir $(junitReportDir)
+	ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress pkg cmd -- -junit-report-dir $(junitReportDir)
 
 integration-test: ensure-test-report-dir-exists go-dep
 	@echo "== integration-test"
@@ -84,7 +86,7 @@ ifeq ($(strip $(USE_MOCK)),true)
         KUBE_CONTEXT=$(KUBE_CONTEXT) \
         NAMESPACE=$(NAMESPACE) \
         USE_MOCK=false \
-        ginkgo -r --v --progress test/e2e/create -- -junit-report-dir $(junitReportDir)
+        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/create -- -junit-report-dir $(junitReportDir)
 endif
 
 e2e-test: ensure-test-report-dir-exists go-dep
@@ -94,7 +96,7 @@ e2e-test: ensure-test-report-dir-exists go-dep
         KUBE_CONTEXT=$(KUBE_CONTEXT) \
         NAMESPACE=$(NAMESPACE) \
         USE_MOCK=$(USE_MOCK) \
-        ginkgo -r --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
+        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 

@@ -16,7 +16,7 @@ func PrintDiagnosis(namespace string, testStartTime time.Time, clusterNames ...s
 		diagnosis = append(diagnosis, fmt.Sprintf("\n\t\t=== CLUSTER %s DIAGNOSIS ===\n", clusterName))
 		diagnosis = append(diagnosis, clusterDiagnosis(namespace, clusterName))
 	}
-	fmt.Printf("\n\n\t\t== DIAGNOSIS ==\n\n%s", strings.Join(diagnosis, "\n"))
+	fmt.Printf("\n\n\t\t== DIAGNOSIS at %s ==\n\n%s", time.Now().Format(time.RFC3339), strings.Join(diagnosis, "\n"))
 }
 
 func operatorDiagnosis(namespace string, logSince time.Time) string {

@@ -17,11 +17,6 @@ import (
 	"time"
 )
 
-const (
-	// max number of 1Gi mem nodes that can fit within the namespace resource quota
-	resourceLimit = 6
-)
-
 var (
 	resources          *parallel.ResourceSemaphore
 	resourcesToReclaim int
@@ -35,12 +30,12 @@ func TestModification(t *testing.T) {
 
 var _ = ParallelTestBeforeSuite(func() []TestCluster {
 	// initialise the resources available just once for the entire test suite
-	resources = parallel.NewResourceSemaphore(resourceLimit)
+	resources = parallel.NewResourceSemaphore(MaxCassandraNodesPerNamespace)
 	return []TestCluster{}
 }, func(clusterNames []string) {
 	// instantiate the accessor to the resource file for each spec,
 	// so they can make use of it to acquire / release resources
-	resources = parallel.NewUnInitialisedResourceSemaphore(resourceLimit)
+	resources = parallel.NewUnInitialisedResourceSemaphore(MaxCassandraNodesPerNamespace)
 })
 
 func registerResourcesUsed(size int) {
