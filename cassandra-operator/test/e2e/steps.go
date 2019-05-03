@@ -104,6 +104,13 @@ func TheClusterPodSpecAreChangedTo(namespace, clusterName string, podSpec v1alph
 	log.Infof("Updated pod spec for cluster %s", clusterName)
 }
 
+func TheDcImmutablePropertyIsChangedTo(namespace, clusterName, dc string) {
+	mutateCassandraSpec(namespace, clusterName, func(spec *v1alpha1.CassandraSpec) {
+		spec.DC = dc
+	})
+	log.Infof("Updated DC name for cluster %s", clusterName)
+}
+
 func TheImageImmutablePropertyIsChangedTo(namespace, clusterName, imageName string) {
 	mutateCassandraSpec(namespace, clusterName, func(spec *v1alpha1.CassandraSpec) {
 		spec.Pod.Image = imageName

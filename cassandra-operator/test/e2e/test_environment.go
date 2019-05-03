@@ -50,23 +50,8 @@ func init() {
 		kubeContext = "dind"
 	}
 
-	podStartTimeoutEnvValue := os.Getenv("POD_START_TIMEOUT")
-	if podStartTimeoutEnvValue == "" {
-		podStartTimeoutEnvValue = "45s"
-	}
-
 	var err error
-	NodeStartDuration, err = time.ParseDuration(podStartTimeoutEnvValue)
-	if err != nil {
-		panic(fmt.Sprintf("Invalid pod start timeout specified %v", err))
-	}
-
-	NodeTerminationDuration = NodeStartDuration
-	NodeRestartDuration = NodeStartDuration * 2
-
-	UseMockedImage = os.Getenv("USE_MOCK") == "true"
 	kubeconfigLocation = fmt.Sprintf("%s/.kube/config", os.Getenv("HOME"))
-
 	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{Precedence: []string{kubeconfigLocation}},
 		&clientcmd.ConfigOverrides{CurrentContext: kubeContext},
@@ -79,7 +64,13 @@ func init() {
 	KubeClientset = kubernetes.NewForConfigOrDie(config)
 	CassandraClientset = versioned.NewForConfigOrDie(config)
 
+	UseMockedImage = os.Getenv("USE_MOCK") == "true"
+	podStartTimeoutEnvValue := os.Getenv("POD_START_TIMEOUT")
+
 	if UseMockedImage {
+		if podStartTimeoutEnvValue == "" {
+			podStartTimeoutEnvValue = "45s"
+		}
 		CassandraImageName = os.Getenv("FAKE_CASSANDRA_IMAGE")
 		if CassandraImageName == "" {
 			panic("FAKE_CASSANDRA_IMAGE must be supplied")
@@ -90,6 +81,9 @@ func init() {
 		CassandraLivenessProbeFailureThreshold = 3
 		CassandraReadinessProbeFailureThreshold = 3
 	} else {
+		if podStartTimeoutEnvValue == "" {
+			podStartTimeoutEnvValue = "5m"
+		}
 		CassandraImageName = cluster.DefaultCassandraImage
 		CassandraInitialDelay = 30
 		CassandraLivenessPeriod = 30
@@ -98,6 +92,13 @@ func init() {
 		CassandraReadinessProbeFailureThreshold = 8 // allow 2mins
 	}
 
+	NodeStartDuration, err = time.ParseDuration(podStartTimeoutEnvValue)
+	if err != nil {
+		panic(fmt.Sprintf("Invalid pod start timeout specified %v", err))
+	}
+
+	NodeTerminationDuration = NodeStartDuration
+	NodeRestartDuration = NodeStartDuration * 2
 	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", cluster.DefaultCassandraBootstrapperImage)
 	CassandraSnapshotImageName = getEnvOrDefault("CASSANDRA_SNAPSHOT_IMAGE", cluster.DefaultCassandraSnapshotImage)
 
@@ -107,12 +108,13 @@ func init() {
 	}
 
 	log.Infof(
-		"Running tests against Kubernetes context:%s in namespace: %s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s",
+		"Running tests with Kubernetes context: %s, namespace: %s, Cassandra image: %s, bootstrapper image: %s, snapshot image: %s, node start duration: %s",
 		kubeContext,
 		Namespace,
 		CassandraImageName,
 		CassandraBootstrapperImageName,
 		CassandraSnapshotImageName,
+		NodeStartDuration,
 	)
 }
 
