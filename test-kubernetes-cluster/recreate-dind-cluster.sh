@@ -209,7 +209,7 @@ ${buildDir}/dind-cluster-v${DIND_VERSION}.sh clean
 FEATURE_GATES="${FEATURE_GATES:-MountPropagation=true,PersistentLocalVolumes=true}"
 KUBELET_FEATURE_GATES="${KUBELET_FEATURE_GATES:-MountPropagation=true,DynamicKubeletConfig=true,PersistentLocalVolumes=true}"
 
-FEATURE_GATES=${FEATURE_GATES} KUBELET_FEATURE_GATES=${KUBELET_FEATURE_GATES} NUM_NODES=${numNodes} MGMT_CIDRS=172.18.0.0/16 POD_NETWORK_CIDR=172.20.0.0/16 ${buildDir}/dind-cluster-v${DIND_VERSION}.sh up
+FEATURE_GATES=${FEATURE_GATES} KUBELET_FEATURE_GATES=${KUBELET_FEATURE_GATES} NUM_NODES=${numNodes} POD_NETWORK_CIDR=172.20.0.0/16 ${buildDir}/dind-cluster-v${DIND_VERSION}.sh up
 
 # add kubectl directory to PATH
 export PATH="$HOME/.kubeadm-dind-cluster:$PATH"
