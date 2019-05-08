@@ -17,13 +17,31 @@ projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 
 travis: make-all
 
-setup: setup-all recreate-dind-cluster
+setup: check-system-dependencies setup-all recreate-dind-cluster
 
 install: install-all
 
 clean: clean-all
 
 release: release-all
+
+check-system-dependencies:
+	@echo "== check-system-dependencies"
+ifeq (, $(shell which go))
+	$(error "golang not found in PATH")
+endif
+ifeq (, $(shell which docker))
+	$(error "docker not found in PATH")
+endif
+ifeq (, $(shell which dgoss))
+	$(error "dgoss not found in PATH")
+endif
+ifeq (, $(shell which java))
+	$(error "java not found in PATH")
+endif
+ifeq (, $(shell which kubectl))
+	$(error "kubectl not found in PATH")
+endif
 
 make-all:
 	@echo "== make-all"

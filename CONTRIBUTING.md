@@ -9,8 +9,9 @@ All new code, including changes to existing code, should be tested and have a co
 
 ## Building and Testing
 
-To setup your environment with the required dependencies.
-Running this at the project root level will create a [Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster/) cluster. 
+To setup your environment with the required dependencies, run this at the project root level.
+This will create a [Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster/) cluster.
+Missing system libraries that need installing will be listed in the output:   
 ```
 ./make setup
 ```
