@@ -7,6 +7,20 @@ issue before making a change.  This saves everyone from wasted effort in the eve
 changes need some adjustment before they are ready for submission.
 All new code, including changes to existing code, should be tested and have a corresponding test added or updated where applicable.
 
+
+## Prerequisites
+
+The following must be installed on your development machine:
+
+- `go`
+- `docker`
+- `openjdk-8` or another JDK
+- `gcc` (or `build-essential` package on debian distributions)
+- `kubectl`
+- `dgoss`
+
+`cassandra-operator` must be cloned to a location on your `$GOPATH`, for example `go/src/github.com/sky-uk/cassandra-operator/`.
+
 ## Building and Testing
 
 To setup your environment with the required dependencies, run this at the project root level.
