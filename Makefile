@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean-all build-all setup setup-all
+.PHONY: travis check-style clean-all build-all setup setup-all check-style-all
 
 TEST_REGISTRY ?= localhost:5000
 POD_START_TIMEOUT ?= 120s
@@ -24,6 +24,8 @@ install: install-all
 clean: clean-all
 
 release: release-all
+
+check-style: check-style-all
 
 check-system-dependencies:
 	@echo "== check-system-dependencies"
@@ -81,3 +83,10 @@ release-all:
 	$(MAKE) -C cassandra-bootstrapper release
 	$(MAKE) -C cassandra-snapshot release
 	$(MAKE) -C cassandra-operator release
+
+check-style-all:
+	@echo "== check-style-all"
+	$(MAKE) -C fake-cassandra-docker check-style
+	$(MAKE) -C cassandra-bootstrapper check-style
+	$(MAKE) -C cassandra-snapshot check-style
+	$(MAKE) -C cassandra-operator check-style

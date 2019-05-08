@@ -25,24 +25,31 @@ The following must be installed on your development machine:
 
 To setup your environment with the required dependencies, run this at the project root level.
 This will create a [Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster/) cluster.
-Missing system libraries that need installing will be listed in the output:   
+Missing system libraries that need installing will be listed in the output:
+
 ```
-./make setup
+make setup
+```
+
+To run code style checks on all the sub-projects:
+
+```
+make check-style
 ```
 
 To build and run all tests:
 ```
-./make
+make
 ```
 
-An end-to-end testing approach is used wherever possible. 
+An end-to-end testing approach is used wherever possible.
 The end-to-end tests are run in parallel in order to the reduce build time as much as possible.
 The number of parallel tests is dictated by a hardcoded value in the end-to-end test suite, which has been chosen to reflect the namespace resource quota in AWS Dev.
 
 End-to-end tests are by default run against a local [Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster/) cluster using a [fake-cassandra-docker](fake-cassandra-docker/README.md) image to speed up testing.
-However tests can also be run against a real Cassandra image as well as against your own cluster. 
- 
-For instance, if you want to run a full build against your cluster with the default `cassandra:3.11` Cassandra image, use this: 
+However tests can also be run against a real Cassandra image as well as against your own cluster.
+
+For instance, if you want to run a full build against your cluster with the default `cassandra:3.11` Cassandra image, use this:
 ```
 USE_MOCK=false POD_START_TIMEOUT=5m DOMAIN=mydomain.com KUBE_CONTEXT=k8Context TEST_REGISTRY=myregistry.com/cassandra-operator-test make
 ```
@@ -51,10 +58,10 @@ USE_MOCK=false POD_START_TIMEOUT=5m DOMAIN=mydomain.com KUBE_CONTEXT=k8Context T
 Flag | Meaning | Default
 ---|---|---
 `USE_MOCK`                     | Whether the Cassandra pods created in the tests should use a `fake-cassandra-docker` image. If true, you can further specify which image to use via the `FAKE_CASSANDRA_IMAGE` flag | `true`
-`CASSANDRA_BOOTSTRAPPER_IMAGE` | The fully qualified name for the `cassandra-bootstrapper` docker image | `$(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)` 
+`CASSANDRA_BOOTSTRAPPER_IMAGE` | The fully qualified name for the `cassandra-bootstrapper` docker image | `$(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)`
 `FAKE_CASSANDRA_IMAGE`         | The fully qualified name for the `fake-cassandra-docker` docker image | `$(TEST_REGISTRY)/fake-cassandra:v$(gitRev)`
 `CASSANDRA_SNAPSHOT_IMAGE`     | The fully qualified name for the `cassandra-snapshot` docker image | `$(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)`
-`POD_START_TIMEOUT`            | The max duration allowed for a Cassandra pod to start. The time varies depending on whether a real or fake cassandra image is used and whether PVC or empty dir is used for the cassandra volumes. As a starting point use 120s for fake cassandra otherwise 5m | `120s` 
+`POD_START_TIMEOUT`            | The max duration allowed for a Cassandra pod to start. The time varies depending on whether a real or fake cassandra image is used and whether PVC or empty dir is used for the cassandra volumes. As a starting point use 120s for fake cassandra otherwise 5m | `120s`
 `DOMAIN`                       | Domain name used to create the test operator ingress host | `localhost`
 `KUBE_CONTEXT`                 | The Kubernetes context where the test operator will be deployed | `dind`
 `TEST_REGISTRY`                | The name of the docker registry where test images created via the build will be pushed| `localhost:5000`
@@ -63,10 +70,10 @@ Flag | Meaning | Default
 `GINKGO_COMPILERS`             | Ginkgo `-compilers` value to use when compiling multiple tests suite | `0`, equivalent to not setting the option at all
 `GINKGO_NODES`                 | Ginkgo `-nodes` value to use when running tests suite in parallel | `0`, equivalent to not setting the option at all
 
- 
+
 ## What to work on
 
-If you want to get involved but are not sure on what issue to pick up, 
+If you want to get involved but are not sure on what issue to pick up,
 you should look for an issue with a `good first issue` or `bug` label.
 
 ## Pull Request Process
@@ -125,4 +132,3 @@ issue or contacting one or more of the project maintainers.
 This Code of Conduct is adapted from the [Contributor Covenant](http://contributor-covenant.org),
 version 1.2.0, available at
 [http://contributor-covenant.org/version/1/2/0/](http://contributor-covenant.org/version/1/2/0/)
-

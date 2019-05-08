@@ -3,6 +3,7 @@ package e2e
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"io/ioutil"
 	appsV1 "k8s.io/api/apps/v1beta2"
@@ -13,7 +14,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 )
 
 func PersistentVolumeClaimsForCluster(namespace, clusterName string) func() ([]*labelledResource, error) {

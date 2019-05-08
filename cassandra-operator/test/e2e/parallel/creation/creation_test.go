@@ -17,7 +17,7 @@ import (
 var (
 	multipleRacksCluster *TestCluster
 	emptyDirCluster      *TestCluster
-	testStartTime		 time.Time
+	testStartTime        time.Time
 )
 
 func TestCreation(t *testing.T) {
@@ -50,13 +50,13 @@ func createClustersInParallel(multipleRacksCluster, emptyDirCluster *TestCluster
 			CPU:               resource.MustParse("1m"),
 			StorageSize:       resource.MustParse("100Mi"),
 			LivenessProbe: &v1alpha1.Probe{
-				FailureThreshold: CassandraLivenessProbeFailureThreshold,
+				FailureThreshold:    CassandraLivenessProbeFailureThreshold,
 				TimeoutSeconds:      7,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraLivenessPeriod,
 			},
 			ReadinessProbe: &v1alpha1.Probe{
-				FailureThreshold: CassandraReadinessProbeFailureThreshold,
+				FailureThreshold:    CassandraReadinessProbeFailureThreshold,
 				TimeoutSeconds:      6,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraReadinessPeriod,

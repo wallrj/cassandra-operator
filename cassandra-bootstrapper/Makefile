@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean setup build install jar check dgoss docker-image push-image release
+.PHONY: travis clean setup build install jar check dgoss docker-image push-image release check-style
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 gradle := $(projectDir)/../gradlew
@@ -13,7 +13,7 @@ build: jar docker-image
 
 install: build push-image
 
-check: dgoss
+check: check-style dgoss
 
 setup:
 	@echo "== setup"
@@ -35,3 +35,6 @@ clean: common-docker-clean
 	$(gradle) :cassandra-bootstrapper:clean :cassandra-bootstrapper:bootstrapper:clean :cassandra-bootstrapper:seed-provider:clean
 
 release: common-docker-release
+
+check-style:
+	@echo "== check-style not implemented"
