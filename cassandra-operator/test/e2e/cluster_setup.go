@@ -72,12 +72,12 @@ func clusterDefaultSpec() *v1alpha1.CassandraSpec {
 			CPU:               resource.MustParse(PodCPU),
 			StorageSize:       resource.MustParse(podStorageSize),
 			LivenessProbe: &v1alpha1.Probe{
-				FailureThreshold: CassandraLivenessProbeFailureThreshold,
+				FailureThreshold:    CassandraLivenessProbeFailureThreshold,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraLivenessPeriod,
 			},
 			ReadinessProbe: &v1alpha1.Probe{
-				FailureThreshold: CassandraReadinessProbeFailureThreshold,
+				FailureThreshold:    CassandraReadinessProbeFailureThreshold,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraReadinessPeriod,
 			},

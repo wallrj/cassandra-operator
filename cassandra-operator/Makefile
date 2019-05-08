@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-dep go-build go-install docker-image push-image release
+.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-dep go-build go-install docker-image push-image release check-style
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -29,7 +29,9 @@ build: go-build go-install docker-image
 
 install: build push-image
 
-check: fmt vet lint validate-licences test deploy-operator integration-test e2e-test
+check-style: fmt vet lint
+
+check: check-style validate-licences test deploy-operator integration-test e2e-test
 
 setup:
 	@echo "== setup"
@@ -53,7 +55,7 @@ go-install: go-build
 fmt:
 	go fmt ./...
 
-vet:
+vet: go-dep
 	go vet $(pkgs)
 
 lint:

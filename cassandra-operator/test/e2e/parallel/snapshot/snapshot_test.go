@@ -17,7 +17,7 @@ import (
 var (
 	resources          *parallel.ResourceSemaphore
 	resourcesToReclaim int
-	testStartTime time.Time
+	testStartTime      time.Time
 )
 
 func TestSnapshot(t *testing.T) {

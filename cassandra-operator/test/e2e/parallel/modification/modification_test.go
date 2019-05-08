@@ -20,7 +20,7 @@ import (
 var (
 	resources          *parallel.ResourceSemaphore
 	resourcesToReclaim int
-	testStartTime time.Time
+	testStartTime      time.Time
 )
 
 func TestModification(t *testing.T) {
@@ -84,13 +84,13 @@ var _ = Context("Allowable cluster modifications", func() {
 			Memory:            resource.MustParse("999Mi"),
 			CPU:               resource.MustParse("1m"),
 			LivenessProbe: &v1alpha1.Probe{
-				FailureThreshold: CassandraLivenessProbeFailureThreshold + 1,
+				FailureThreshold:    CassandraLivenessProbeFailureThreshold + 1,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraLivenessPeriod,
 				TimeoutSeconds:      6,
 			},
 			ReadinessProbe: &v1alpha1.Probe{
-				FailureThreshold: CassandraReadinessProbeFailureThreshold + 1,
+				FailureThreshold:    CassandraReadinessProbeFailureThreshold + 1,
 				TimeoutSeconds:      4,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraReadinessPeriod,

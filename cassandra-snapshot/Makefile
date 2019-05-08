@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-dep go-build go-install docker-image push-image prepare-deployment release
+.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-dep go-build go-install docker-image push-image prepare-deployment release check-style
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -26,7 +26,9 @@ build: go-build docker-image
 
 install: build go-install push-image
 
-check: fmt vet lint validate-licences test prepare-deployment integration-test e2e-test
+check-style: fmt vet lint
+
+check: check-style validate-licences test prepare-deployment integration-test e2e-test
 
 setup:
 	@echo "== setup"
@@ -58,7 +60,7 @@ validate-licences:
 	projects=$$(dep status -f='vendor/{{ .ProjectRoot }} ') ;\
 	licence-compliance-checker -L error -E -r $$restricted -o vendor/github.com/ghodss/yaml=BSD-3-Clause $$projects ;\
 
-vet:
+vet: go-dep
 	@echo "== vet"
 	go vet $(pkgs)
 

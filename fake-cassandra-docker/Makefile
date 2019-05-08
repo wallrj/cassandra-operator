@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean setup build install jar check dgoss docker-image push-image release
+.PHONY: travis clean setup build install jar check dgoss docker-image push-image release check-style
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 gradle := $(projectDir)/../gradlew
@@ -13,7 +13,10 @@ build: jar docker-image
 
 install: build push-image
 
-check: dgoss
+check-style:
+	@echo "== check-style not implemented"
+
+check: check-style dgoss
 
 setup:
 	@echo "== setup"
