@@ -1,18 +1,21 @@
 package adjuster
 
 import (
+	"testing"
+
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	"k8s.io/api/core/v1"
-	"testing"
 
 	"encoding/json"
 	"fmt"
+
 	"github.com/PaesslerAG/jsonpath"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -60,8 +63,8 @@ var _ = Describe("cluster events", func() {
 			TimeoutSeconds:      int32(5),
 		}
 		oldClusterSpec = &v1alpha1.CassandraSpec{
-			DC:    "ADatacenter",
-			Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
+			Datacenter: ptr.String("ADatacenter"),
+			Racks:      []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
 			Pod: v1alpha1.Pod{
 				Image:          "anImage",
 				Memory:         resource.MustParse("2Gi"),
@@ -72,8 +75,8 @@ var _ = Describe("cluster events", func() {
 			},
 		}
 		newClusterSpec = &v1alpha1.CassandraSpec{
-			DC:    "ADatacenter",
-			Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
+			Datacenter: ptr.String("ADatacenter"),
+			Racks:      []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
 			Pod: v1alpha1.Pod{
 				Image:          "anImage",
 				Memory:         resource.MustParse("2Gi"),
@@ -223,18 +226,18 @@ var _ = Describe("cluster events", func() {
 
 	Context("unsupported property change is detected", func() {
 		It("should reject the change with an error message when DC is changed", func() {
-			newClusterSpec.DC = "other-dc"
+			newClusterSpec.Datacenter = ptr.String("other-dc")
 			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
 
 			Expect(err).To(MatchError("changing dc is forbidden. The dc used will continue to be 'ADatacenter'"))
 		})
 
 		It("should report that the default DC name will continue to be used when no DC was previously provided", func() {
-			oldClusterSpec.DC = ""
-			newClusterSpec.DC = "new-dc"
+			oldClusterSpec.Datacenter = nil
+			newClusterSpec.Datacenter = ptr.String("new-dc")
 			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
 
-			Expect(err).To(MatchError(fmt.Sprintf("changing dc is forbidden. The dc used will continue to be '%s'", cluster.DefaultDCName)))
+			Expect(err).To(MatchError(fmt.Sprintf("changing dc is forbidden. The dc used will continue to be '%s'", v1alpha1.DefaultDCName)))
 		})
 
 		It("should reject the change with an error message when Image is changed", func() {

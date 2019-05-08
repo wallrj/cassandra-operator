@@ -3,13 +3,14 @@ package adjuster
 import (
 	"bytes"
 	"fmt"
+	"reflect"
+	"text/template"
+	"time"
+
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 	"k8s.io/api/core/v1"
-	"reflect"
-	"text/template"
-	"time"
 )
 
 const statefulSetPatchTemplate = `{
@@ -18,8 +19,8 @@ const statefulSetPatchTemplate = `{
     "template": {
       "spec": {
 		"initContainers": [{
-           "name": "cassandra-bootstrapper",	
-           "image": "{{ .PodBootstrapperImage }}"	
+           "name": "cassandra-bootstrapper",
+           "image": "{{ .PodBootstrapperImage }}"
 		}],
         "containers": [{
            "name": "cassandra",
@@ -178,12 +179,8 @@ func (r *Adjuster) scaleDownPatchForRack(nodesToScaleDown int) string {
 }
 
 func (r *Adjuster) ensureChangeIsAllowed(oldCluster, newCluster *v1alpha1.CassandraSpec, matchedRacks []matchedRack) error {
-	if !reflect.DeepEqual(oldCluster.DC, newCluster.DC) {
-		currentDC := oldCluster.DC
-		if currentDC == "" {
-			currentDC = cluster.DefaultDCName
-		}
-		return fmt.Errorf("changing dc is forbidden. The dc used will continue to be '%v'", currentDC)
+	if oldCluster.GetDatacenter() != newCluster.GetDatacenter() {
+		return fmt.Errorf("changing dc is forbidden. The dc used will continue to be '%v'", oldCluster.GetDatacenter())
 	}
 
 	if !reflect.DeepEqual(oldCluster.Pod.Image, newCluster.Pod.Image) {

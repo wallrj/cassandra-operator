@@ -2,22 +2,24 @@ package creation
 
 import (
 	"fmt"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 )
 
 var (
 	multipleRacksCluster *TestCluster
 	emptyDirCluster      *TestCluster
-	testStartTime		 time.Time
+	testStartTime        time.Time
 )
 
 func TestCreation(t *testing.T) {
@@ -42,7 +44,7 @@ func createClustersInParallel(multipleRacksCluster, emptyDirCluster *TestCluster
 	extraFile := &ExtraConfigFile{Name: multipleRacksCluster.ExtraConfigFileName, Content: "some content"}
 
 	AClusterWithName(multipleRacksCluster.Name).AndClusterSpec(&v1alpha1.CassandraSpec{
-		DC: "custom-dc",
+		Datacenter: ptr.String("custom-dc"),
 		Pod: v1alpha1.Pod{
 			BootstrapperImage: CassandraBootstrapperImageName,
 			Image:             CassandraImageName,
@@ -50,13 +52,13 @@ func createClustersInParallel(multipleRacksCluster, emptyDirCluster *TestCluster
 			CPU:               resource.MustParse("1m"),
 			StorageSize:       resource.MustParse("100Mi"),
 			LivenessProbe: &v1alpha1.Probe{
-				FailureThreshold: CassandraLivenessProbeFailureThreshold,
+				FailureThreshold:    CassandraLivenessProbeFailureThreshold,
 				TimeoutSeconds:      7,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraLivenessPeriod,
 			},
 			ReadinessProbe: &v1alpha1.Probe{
-				FailureThreshold: CassandraReadinessProbeFailureThreshold,
+				FailureThreshold:    CassandraReadinessProbeFailureThreshold,
 				TimeoutSeconds:      6,
 				InitialDelaySeconds: CassandraInitialDelay,
 				PeriodSeconds:       CassandraReadinessPeriod,
