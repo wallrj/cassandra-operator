@@ -115,7 +115,7 @@ func (c *FakeCassandras) DeleteCollection(options *v1.DeleteOptions, listOptions
 // Patch applies the patch and returns the patched cassandra.
 func (c *FakeCassandras) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Cassandra, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(cassandrasResource, c.ns, name, data, subresources...), &v1alpha1.Cassandra{})
+		Invokes(testing.NewPatchSubresourceAction(cassandrasResource, c.ns, name, pt, data, subresources...), &v1alpha1.Cassandra{})
 
 	if obj == nil {
 		return nil, err

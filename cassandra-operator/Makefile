@@ -123,7 +123,7 @@ validate-licences:
 	set -e ;\
 	restricted=$$(paste -s -d ',' restricted-licences.txt) ;\
 	projects=$$(dep status -f='vendor/{{ .ProjectRoot }} ') ;\
-	licence-compliance-checker -L error -E -r $$restricted -o vendor/github.com/ghodss/yaml=BSD-3-Clause -o vendor/github.com/golang/protobuf=BSD-3-Clause -o vendor/github.com/gogo/protobuf=BSD-3-Clause -o vendor/github.com/hashicorp/golang-lru=MPL-2.0 $$projects ;\
+	licence-compliance-checker -L error -E -r $$restricted -o vendor/sigs.k8s.io/yaml=BSD-3-Clause -o vendor/github.com/golang/protobuf=BSD-3-Clause -o vendor/github.com/gogo/protobuf=BSD-3-Clause -o vendor/github.com/hashicorp/golang-lru=MPL-2.0 $$projects ;\
 
 clean: common-docker-clean
 	@echo "== clean"

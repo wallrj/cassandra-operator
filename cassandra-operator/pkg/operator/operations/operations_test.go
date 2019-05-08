@@ -411,3 +411,5 @@ func (r *stubEventRecorder) Eventf(object runtime.Object, eventtype, reason, mes
 }
 func (r *stubEventRecorder) PastEventf(object runtime.Object, timestamp metav1.Time, eventtype, reason, messageFmt string, args ...interface{}) {
 }
+func (r *stubEventRecorder) AnnotatedEventf(object runtime.Object, annotations map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+}

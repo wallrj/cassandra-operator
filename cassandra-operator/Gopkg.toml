@@ -1,28 +1,12 @@
-# Gopkg.toml example
-#
-# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
-# for detailed Gopkg.toml documentation.
-#
-# required = ["github.com/user/thing/cmd/thing"]
-# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
-#
-# [[constraint]]
-#   name = "github.com/user/project"
-#   version = "1.0.0"
-#
-# [[constraint]]
-#   name = "github.com/user/project2"
-#   branch = "dev"
-#   source = "github.com/myfork/project2"
-#
-# [[override]]
-#   name = "github.com/x/y"
-#   version = "2.4.0"
-#
-# [prune]
-#   non-go = false
-#   go-tests = true
-#   unused-packages = true
+required = [
+  "k8s.io/code-generator/cmd/client-gen",
+  "k8s.io/code-generator/cmd/conversion-gen",
+  "k8s.io/code-generator/cmd/deepcopy-gen",
+  "k8s.io/code-generator/cmd/defaulter-gen",
+  "k8s.io/code-generator/cmd/informer-gen",
+  "k8s.io/code-generator/cmd/lister-gen",
+  "github.com/onsi/ginkgo/ginkgo",
+]
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
@@ -30,7 +14,7 @@
 
 [[constraint]]
   name = "k8s.io/client-go"
-  version = "v7.0.0"
+  version = "v11.0.0"
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"
@@ -49,19 +33,12 @@
   version = "0.0.3"
 
 [[constraint]]
-  name = "k8s.io/code-generator"
-  revision = "c7b82f7132f7071513e34dff19f450c96293a745"
-
-[[override]]
-  # fixed to this version in order to avoid compilation error.
   name = "k8s.io/apimachinery"
-  revision = "800fcb029b488923f14852306f0c98c11d0f360c"
+  version = "kubernetes-1.14.1"
 
-[[override]]
-  # fixed to this revision to avoid picking up a change in the logging framework used by gengo, which causes issues with
-  # our current set of kubernetes dependencies.
-  name = "k8s.io/gengo"
-  revision = "7338e4bfd6915369a1375890db1bbda0158c9863"
+[[constraint]]
+  name = "k8s.io/code-generator"
+  version = "kubernetes-1.14.1"
 
 [[override]]
   # required to work around a bug in dep: https://github.com/golang/dep/issues/1799
