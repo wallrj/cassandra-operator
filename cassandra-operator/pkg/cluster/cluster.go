@@ -2,6 +2,9 @@ package cluster
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/robfig/cron"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
@@ -11,8 +14,6 @@ import (
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strings"
-	"time"
 )
 
 const (
@@ -33,8 +34,6 @@ const (
 	// DefaultCassandraSnapshotImage is the name of the Docker image used to make and cleanup snapshots
 	DefaultCassandraSnapshotImage = "skyuk/cassandra-snapshot:latest"
 
-	// DefaultDCName is the default data center name which each Cassandra pod belongs to
-	DefaultDCName                      = "dc1"
 	cassandraContainerName             = "cassandra"
 	cassandraBootstrapperContainerName = "cassandra-bootstrapper"
 
@@ -109,11 +108,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 		}
 	}
 
-	dc := clusterDefinition.Spec.DC
-	if dc == "" {
-		dc = DefaultDCName
-	}
-
 	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
 		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()
 	} else {
@@ -137,7 +131,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	}
 
 	cluster.definition = clusterDefinition.DeepCopy()
-	cluster.definition.Spec.DC = dc
 	cluster.definition.Spec.Pod.BootstrapperImage = bootstrapperImage
 	cluster.definition.Spec.Pod.Image = cassandraImage
 	return nil
@@ -562,7 +555,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 		},
 		{
 			Name:  "CLUSTER_DATA_CENTER",
-			Value: c.definition.Spec.DC,
+			Value: c.definition.Spec.GetDatacenter(),
 		},
 		{
 			Name: "NODE_LISTEN_ADDRESS",

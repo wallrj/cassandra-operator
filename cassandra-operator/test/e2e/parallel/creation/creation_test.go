@@ -2,15 +2,17 @@ package creation
 
 import (
 	"fmt"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 )
 
@@ -42,7 +44,7 @@ func createClustersInParallel(multipleRacksCluster, emptyDirCluster *TestCluster
 	extraFile := &ExtraConfigFile{Name: multipleRacksCluster.ExtraConfigFileName, Content: "some content"}
 
 	AClusterWithName(multipleRacksCluster.Name).AndClusterSpec(&v1alpha1.CassandraSpec{
-		DC: "custom-dc",
+		Datacenter: ptr.String("custom-dc"),
 		Pod: v1alpha1.Pod{
 			BootstrapperImage: CassandraBootstrapperImageName,
 			Image:             CassandraImageName,

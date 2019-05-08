@@ -2,8 +2,9 @@ package v1alpha1
 
 import (
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	// required for dep management
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -13,6 +14,8 @@ import (
 const (
 	NodeServiceAccountName     = "cassandra-node"
 	SnapshotServiceAccountName = "cassandra-snapshot"
+	// DefaultDCName is the default data center name which each Cassandra pod belongs to
+	DefaultDCName = "dc1"
 )
 
 // +genclient
@@ -30,8 +33,8 @@ type Cassandra struct {
 // CassandraSpec is the specification for the Cassandra resource
 type CassandraSpec struct {
 	// +optional
-	DC    string `json:"dc"`
-	Racks []Rack `json:"racks"`
+	Datacenter *string `json:"datacenter,omitempty"`
+	Racks      []Rack  `json:"racks"`
 	// +optional
 	UseEmptyDir bool `json:"useEmptyDir"`
 	Pod         Pod  `json:"pod"`
@@ -150,6 +153,14 @@ func (c *Cassandra) RackName(rack *Rack) string {
 // CustomConfigMapName returns the expected config map name for this cluster. This will return a value even if the config map does not exist.
 func (c *Cassandra) CustomConfigMapName() string {
 	return fmt.Sprintf("%s-config", c.Name)
+}
+
+// TODO: Move this to Cassandra top-level object
+func (c *CassandraSpec) GetDatacenter() string {
+	if c.Datacenter == nil {
+		return DefaultDCName
+	}
+	return *c.Datacenter
 }
 
 // SnapshotPropertiesUpdated returns false when snapshot1 and snapshot2 have the same properties disregarding retention policy
