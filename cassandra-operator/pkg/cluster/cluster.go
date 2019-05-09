@@ -146,6 +146,9 @@ func validateRacks(clusterDefinition *v1alpha1.Cassandra) error {
 		return fmt.Errorf("no racks specified for cluster: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 
+	// TODO: Remove these storage class and empty dir validation checks
+	// And this sort of validation can eventually be performed by an admission controller webhook.
+	// See https://github.com/sky-uk/cassandra-operator/issues/71
 	for _, rack := range clusterDefinition.Spec.Racks {
 		if rack.Replicas < 1 {
 			return fmt.Errorf("invalid rack replicas value %d provided for Cassandra cluster definition: %s.%s", rack.Replicas, clusterDefinition.Namespace, clusterDefinition.Name)
