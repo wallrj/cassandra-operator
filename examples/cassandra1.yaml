@@ -9,7 +9,7 @@ spec:
   - name: "region-1-zone-a"
     zone: "zone-a"
     replicas: 3
-  pod:
+  nodePodConfiguration:
     bootstrapperImage: "skyuk/cassandra-bootstrapper:latest"
     image: "cassandra:3.11"
     persistence:
