@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"os"
 	"time"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"k8s.io/client-go/kubernetes/scheme"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
@@ -39,6 +40,7 @@ func init() {
 	rootCmd.PersistentFlags().DurationVar(&metricPollInterval, "metric-poll-interval", 5*time.Second, "Poll interval between cassandra nodes metrics retrieval")
 	rootCmd.PersistentFlags().DurationVar(&metricRequestTimeout, "metric-request-timeout", 2*time.Second, "Time limit for cassandra node metrics requests")
 	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", log.InfoLevel.String(), "should be one of: debug, info, warn, error, fatal, panic")
+	// TODO: Remove this --empty-dir command line flag
 	rootCmd.PersistentFlags().BoolVar(&allowEmptyDir, "allow-empty-dir", false, "Set to true in order to allow creation of clusters which use emptyDir storage")
 }
 

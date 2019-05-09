@@ -36,6 +36,7 @@ function deployOperator() {
     local namespace=$3
     local ingressHost=$4
     local deployment=cassandra-operator
+    // TODO: Remove --allow-empty-dir
     local operatorArgs='["--allow-empty-dir=true", "--log-level=debug"]'
     local tmpDir=$(mktemp -d)
     trap '{ CODE=$?; rm -rf ${tmpDir} ; exit ${CODE}; }' EXIT
