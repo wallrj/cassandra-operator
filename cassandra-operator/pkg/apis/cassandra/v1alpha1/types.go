@@ -34,7 +34,8 @@ type Cassandra struct {
 type CassandraSpec struct {
 	// +optional
 	Datacenter *string `json:"datacenter,omitempty"`
-	Racks      []Rack  `json:"racks"`
+	// +optional
+	Racks []Rack `json:"racks,omitempty"`
 	// +optional
 	UseEmptyDir bool `json:"useEmptyDir"`
 	Pod         Pod  `json:"pod"`
@@ -97,7 +98,7 @@ type Snapshot struct {
 	// Schedule follows the cron format, see https://en.wikipedia.org/wiki/Cron
 	Schedule string `json:"schedule"`
 	// +optional
-	Keyspaces []string `json:"keyspaces"`
+	Keyspaces []string `json:"keyspaces,omitempty"`
 	// +optional
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 	// +optional
