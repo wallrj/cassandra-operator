@@ -79,6 +79,8 @@ func New(clusterDefinition *v1alpha1.Cassandra) (*Cluster, error) {
 }
 
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
+// TODO: This validation can be moved to a ValidatingWebHook.
+// See: https://github.com/sky-uk/cassandra-operator/issues/71
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	if err := validateRacks(clusterDefinition); err != nil {
 		return err
@@ -583,7 +585,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 
 func (c *Cluster) createCassandraDataPersistentVolumeClaimForRack(rack *v1alpha1.Rack) []v1.PersistentVolumeClaim {
 	var persistentVolumeClaim []v1.PersistentVolumeClaim
-
+	// TODO: Always create a persistent volume claim, using values from the persistence field
 	if !c.definition.Spec.UseEmptyDir {
 		persistentVolumeClaim = append(persistentVolumeClaim, v1.PersistentVolumeClaim{
 			ObjectMeta: c.objectMetadata(c.definition.StorageVolumeName(), RackLabel, rack.Name, "app", c.definition.Name),

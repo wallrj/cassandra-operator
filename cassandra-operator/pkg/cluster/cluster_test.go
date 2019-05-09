@@ -2,6 +2,10 @@ package cluster
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -11,9 +15,6 @@ import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
-	"strconv"
-	"testing"
 )
 
 const (
@@ -28,6 +29,8 @@ func TestCluster(t *testing.T) {
 
 var _ = Describe("cluster construction", func() {
 	var clusterDef *v1alpha1.Cassandra
+	// TODO: Update these test resources to use persistence fields instead.
+	//
 	BeforeEach(func() {
 		retentionPeriod := int32(7)
 		clusterDef = &v1alpha1.Cassandra{
@@ -51,6 +54,8 @@ var _ = Describe("cluster construction", func() {
 		}
 	})
 
+	// TODO: These validation tests can be moved to a validating webhook package
+	// See: https://github.com/sky-uk/cassandra-operator/issues/71
 	Context("config validation", func() {
 		It("should reject a configuration with a rack with zero replicas", func() {
 			clusterDef.Spec.Racks = []v1alpha1.Rack{{Name: "a"}}
