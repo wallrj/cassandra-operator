@@ -1,0 +1,43 @@
+apiVersion: "core.sky.uk/v1alpha1"
+kind: "Cassandra"
+metadata:
+  name: "cluster-1"
+  namespace: "example.com"
+spec:
+  datacenter: "region-1"
+  racks:
+  - name: "region-1-zone-a"
+    zone: "zone-a"
+    storageClass: "local-ssd"
+    replicas: 3
+    useEmptyDir: false
+  pod:
+    bootstrapperImage: "skyuk/cassandra-bootstrapper:latest"
+    image: "cassandra:3.11"
+    storageSize: "100Gi"
+    memory: "1Gi"
+    cpu: "1"
+    livenessProbe:
+      failureThreshold: 1
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      successThreshold: 3
+      timeoutSeconds: 30
+    readinessProbe:
+      failureThreshold: 1
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      successThreshold: 3
+      timeoutSeconds: 30
+  snapshot:
+    image: "skyuk/cassandra-snapshot:latest"
+    schedule: "0 4 * * *"
+    keyspaces:
+    - "mykeyspace"
+    - "system_auth"
+    timeoutSeconds: 30
+    retentionPolicy:
+      enabled: true
+      retentionPeriodDays: 60
+      cleanupSchedule: "0 4 * * *"
+      cleanupTimeoutSeconds: "600"
