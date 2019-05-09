@@ -34,15 +34,36 @@ spec:
       limits:
         cpu: "1"
         memory: "2Gi"
-  snapshot:
+---
+apiVersion: "core.sky.uk/v1alpha1"
+kind: "CassandraSnapshotSchedule"
+metadata:
+  name: "cluster-1-daily"
+  namespace: "example.com"
+spec:
+  schedule: "0 4 * * *"
+  cleanupSchedule: "0 4 * * *"
+  template:
+    clusterName: "cluster-1"
     image: "skyuk/cassandra-snapshot:latest"
-    schedule: "0 4 * * *"
     keyspaces:
     - "mykeyspace"
     - "system_auth"
     timeoutSeconds: 30
     retentionPolicy:
-      enabled: true
       retentionPeriodDays: 60
-      cleanupSchedule: "0 4 * * *"
-      cleanupTimeoutSeconds: "600"
+---
+apiVersion: "core.sky.uk/v1alpha1"
+kind: "CassandraSnapshot"
+metadata:
+  name: "cluster-1-ondemand-snapshot-1"
+  namespace: "example.com"
+spec:
+  clusterName: "cluster-1"
+  image: "skyuk/cassandra-snapshot:latest"
+  keyspaces:
+  - "mykeyspace"
+  - "system_auth"
+  timeoutSeconds: 30
+  retentionPolicy:
+    retentionPeriodDays: 10
