@@ -9,12 +9,12 @@ spec:
   - name: "region-1-zone-a"
     zone: "zone-a"
     replicas: 3
-    persistence:
-      storageClass: "local-ssh"
-      size: "100Gi"
   pod:
     bootstrapperImage: "skyuk/cassandra-bootstrapper:latest"
     image: "cassandra:3.11"
+    persistence:
+      storageClass: "local-ssh"
+      size: "100Gi"
     livenessProbe:
       failureThreshold: 1
       initialDelaySeconds: 10
