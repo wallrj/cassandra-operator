@@ -35,9 +35,7 @@ type CassandraSpec struct {
 	// +optional
 	Datacenter *string `json:"datacenter,omitempty"`
 	Racks      []Rack  `json:"racks"`
-	// +optional
-	UseEmptyDir bool `json:"useEmptyDir"`
-	Pod         Pod  `json:"pod"`
+	Pod        Pod     `json:"pod"`
 	// +optional
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
 }
@@ -59,14 +57,21 @@ type Pod struct {
 	// +optional
 	BootstrapperImage string `json:"bootstrapperImage"`
 	// +optional
-	Image       string            `json:"image"`
-	StorageSize resource.Quantity `json:"storageSize"`
-	Memory      resource.Quantity `json:"memory"`
-	CPU         resource.Quantity `json:"cpu"`
+	Image  string            `json:"image"`
+	Memory resource.Quantity `json:"memory"`
+	CPU    resource.Quantity `json:"cpu"`
 	// +optional
 	LivenessProbe *Probe `json:"livenessProbe"`
 	// +optional
 	ReadinessProbe *Probe `json:"readinessProbe"`
+	// Persistence has storage configuration for each C* node.
+	// All C* nodes will have identical storage.
+	Persistence Persistence `json:"persistence,omitempty"`
+}
+
+type Persistence struct {
+	StorageClass string            `json:"storageClass`
+	Size         resource.Quantity `json:"size"`
 }
 
 // CassandraStatus is the status for the Cassandra resource
@@ -84,10 +89,9 @@ type CassandraList struct {
 
 // Rack defines the properties of a rack in the cluster
 type Rack struct {
-	Name         string `json:"name"`
-	Zone         string `json:"zone"`
-	StorageClass string `json:"storageClass"`
-	Replicas     int32  `json:"replicas"`
+	Name     string `json:"name"`
+	Zone     string `json:"zone"`
+	Replicas int32  `json:"replicas"`
 }
 
 // Snapshot defines the snapshot creation and deletion configuration
