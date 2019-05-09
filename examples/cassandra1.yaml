@@ -12,11 +12,16 @@ spec:
     persistence:
       storageClass: "local-ssh"
       size: "100Gi"
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
   pod:
     bootstrapperImage: "skyuk/cassandra-bootstrapper:latest"
     image: "cassandra:3.11"
-    memory: "1Gi"
-    cpu: "1"
     livenessProbe:
       failureThreshold: 1
       initialDelaySeconds: 10
