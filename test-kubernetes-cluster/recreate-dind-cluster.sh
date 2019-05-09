@@ -93,6 +93,8 @@ roleRef:
 EOF
 }
 
+// TODO: Local static provisioner creates PVs for tests cluster,
+// so ignore my earlier comments about having to manually provision hostpath PVs.
 function deploy_local_volume_provisioner() {
     # based on https://github.com/kubernetes-sigs/sig-storage-local-static-provisioner/blob/master/provisioner/deployment/kubernetes/example/default_example_provisioner_generated.yaml
     local zone=$1

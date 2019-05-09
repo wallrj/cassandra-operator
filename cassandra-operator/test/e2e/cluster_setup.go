@@ -2,17 +2,18 @@ package e2e
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
-	"io/ioutil"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 const (
@@ -45,6 +46,7 @@ func PodName(clusterName, rack string, count int) string {
 	return fmt.Sprintf("%s-%s-%d", clusterName, rack, count)
 }
 
+// TODO: Replace StorageClass with Persistence config in the e2e setup
 func Rack(rackName string, replicas int32) v1alpha1.Rack {
 	return v1alpha1.Rack{
 		Name:         rackName,
