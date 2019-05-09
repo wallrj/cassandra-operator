@@ -195,6 +195,8 @@ func (r *Adjuster) ensureChangeIsAllowed(oldCluster, newCluster *v1alpha1.Cassan
 	}
 
 	for _, matchedRack := range matchedRacks {
+		// TODO: Move this validation to the validating webhook
+		// See: https://github.com/sky-uk/cassandra-operator/issues/71
 		if matchedRack.new.StorageClass != matchedRack.old.StorageClass {
 			return fmt.Errorf("changing storageClass for rack '%s' is forbidden. The storageClass used will continue to be '%s'", matchedRack.old.Name, matchedRack.old.StorageClass)
 		}

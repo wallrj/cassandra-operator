@@ -255,7 +255,8 @@ var _ = Describe("cluster events", func() {
 
 			Expect(err).To(MatchError(fmt.Sprintf("changing image is forbidden. The image used will continue to be '%s'", cluster.DefaultCassandraImage)))
 		})
-
+		// TODO: Validation tests can move to webhook package
+		// https://github.com/sky-uk/cassandra-operator/issues/71
 		It("should reject the change with an error message when UseEmptyDir is changed", func() {
 			newClusterSpec.UseEmptyDir = true
 			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
@@ -263,6 +264,8 @@ var _ = Describe("cluster events", func() {
 			Expect(err).To(MatchError("changing useEmptyDir is forbidden. The useEmptyDir used will continue to be 'false'"))
 		})
 
+		// TODO: Validation tests can move to webhook package
+		// https://github.com/sky-uk/cassandra-operator/issues/71
 		It("should reject the change with an error message when a rack storageClass is changed", func() {
 			newClusterSpec.Racks[0].StorageClass = "another-storage-class"
 			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
