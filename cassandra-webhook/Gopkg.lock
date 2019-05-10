@@ -314,6 +314,17 @@
   revision = "5867b95ac084bbfee6ea16595c4e05ab009021da"
 
 [[projects]]
+  digest = "1:949dc16e7647d37f9fa3c1240a6d1cf158473e6b36939a70f341a371f572dc69"
+  name = "github.com/sky-uk/cassandra-operator"
+  packages = [
+    "cassandra-operator/pkg/apis/cassandra",
+    "cassandra-operator/pkg/apis/cassandra/v1alpha1",
+  ]
+  pruneopts = "UT"
+  revision = "d06db0373bc6f786d38a5a9bcb514224e74c47c8"
+  version = "v0.70.1-alpha"
+
+[[projects]]
   digest = "1:7c7ef7c1bf5eb925d97c670fba41f85f6dce02c334c96c23f74a4dadb208e4a7"
   name = "github.com/spf13/cobra"
   packages = ["."]
@@ -852,6 +863,14 @@
   version = "kubernetes-1.14.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:408721d4324d48b2e840a116db01e64d655f5471e98e7fb0592dd1329fbf8d7e"
+  name = "k8s.io/code-generator"
+  packages = ["cmd/client-gen/types"]
+  pruneopts = "UT"
+  revision = "ff26e7842f9d5224562ef78defed0785ae8395cf"
+
+[[projects]]
   digest = "1:62505062b5c666aa8a7713dbd199cae0469e08f2df6c61af56970f2a1a4a2a57"
   name = "k8s.io/component-base"
   packages = [
@@ -861,6 +880,17 @@
   pruneopts = "UT"
   revision = "4a91899592f42b2f5859587cc5a676a5b94d2ee3"
   version = "kubernetes-1.14.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:86c68cf7743a270426889af4913a05545e656505fa65fa39786a2cf8e9c135a5"
+  name = "k8s.io/gengo"
+  packages = [
+    "namer",
+    "types",
+  ]
+  pruneopts = "UT"
+  revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
 
 [[projects]]
   digest = "1:69367163a23cd68971724f36a6759a01d50968e58936808b7eb5e5c186a3a382"
@@ -918,6 +948,12 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/openshift/generic-admission-server/pkg/cmd"]
+  input-imports = [
+    "github.com/openshift/generic-admission-server/pkg/cmd",
+    "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1",
+    "k8s.io/api/admission/v1beta1",
+    "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/client-go/rest",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
