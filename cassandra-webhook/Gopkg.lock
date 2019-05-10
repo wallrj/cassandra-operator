@@ -314,15 +314,17 @@
   revision = "5867b95ac084bbfee6ea16595c4e05ab009021da"
 
 [[projects]]
-  digest = "1:949dc16e7647d37f9fa3c1240a6d1cf158473e6b36939a70f341a371f572dc69"
+  branch = "71-webhook"
+  digest = "1:b61c42d4279805e79db3925d2a9307c8395e3d92ba298c48b5ddfe72a9ff8fbb"
   name = "github.com/sky-uk/cassandra-operator"
   packages = [
     "cassandra-operator/pkg/apis/cassandra",
     "cassandra-operator/pkg/apis/cassandra/v1alpha1",
+    "cassandra-operator/pkg/apis/cassandra/validation",
   ]
   pruneopts = "UT"
-  revision = "d06db0373bc6f786d38a5a9bcb514224e74c47c8"
-  version = "v0.70.1-alpha"
+  revision = "2a36425119bb30bb543aa6488c1af77cd4e1d713"
+  source = "github.com/wallrj/cassandra-operator"
 
 [[projects]]
   digest = "1:7c7ef7c1bf5eb925d97c670fba41f85f6dce02c334c96c23f74a4dadb208e4a7"
@@ -951,7 +953,9 @@
   input-imports = [
     "github.com/openshift/generic-admission-server/pkg/cmd",
     "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1",
+    "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/validation",
     "k8s.io/api/admission/v1beta1",
+    "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/client-go/rest",
   ]
