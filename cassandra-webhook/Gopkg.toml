@@ -1,0 +1,7 @@
+[[constraint]]
+  name = "github.com/openshift/generic-admission-server"
+  version = "1.14.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true
