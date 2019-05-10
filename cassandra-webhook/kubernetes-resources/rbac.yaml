@@ -1,0 +1,18 @@
+# Allow webhook to read specific configmap that has the requestheader-* entries to
+# api agg
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: cassandra-webhook:webhook-authentication-reader
+  namespace: kube-system
+  labels:
+    app: cassandra-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: cassandra-webhook
+  namespace: $TARGET_NAMESPACE

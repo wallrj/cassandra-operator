@@ -39,7 +39,7 @@ function deploy() {
     local tmpDir=$(mktemp -d)
     trap '{ CODE=$?; rm -rf ${tmpDir} ; exit ${CODE}; }' EXIT
 
-    k8Resources="deployment.yaml"
+    k8Resources="rbac.yaml deployment.yaml"
     for k8Resource in ${k8Resources}
     do
         sed -e "s@\$TARGET_NAMESPACE@$namespace@g" \
@@ -47,7 +47,7 @@ function deploy() {
             -e "s@\$ARGS@$args@g" \
             -e "s@\$INGRESS_HOST@$ingressHost@g" \
             ${resourcesDir}/${k8Resource} > ${tmpDir}/${k8Resource}
-        kubectl --context ${context} -n ${namespace} apply -f ${tmpDir}/${k8Resource}
+        kubectl --context ${context} apply -f ${tmpDir}/${k8Resource}
     done
 
     waitForDeployment ${context} ${namespace} ${deployment}
