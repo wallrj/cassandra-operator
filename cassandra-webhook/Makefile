@@ -1,4 +1,4 @@
-.PHONY: build check-style go-dep go-build go-install fmt vet lint ensure-build-dir-exists docker-image
+.PHONY: build check-style go-dep go-build go-install fmt vet lint ensure-build-dir-exists docker-image install push-image
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 buildDir := $(projectDir)/build
@@ -8,6 +8,9 @@ pkgs := $(shell go list ./... | grep -v /vendor/ | grep -v /pkg/apis/ | grep -v 
 include $(projectDir)/../MakefileDocker
 
 build: go-build go-install docker-image
+
+install: build push-image
+
 check-style: fmt vet lint
 
 go-dep:
@@ -35,5 +38,7 @@ lint:
 
 ensure-build-dir-exists:
 	mkdir -p $(buildDir)
+
+push-image: docker-image common-docker-push
 
 docker-image: go-build common-docker-build
