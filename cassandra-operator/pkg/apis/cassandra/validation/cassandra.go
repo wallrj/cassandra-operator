@@ -6,6 +6,14 @@ import (
 )
 
 func ValidateCassandra(c *v1alpha1.Cassandra) field.ErrorList {
+	allErrs := ValidateCassandraSpec(&c.Spec, field.NewPath("spec"))
+	return allErrs
+}
+
+func ValidateCassandraSpec(c *v1alpha1.CassandraSpec, fldPath *field.Path) field.ErrorList {
 	el := field.ErrorList{}
+	if c.Datacenter != nil && *c.Datacenter == "" {
+		el = append(el, field.Required(fldPath.Child("Datacenter"), "must not be empty"))
+	}
 	return el
 }
