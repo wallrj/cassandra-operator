@@ -1,8 +1,13 @@
 package webhooks
 
 import (
+	"encoding/json"
+	"net/http"
+
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/validation"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	restclient "k8s.io/client-go/rest"
 )
@@ -23,5 +28,29 @@ func (c *Cassandra) ValidatingResource() (plural schema.GroupVersionResource, si
 }
 
 func (c *Cassandra) Validate(admissionSpec *admissionv1beta1.AdmissionRequest) *admissionv1beta1.AdmissionResponse {
-	return nil
+	status := &admissionv1beta1.AdmissionResponse{}
+
+	obj := &v1alpha1.Cassandra{}
+	err := json.Unmarshal(admissionSpec.Object.Raw, obj)
+	if err != nil {
+		status.Allowed = false
+		status.Result = &metav1.Status{
+			Status: metav1.StatusFailure, Code: http.StatusBadRequest, Reason: metav1.StatusReasonBadRequest,
+			Message: err.Error(),
+		}
+		return status
+	}
+
+	err = validation.ValidateCassandra(obj).ToAggregate()
+	if err != nil {
+		status.Allowed = false
+		status.Result = &metav1.Status{
+			Status: metav1.StatusFailure, Code: http.StatusNotAcceptable, Reason: metav1.StatusReasonNotAcceptable,
+			Message: err.Error(),
+		}
+		return status
+	}
+
+	status.Allowed = true
+	return status
 }
