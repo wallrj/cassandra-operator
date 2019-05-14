@@ -39,7 +39,7 @@ function deploy() {
     local tmpDir=$(mktemp -d)
     trap '{ CODE=$?; rm -rf ${tmpDir} ; exit ${CODE}; }' EXIT
 
-    k8Resources="rbac.yaml deployment.yaml"
+    k8Resources="apiservice.yaml rbac.yaml service.yaml deployment.yaml"
     for k8Resource in ${k8Resources}
     do
         sed -e "s@\$TARGET_NAMESPACE@$namespace@g" \

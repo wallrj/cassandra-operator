@@ -3,7 +3,6 @@ kind: ServiceAccount
 metadata:
   name: cassandra-webhook
   namespace: $TARGET_NAMESPACE
-  namespace: $TARGET_NAMESPACE
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment

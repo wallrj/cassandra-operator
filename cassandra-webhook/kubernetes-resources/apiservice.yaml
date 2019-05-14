@@ -1,0 +1,14 @@
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: v1beta1.admission.core.sky.uk
+  labels:
+    app: cassandra-webhook
+spec:
+  group: admission.core.sky.uk
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: cassandra-webhook
+    namespace: $TARGET_NAMESPACE
+  version: v1beta1
