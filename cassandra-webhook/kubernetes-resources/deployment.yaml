@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
       - env:
-        - name: NAMESPACE
+        - name: POD_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
@@ -38,7 +38,9 @@ spec:
               fieldPath: metadata.name
         - name: APP_NAME
           value: cassandra-webhook
-        args: $ARGS
+        args:
+        - --v=2
+        - --secure-port=6443
         image: $IMAGE
         imagePullPolicy: IfNotPresent
         name: cassandra-webhook
