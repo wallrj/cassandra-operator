@@ -61,7 +61,7 @@ release: common-docker-release
 
 setup:
 	@echo "== setup"
-	@echo "Not implemented"
+	go get -u github.com/cloudflare/cfssl/cmd/...
 
 clean: common-docker-clean
 	@echo "== clean"
