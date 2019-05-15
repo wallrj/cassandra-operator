@@ -90,3 +90,4 @@ check-style-all:
 	$(MAKE) -C cassandra-bootstrapper check-style
 	$(MAKE) -C cassandra-snapshot check-style
 	$(MAKE) -C cassandra-operator check-style
+	$(MAKE) -C cassandra-webhook check-style
