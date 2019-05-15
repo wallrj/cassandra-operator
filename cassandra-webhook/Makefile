@@ -23,7 +23,7 @@ deploy: install
 	IMAGE=$(IMAGE_TO_DEPLOY) CONTEXT=$(KUBE_CONTEXT) NAMESPACE=$(NAMESPACE) $(projectDir)/deploy.sh
 
 check: deploy
-	kubectl apply -f examples/cassandra1.yaml
+	! kubectl apply -f examples/cassandra1.yaml
 
 check-style: fmt vet lint
 
