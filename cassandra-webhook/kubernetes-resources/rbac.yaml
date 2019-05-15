@@ -3,10 +3,10 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: RoleBinding
 metadata:
-  name: cassandra-webhook:webhook-authentication-reader
+  name: cassandra-operator-webhook:webhook-authentication-reader
   namespace: kube-system
   labels:
-    app: cassandra-webhook
+    app: cassandra-operator-webhook
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -14,5 +14,5 @@ roleRef:
 subjects:
 - apiGroup: ""
   kind: ServiceAccount
-  name: cassandra-webhook
-  namespace: $TARGET_NAMESPACE
+  name: cassandra-operator-webhook
+  namespace: $NAMESPACE

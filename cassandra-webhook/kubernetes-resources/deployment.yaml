@@ -1,29 +1,23 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: cassandra-webhook
-  namespace: $TARGET_NAMESPACE
----
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: cassandra-webhook
-  name: cassandra-webhook
-  namespace: $TARGET_NAMESPACE
+    app: cassandra-operator-webhook
+  name: cassandra-operator-webhook
+  namespace: $NAMESPACE
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: cassandra-webhook
-      deployment: cassandra-webhook
+      app: cassandra-operator-webhook
+      deployment: cassandra-operator-webhook
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: cassandra-webhook
-        deployment: cassandra-webhook
+        app: cassandra-operator-webhook
+        deployment: cassandra-operator-webhook
     spec:
       containers:
       - env:
@@ -37,20 +31,29 @@ spec:
             fieldRef:
               fieldPath: metadata.name
         - name: APP_NAME
-          value: cassandra-webhook
+          value: cassandra-operator-webhook
         args:
         - --v=2
         - --secure-port=6443
+        - --tls-cert-file=/certs/tls.crt
+        - --tls-private-key-file=/certs/tls.key
         image: $IMAGE
         imagePullPolicy: IfNotPresent
-        name: cassandra-webhook
+        name: cassandra-operator-webhook
         resources:
           limits:
             memory: 256Mi
           requests:
             cpu: "0"
             memory: 256Mi
+        volumeMounts:
+        - name: certs
+          mountPath: /certs
+      volumes:
+      - name: certs
+        secret:
+          secretName: cassandra-operator-webhook-tls
       restartPolicy: Always
-      serviceAccount: cassandra-webhook
-      serviceAccountName: cassandra-webhook
+      serviceAccount: cassandra-operator-webhook
+      serviceAccountName: cassandra-operator-webhook
       terminationGracePeriodSeconds: 30

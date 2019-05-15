@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: cassandra-webhook
-  namespace: $TARGET_NAMESPACE
+  name: cassandra-operator-webhook
+  namespace: $NAMESPACE
   labels:
-    app: cassandra-webhook
+    app: cassandra-operator-webhook
 spec:
   type: ClusterIP
   ports:
@@ -12,4 +12,4 @@ spec:
     port: 443
     targetPort: 6443
   selector:
-    app: cassandra-webhook
+    app: cassandra-operator-webhook

@@ -1,62 +1,87 @@
-#!/bin/bash -e
+#!/bin/bash
 
-scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-resourcesDir="${scriptDir}/kubernetes-resources"
+set -o errexit
+set -o nounset
+set -o pipefail
 
-function waitForDeployment {
-    local count=0
-    local sleepBetweenRetries=2
-    local maxRetry=150 # 5mins max, as corresponds to: maxRetry * sleepBetweenRetries
-    local context=$1
-    local namespace=$2
-    local deployment=$3
+usage="Usage: CONTEXT=<ctx> IMAGE=<dockerImage> NAMESPACE=<namespace> $0"
 
-    local desiredReplicas=1
-    local updatedReplicas=""
-    local readyReplicas=""
-    until ([[ "$desiredReplicas" = "$updatedReplicas" ]] && [[ "$desiredReplicas" = "$readyReplicas" ]]) || (( "$count" >= "$maxRetry" )); do
-        count=$((count+1))
-        echo "Waiting for ${namespace}.${deployment} to have ${desiredReplicas} updated replicas. Attempt: $count"
-        readyReplicas=$(kubectl --context ${context} -n ${namespace} get deployment ${deployment} -o go-template="{{.status.readyReplicas}}")
-        updatedReplicas=$(kubectl --context ${context} -n ${namespace} get deployment ${deployment} -o go-template="{{.status.updatedReplicas}}")
-
-        sleep ${sleepBetweenRetries}
-    done
-
-    if [[ "$desiredReplicas" != "$updatedReplicas" ]] || [[ "$desiredReplicas" != "$readyReplicas" ]]; then
-        echo "Deployment failed to become ready after ${maxRetry} retries"
-        exit 1
-    fi
-    echo "Deployment is ready"
-}
-
-function deploy() {
-    local image=$1
-    local context=$2
-    local namespace=$3
-    local ingressHost=$4
-    local deployment=cassandra-webhook
-    local tmpDir=$(mktemp -d)
-    trap '{ CODE=$?; rm -rf ${tmpDir} ; exit ${CODE}; }' EXIT
-
-    k8Resources="apiservice.yaml rbac.yaml service.yaml deployment.yaml"
-    for k8Resource in ${k8Resources}
-    do
-        sed -e "s@\$TARGET_NAMESPACE@$namespace@g" \
-            -e "s@\$IMAGE@$image@g" \
-            -e "s@\$ARGS@$args@g" \
-            -e "s@\$INGRESS_HOST@$ingressHost@g" \
-            ${resourcesDir}/${k8Resource} > ${tmpDir}/${k8Resource}
-        kubectl --context ${context} apply -f ${tmpDir}/${k8Resource}
-    done
-
-    waitForDeployment ${context} ${namespace} ${deployment}
-}
-
-usage="Usage: CONTEXT=<ctx> IMAGE=<dockerImage> NAMESPACE=<namespace> INGRESS_HOST=<ingressHost> $0"
 : ${IMAGE?${usage}}
 : ${CONTEXT?${usage}}
 : ${NAMESPACE?${usage}}
-: ${INGRESS_HOST?${usage}}
 
-deploy ${IMAGE} ${CONTEXT} ${NAMESPACE} ${INGRESS_HOST}
+scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+scriptPath="${scriptDir}/$(basename ${BASH_SOURCE[0]})"
+templatesDir="${scriptDir}/kubernetes-resources"
+resourcesDir="${scriptPath}.files"
+name="cassandra-webhook"
+
+
+function create_certificates() {
+    local fqdn="${name}.${NAMESPACE}.svc"
+    pushd "${resourcesDir}"
+    # See https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/
+    cat <<EOF > "pki/cfssl.json"
+{
+  "hosts": [
+      "$fqdn"
+  ],
+  "CN": "${fqdn}",
+  "key": {
+    "algo": "ecdsa",
+    "size": 256
+  }
+}
+EOF
+
+    cfssl genkey "pki/cfssl.json" \
+        | cfssljson -bare "pki/server"
+
+    cat <<EOF > manifests/csr.yaml
+apiVersion: certificates.k8s.io/v1beta1
+kind: CertificateSigningRequest
+metadata:
+  name: ${fqdn}
+spec:
+  groups:
+  - system:authenticated
+  request: $(cat "pki/server.csr" | base64 | tr -d '\n')
+  usages:
+  - digital signature
+  - key encipherment
+  - server auth
+EOF
+
+    kubectl apply -f manifests/csr.yaml
+
+    kubectl certificate approve "${fqdn}"
+
+    while ! test -s pki/server.crt; do
+        kubectl get csr "${fqdn}" -o jsonpath='{.status.certificate}' \
+            | base64 --decode > pki/server.crt
+    done
+}
+
+
+function create_resources() {
+    pushd "${templatesDir}"
+    find . -type f -iname '*.yaml' | while read relPath; do
+        envsubst < $relPath > "${resourcesDir}/manifests/${relPath}"
+    done
+    popd
+}
+
+function deploy() {
+    kubectl apply -f ${resourcesDir}/manifests
+}
+
+
+if test -d $resourcesDir; then
+    echo "ERROR: $resourcesDir already exists. Cleanup first." >&2
+    exit 1
+fi
+mkdir -p "${resourcesDir}/manifests" "${resourcesDir}/pki"
+
+create_certificates
+create_resources
+deploy
