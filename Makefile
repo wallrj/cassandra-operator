@@ -59,6 +59,7 @@ install-all:
 	$(MAKE) -C cassandra-bootstrapper install
 	$(MAKE) -C cassandra-snapshot install
 	$(MAKE) -C cassandra-operator install
+	$(MAKE) -C cassandra-webhook install
 
 clean-all:
 	@echo "== clean-all"
