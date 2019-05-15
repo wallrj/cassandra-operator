@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-dep go-build go-install docker-image push-image prepare-deployment release check-style
+.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image prepare-deployment release check-style
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -30,19 +30,21 @@ check-style: fmt vet lint
 
 check: check-style validate-licences test prepare-deployment integration-test e2e-test
 
+ensure-go-modules:
+ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')
+	$(error "go modules must be enabled: export GO111MODULE=on, or run from outside $$GOPATH")
+else
+	@echo "go modules enabled"
+endif
+
 setup:
 	@echo "== setup"
-	go get -v golang.org/x/lint/golint golang.org/x/tools/cmd/goimports github.com/golang/dep/cmd/dep github.com/sky-uk/licence-compliance-checker
-	go get -v github.com/onsi/ginkgo/ginkgo && cd $$GOPATH/src/github.com/onsi/ginkgo && git checkout 'v1.6.0' && go install github.com/onsi/ginkgo/ginkgo
-	curl https://raw.githubusercontent.com/golang/dep/v0.5.1/install.sh | sh
+	go install \
+		github.com/sky-uk/licence-compliance-checker \
+		github.com/onsi/ginkgo/ginkgo
 
-go-dep:
-	@echo "== go-dep"
-	dep ensure -v -vendor-only
-
-go-build: ensure-build-dir-exists go-dep
+go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"
-	dep ensure -v -vendor-only
 	go build -o $(buildDir)/bin/cassandra-snapshot -v github.com/sky-uk/cassandra-operator/cassandra-snapshot/cmd
 	KUBE_CONTEXT=ignore go test -run xxxxx $(testPkgs)  # build the test code but don't run any tests yet
 
@@ -57,10 +59,12 @@ validate-licences:
 	@echo "== validate licences"
 	set -e ;\
 	restricted=$$(paste -s -d ',' restricted-licences.txt) ;\
-	projects=$$(dep status -f='vendor/{{ .ProjectRoot }} ') ;\
-	licence-compliance-checker -L error -E -r $$restricted -o vendor/github.com/ghodss/yaml=BSD-3-Clause $$projects ;\
+	licence-compliance-checker -L error -E -r $$restricted \
+		-m github.com/sky-uk/cassandra-operator/cassandra-snapshot=BSD-3-Clause \
+		-m sigs.k8s.io/yaml=BSD-3-Clause \
+		--check-go-modules ;\
 
-vet: go-dep
+vet:
 	@echo "== vet"
 	go vet $(pkgs)
 
@@ -76,11 +80,11 @@ ensure-build-dir-exists:
 ensure-test-report-dir-exists: ensure-build-dir-exists
 	mkdir -p $(junitReportDir)
 
-test: ensure-test-report-dir-exists go-dep
+test: ensure-test-report-dir-exists
 	@echo "== test"
 	ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress pkg cmd -- -junit-report-dir $(junitReportDir)
 
-integration-test: ensure-test-report-dir-exists go-dep
+integration-test: ensure-test-report-dir-exists
 	@echo "== integration-test"
 ifeq ($(strip $(USE_MOCK)),true)
 	@echo "== e2e-test integration test against real cassandra"
@@ -91,7 +95,7 @@ ifeq ($(strip $(USE_MOCK)),true)
         ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/create -- -junit-report-dir $(junitReportDir)
 endif
 
-e2e-test: ensure-test-report-dir-exists go-dep
+e2e-test: ensure-test-report-dir-exists
 	@echo "== e2e-test"
 	IMAGE_UNDER_TEST=$(IMAGE_UNDER_TEST) \
         FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
