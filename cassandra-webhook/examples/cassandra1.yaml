@@ -1,0 +1,6 @@
+apiVersion: core.sky.uk/v1alpha1
+kind: Cassandra
+metadata:
+  name: mycluster
+spec:
+  foreignFieldName: foo
