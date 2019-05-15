@@ -60,6 +60,14 @@ EOF
         kubectl get csr "${fqdn}" -o jsonpath='{.status.certificate}' \
             | base64 --decode > pki/server.crt
     done
+
+    kubectl create secret tls \
+            --dry-run \
+            --output yaml \
+            --namespace test-cassandra-operator \
+            --cert pki/server.crt \
+            --key=pki/server-key.pem \
+            cassandra-operator-webhook-tls > manifests/secret.yaml
 }
 
 
