@@ -1,5 +1,10 @@
 .PHONY: build check-style go-dep go-build go-install fmt vet lint ensure-build-dir-exists docker-image install push-image
 
+# Default context is running locally against a dind cluster
+KUBE_CONTEXT ?= dind
+IMAGE_TO_DEPLOY ?= $(dockerTestImage)
+NAMESPACE ?= test-cassandra-operator
+
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 buildDir := $(projectDir)/build
 image := cassandra-webhook
@@ -10,6 +15,9 @@ include $(projectDir)/../MakefileDocker
 build: go-build go-install docker-image
 
 install: build push-image
+
+deploy: install
+	IMAGE=$(IMAGE_TO_DEPLOY) CONTEXT=$(KUBE_CONTEXT) NAMESPACE=$(NAMESPACE) $(projectDir)/deploy.sh
 
 check-style: fmt vet lint
 
