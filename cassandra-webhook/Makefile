@@ -61,7 +61,8 @@ release: common-docker-release
 
 setup:
 	@echo "== setup"
-	go get -u github.com/cloudflare/cfssl/cmd/...
+	go get -u github.com/cloudflare/cfssl/cmd/cfssl
+	go get -u github.com/cloudflare/cfssl/cmd/cfssljson
 
 clean: common-docker-clean
 	@echo "== clean"
