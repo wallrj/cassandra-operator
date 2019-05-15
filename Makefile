@@ -8,6 +8,7 @@ USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
+CASSANDRA_WEBHOOK_IMAGE ?= $(TEST_REGISTRY)/cassandra-webhook:v$(gitRev)
 NAMESPACE ?= test-cassandra-operator
 GINKGO_NODES ?= 0
 GINKGO_COMPILERS ?= 0
@@ -65,6 +66,7 @@ clean-all:
 	$(MAKE) -C cassandra-bootstrapper clean
 	$(MAKE) -C cassandra-snapshot clean
 	$(MAKE) -C cassandra-operator clean
+	$(MAKE) -C cassandra-webhook clean
 
 setup-all:
 	@echo "== setup-all"
