@@ -12,4 +12,4 @@ spec:
     name: cassandra-operator-webhook
     namespace: $NAMESPACE
   version: v1beta1
-  insecureSkipTLSVerify: true
+  caBundle: $CA_CERT

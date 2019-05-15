@@ -15,8 +15,9 @@ scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 scriptPath="${scriptDir}/$(basename ${BASH_SOURCE[0]})"
 templatesDir="${scriptDir}/kubernetes-resources"
 resourcesDir="${scriptPath}.files"
-name="cassandra-webhook"
+name="cassandra-operator-webhook"
 
+export CA_CERT="$(docker exec kube-master cat /etc/kubernetes/pki/ca.crt | grep -v '^-.*' | tr -d '\n')"
 
 source "${repoDir}/hack/libdeploy.sh"
 
@@ -71,6 +72,7 @@ EOF
             --cert pki/server.crt \
             --key=pki/server-key.pem \
             cassandra-operator-webhook-tls > manifests/secret.yaml
+
 }
 
 
