@@ -12,6 +12,5 @@ func ValidateCassandra(c *v1alpha1.Cassandra) field.ErrorList {
 
 func ValidateCassandraSpec(c *v1alpha1.CassandraSpec, fldPath *field.Path) field.ErrorList {
 	el := field.ErrorList{}
-	el = append(el, field.Required(fldPath.Child("Datacenter"), "Always error"))
 	return el
 }

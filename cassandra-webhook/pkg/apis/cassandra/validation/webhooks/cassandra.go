@@ -1,6 +1,7 @@
 package webhooks
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 
@@ -31,7 +32,9 @@ func (c *Cassandra) Validate(admissionSpec *admissionv1beta1.AdmissionRequest) *
 	status := &admissionv1beta1.AdmissionResponse{}
 
 	obj := &v1alpha1.Cassandra{}
-	err := json.Unmarshal(admissionSpec.Object.Raw, obj)
+	decoder := json.NewDecoder(bytes.NewReader(admissionSpec.Object.Raw))
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(obj)
 	if err != nil {
 		status.Allowed = false
 		status.Result = &metav1.Status{
