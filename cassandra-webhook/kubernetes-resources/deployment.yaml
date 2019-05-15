@@ -33,7 +33,7 @@ spec:
         - name: APP_NAME
           value: cassandra-operator-webhook
         args:
-        - --v=2
+        - --v=4
         - --secure-port=6443
         - --tls-cert-file=/certs/tls.crt
         - --tls-private-key-file=/certs/tls.key
