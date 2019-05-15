@@ -10,12 +10,15 @@ usage="Usage: CONTEXT=<ctx> IMAGE=<dockerImage> NAMESPACE=<namespace> $0"
 : ${CONTEXT?${usage}}
 : ${NAMESPACE?${usage}}
 
+repoDir="$(git rev-parse --show-toplevel)"
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 scriptPath="${scriptDir}/$(basename ${BASH_SOURCE[0]})"
 templatesDir="${scriptDir}/kubernetes-resources"
 resourcesDir="${scriptPath}.files"
 name="cassandra-webhook"
 
+
+source "${repoDir}/hack/libdeploy.sh"
 
 function create_certificates() {
     local fqdn="${name}.${NAMESPACE}.svc"
@@ -81,6 +84,7 @@ function create_resources() {
 
 function deploy() {
     kubectl apply -f ${resourcesDir}/manifests
+    retry kubectl get --raw /apis/admission.core.sky.uk/v1beta1
 }
 
 
