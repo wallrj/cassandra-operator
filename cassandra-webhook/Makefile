@@ -59,5 +59,6 @@ setup:
 
 clean: common-docker-clean
 	@echo "== clean"
+	kubectl delete -f $(buildDir)/deploy.sh.files/manifests
 	rm $(shell go env GOPATH)/bin/cassandra-webhook || true
 	rm -rfv $(buildDir)

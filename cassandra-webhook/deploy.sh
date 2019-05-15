@@ -14,7 +14,7 @@ repoDir="$(git rev-parse --show-toplevel)"
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 scriptPath="${scriptDir}/$(basename ${BASH_SOURCE[0]})"
 templatesDir="${scriptDir}/kubernetes-resources"
-resourcesDir="${scriptPath}.files"
+resourcesDir="${scriptDir}/build/deploy.sh.files"
 name="cassandra-operator-webhook"
 
 export CA_CERT="$(docker exec kube-master cat /etc/kubernetes/pki/ca.crt | base64 | tr -d '\n')"
