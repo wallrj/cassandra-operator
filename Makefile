@@ -72,6 +72,7 @@ setup-all:
 	$(MAKE) -C cassandra-bootstrapper setup
 	$(MAKE) -C cassandra-snapshot setup
 	$(MAKE) -C cassandra-operator setup
+	$(MAKE) -C cassandra-webhook setup
 
 recreate-dind-cluster:
 	@echo "== recreate dind cluster"
@@ -83,6 +84,7 @@ release-all:
 	$(MAKE) -C cassandra-bootstrapper release
 	$(MAKE) -C cassandra-snapshot release
 	$(MAKE) -C cassandra-operator release
+	$(MAKE) -C cassandra-webhook release
 
 check-style-all:
 	@echo "== check-style-all"

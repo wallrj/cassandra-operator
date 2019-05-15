@@ -50,3 +50,14 @@ ensure-build-dir-exists:
 push-image: docker-image common-docker-push
 
 docker-image: go-build common-docker-build
+
+release: common-docker-release
+
+setup:
+	@echo "== setup"
+	@echo "Not implemented"
+
+clean: common-docker-clean
+	@echo "== clean"
+	rm $(shell go env GOPATH)/bin/cassandra-webhook || true
+	rm -rfv $(buildDir)
