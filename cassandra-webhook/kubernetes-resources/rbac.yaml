@@ -1,3 +1,21 @@
+# apiserver gets the auth-delegator role to delegate auth decisions to
+# the core apiserver
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: cassandra-operator-webhook:auth-delegator
+  labels:
+    app: cassandra-operator-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- apiGroup: ""
+  kind: ServiceAccount
+  name: cassandra-operator-webhook
+  namespace: $NAMESPACE
+---
 # Allow webhook to read specific configmap that has the requestheader-* entries to
 # api agg
 apiVersion: rbac.authorization.k8s.io/v1beta1
