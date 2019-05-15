@@ -1,3 +1,4 @@
+.DEFAULT_GOAL := travis
 .PHONY: build check-style go-dep go-build go-install fmt vet lint ensure-build-dir-exists docker-image install push-image
 
 # Default context is running locally against a dind cluster
@@ -11,6 +12,8 @@ image := cassandra-webhook
 pkgs := $(shell go list ./... | grep -v /vendor/ | grep -v /pkg/apis/ | grep -v /pkg/client/ | grep -v /test/e2e)
 
 include $(projectDir)/../MakefileDocker
+
+travis: deploy check
 
 build: go-build go-install docker-image
 
