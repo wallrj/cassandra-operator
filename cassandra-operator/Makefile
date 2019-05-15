@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-dep go-build go-install docker-image push-image release check-style
+.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -33,17 +33,22 @@ check-style: fmt vet lint
 
 check: check-style validate-licences test deploy-operator integration-test e2e-test
 
+ensure-go-modules:
+ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')
+	$(error "go modules must be enabled: export GO111MODULE=on, or run from outside $$GOPATH")
+else
+	@echo "go modules enabled"
+endif
+
 setup:
 	@echo "== setup"
-	go get -v golang.org/x/lint/golint golang.org/x/tools/cmd/goimports github.com/golang/dep/cmd/dep github.com/sky-uk/licence-compliance-checker
-	go get -v github.com/onsi/ginkgo/ginkgo && cd $$GOPATH/src/github.com/onsi/ginkgo && git checkout 'v1.6.0' && go install github.com/onsi/ginkgo/ginkgo
-	curl https://raw.githubusercontent.com/golang/dep/v0.5.1/install.sh | sh
+	go install \
+		github.com/sky-uk/licence-compliance-checker \
+		github.com/onsi/ginkgo/ginkgo \
+		golang.org/x/tools/cmd/goimports \
+		golang.org/x/lint/golint
 
-go-dep:
-	@echo "== go-dep"
-	dep ensure -v -vendor-only
-
-go-build: ensure-build-dir-exists go-dep
+go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"
 	go build -o $(buildDir)/bin/cassandra-operator -v github.com/sky-uk/cassandra-operator/cassandra-operator/cmd/operator
 	KUBE_CONTEXT=ignore go test -run xxxxx $(testPkgs) # build the test code but don't run any tests yet
@@ -55,7 +60,7 @@ go-install: go-build
 fmt:
 	go fmt ./...
 
-vet: go-dep
+vet:
 	go vet $(pkgs)
 
 lint:
@@ -69,11 +74,11 @@ ensure-build-dir-exists:
 ensure-test-report-dir-exists: ensure-build-dir-exists
 	mkdir -p $(junitReportDir)
 
-test: ensure-test-report-dir-exists go-dep
+test: ensure-test-report-dir-exists
 	@echo "== test"
 	ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress pkg cmd -- -junit-report-dir $(junitReportDir)
 
-integration-test: ensure-test-report-dir-exists go-dep
+integration-test: ensure-test-report-dir-exists
 	@echo "== integration-test"
 ifeq ($(strip $(USE_MOCK)),true)
 	@echo "== e2e-test integration test against real cassandra"
@@ -88,7 +93,7 @@ endif
 
 e2e-test: e2e-test-parallel e2e-test-sequential
 
-e2e-test-parallel: ensure-test-report-dir-exists go-dep
+e2e-test-parallel: ensure-test-report-dir-exists
 	@echo "== e2e-test-parallel"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
 	    NAMESPACE=$(NAMESPACE) \
@@ -99,7 +104,7 @@ e2e-test-parallel: ensure-test-report-dir-exists go-dep
 	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
 	    ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress -stream -timeout=30m test/e2e/parallel -- -junit-report-dir $(junitReportDir)
 
-e2e-test-sequential: ensure-test-report-dir-exists go-dep
+e2e-test-sequential: ensure-test-report-dir-exists
 	@echo "== e2e-test-sequential"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
 	    NAMESPACE=$(NAMESPACE) \
@@ -122,8 +127,11 @@ validate-licences:
 	@echo "== validate licences"
 	set -e ;\
 	restricted=$$(paste -s -d ',' restricted-licences.txt) ;\
-	projects=$$(dep status -f='vendor/{{ .ProjectRoot }} ') ;\
-	licence-compliance-checker -L error -E -r $$restricted -o vendor/sigs.k8s.io/yaml=BSD-3-Clause -o vendor/github.com/golang/protobuf=BSD-3-Clause -o vendor/github.com/gogo/protobuf=BSD-3-Clause -o vendor/github.com/hashicorp/golang-lru=MPL-2.0 $$projects ;\
+	licence-compliance-checker -L error -E -r $$restricted \
+		-m github.com/sky-uk/cassandra-operator/cassandra-operator=BSD-3-Clause \
+		-m sigs.k8s.io/yaml=BSD-3-Clause \
+		-m github.com/hashicorp/golang-lru=MPL-2.0 \
+		--check-go-modules ;\
 
 clean: common-docker-clean
 	@echo "== clean"

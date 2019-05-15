@@ -88,6 +88,21 @@ you should look for an issue with a `good first issue` or `bug` label.
 5. You may merge the pull request to master once a reviewer has approved it. If you do not have permission to
    do that, you may request the reviewer to merge it for you.
 
+## Pinning dependencies
+
+Certain dependencies are picky about using exact combinations of package
+versions (in particular, `k8s.io/client-go` and `k8s.io/apimachinery`).
+
+The `cassandra-operator/hack/pin-dependency.sh` script is useful for managing
+and pinning these versions when the time comes to update them.
+
+For example, to pin both of these:
+
+```bash
+./hack/pin-dependency.sh k8s.io/apimachinery kubernetes-1.15.0-alpha.0
+./hack/pin-dependency.sh k8s.io/client-go v11.0.0
+```
+
 ## Releasing
 
 Once a pull request has been merged, the commit in master should be tagged with a new version number and pushed.
