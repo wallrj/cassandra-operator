@@ -17,7 +17,7 @@ templatesDir="${scriptDir}/kubernetes-resources"
 resourcesDir="${scriptPath}.files"
 name="cassandra-operator-webhook"
 
-export CA_CERT="$(docker exec kube-master cat /etc/kubernetes/pki/ca.crt | grep -v '^-.*' | tr -d '\n')"
+export CA_CERT="$(docker exec kube-master cat /etc/kubernetes/pki/ca.crt | base64 | tr -d '\n')"
 
 source "${repoDir}/hack/libdeploy.sh"
 
