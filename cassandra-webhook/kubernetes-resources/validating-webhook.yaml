@@ -22,3 +22,4 @@ webhooks:
         name: kubernetes
         namespace: default
         path: /apis/admission.core.sky.uk/v1beta1/cassandras
+      caBundle: $CA_CERT
