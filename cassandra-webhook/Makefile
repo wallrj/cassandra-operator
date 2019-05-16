@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: build check-style go-dep go-build go-install fmt vet lint ensure-build-dir-exists docker-image install push-image
+.PHONY: build check-style go-build go-install fmt vet lint ensure-build-dir-exists docker-image install push-image
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -27,11 +27,7 @@ check: deploy
 
 check-style: fmt vet lint
 
-go-dep:
-	@echo "== go-dep"
-	dep ensure -v -vendor-only
-
-go-build: ensure-build-dir-exists go-dep
+go-build: ensure-build-dir-exists
 	@echo "== build"
 	go build -o $(buildDir)/bin/cassandra-webhook -v github.com/sky-uk/cassandra-operator/cassandra-webhook/cmd/webhook
 
@@ -42,7 +38,7 @@ go-install: go-build
 fmt:
 	go fmt ./...
 
-vet: go-dep
+vet:
 	go vet $(pkgs)
 
 lint:
