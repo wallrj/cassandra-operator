@@ -64,9 +64,9 @@ type Pod struct {
 	Memory      resource.Quantity `json:"memory"`
 	CPU         resource.Quantity `json:"cpu"`
 	// +optional
-	LivenessProbe *Probe `json:"livenessProbe"`
+	LivenessProbe *Probe `json:"livenessProbe,omitempty"`
 	// +optional
-	ReadinessProbe *Probe `json:"readinessProbe"`
+	ReadinessProbe *Probe `json:"readinessProbe,omitempty"`
 }
 
 // CassandraStatus is the status for the Cassandra resource
@@ -97,7 +97,7 @@ type Snapshot struct {
 	// Schedule follows the cron format, see https://en.wikipedia.org/wiki/Cron
 	Schedule string `json:"schedule"`
 	// +optional
-	Keyspaces []string `json:"keyspaces"`
+	Keyspaces []string `json:"keyspaces,omitempty"`
 	// +optional
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 	// +optional
