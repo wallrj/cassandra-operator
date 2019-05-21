@@ -1,0 +1,51 @@
+# https://gist.github.com/victorddiniz/277f36ffdab25a0cf731f2e2c2164df9
+
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: cassandra-reaper
+spec:
+  selector:
+    matchLabels:
+      deployment: cassandra-reaper
+  template:
+    metadata:
+      labels:
+        deployment: cassandra-reaper
+    spec:
+      containers:
+      - name: cassandra-reaper
+        image: thelastpickle/cassandra-reaper:1.4.3
+        env:
+        - name: REAPER_STORAGE_TYPE
+          value: memory
+        - name: REAPER_CASS_CLUSTER_NAME
+          value: "My Cluster"
+        - name: REAPER_CASS_CONTACT_POINTS
+          value: '[ "10.16.0.6", "10.16.1.11", "10.16.2.10" ]'
+        - name: REAPER_ENABLE_WEBUI_AUTH
+          value: "true"
+        - name: REAPER_WEBUI_USER
+          value: "anon"
+        - name: REAPER_WEBUI_PASSWORD
+          value: "anon"
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 30
+        resources:
+          requests:
+            cpu: 200m
+            memory: 400M
+          limits:
+            cpu: 300m
+            memory: 500M
+        ports:
+        - containerPort: 8081
+          name: 'admin-ui'
+        - containerPort: 8080
+          name: 'web-ui'
