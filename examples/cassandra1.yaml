@@ -1,0 +1,15 @@
+apiVersion: core.sky.uk/v1alpha1
+kind: Cassandra
+metadata:
+  name: mycluster
+spec:
+  pod:
+    image: "cassandra:3.11"
+    cpu: 0.5m
+    memory: 1Gi
+    storageSize: 100Mi
+  racks:
+  - name: a
+    replicas: 1
+    storageClass: standard
+    zone: europe-west1-b
