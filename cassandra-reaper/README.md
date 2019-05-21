@@ -1,4 +1,46 @@
-## Cassandra Reaper
+# Cassandra Reaper Operator
+
+## Architecture
+
+Cassandra Reaper Operator (CRO):
+ * Deploys a [Cassandra Reaper Docker Container](https://hub.docker.com/r/thelastpickle/cassandra-reaper/) as a `StatefulSet`.
+ * Watches for and reacts to changes in `CassandraReaperCluster` resources.
+
+Here is an example of a `CassandraReaperCluster` resource:
+
+```
+apiVersion: core.sky.uk/v1alpha1
+kind: CassandraReaper
+metadata:
+  name: mycluster-reaper
+  namespace: example-ns
+spec:
+  # The IP address or hostname of a seed provider of the target Cassandra cluster.
+  # And optional port number if the JMX service is listening on a non-standard port.
+  # See http://cassandra-reaper.io/docs/api/#cluster-resource
+  jmxEndpoint: mycluster-seeds:7199
+
+  # The name of a `Secret` in the same namespace which contains the JMX username and password to use when connecting to the target Cassandra cluster
+  # username: user2
+  # password: password2
+  # See http://cassandra-reaper.io/docs/configuration/reaper_specific/#jmxcredentials
+  jmxCredentials: mycluster-reaper
+```
+
+When CRO finds this resource if performs the following steps:
+ * [Updates JMX credentials](http://cassandra-reaper.io/docs/configuration/reaper_specific/#jmxcredentials)
+   ```
+   jmxCredentials:
+     ...
+     example-ns/mycluster-reapear:
+       username: user2
+       password: password2
+   ```
+ * Restarts Cassandra Reaper.
+   [Reaper does not support SIGHUP config reloading](https://github.com/thelastpickle/cassandra-reaper/blob/d7d045f7eaa4e214584c4ec8082265ba45c36d9b/src/server/src/main/java/io/cassandrareaper/ReaperApplication.java#L394)
+ * [Adds a cluster via the REST API](http://cassandra-reaper.io/docs/api/#cluster-resource)
+   `POST /cluster?seedHost=mycluster-seeds:7199`
+ * Updates `CassandraReaper.status` with the discovered Cluster name.
 
 ### Plan
 
