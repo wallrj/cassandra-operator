@@ -92,3 +92,7 @@ io.cassandrareaper.ReaperException: no host could be reached through JMX
 ```
 kubectl -n test-cassandra-operator exec mycluster-a-0 -- touch /etc/cassandra/jmxremote.password
 ```
+
+```
+nodetool --host 10.16.2.32 --username cassandra --password cassandra status
+```

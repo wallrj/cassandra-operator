@@ -22,7 +22,7 @@ spec:
         - name: REAPER_CASS_CLUSTER_NAME
           value: "My Cluster"
         - name: REAPER_CASS_CONTACT_POINTS
-          value: '[ "10.16.0.6", "10.16.1.11", "10.16.2.10" ]'
+          value: '[ "10.16.2.29" ]'
         - name: REAPER_ENABLE_WEBUI_AUTH
           value: "true"
         - name: REAPER_WEBUI_USER
