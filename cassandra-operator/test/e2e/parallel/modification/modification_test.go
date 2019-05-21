@@ -79,8 +79,8 @@ var _ = Context("Allowable cluster modifications", func() {
 		// when
 		revisionsBeforeUpdate := statefulSetRevisions(clusterName, racks)
 		TheClusterPodSpecAreChangedTo(Namespace, clusterName, v1alpha1.Pod{
-			BootstrapperImage: CassandraBootstrapperImageName,
-			Image:             CassandraImageName,
+			BootstrapperImage: &CassandraBootstrapperImageName,
+			Image:             &CassandraImageName,
 			Memory:            resource.MustParse("999Mi"),
 			CPU:               resource.MustParse("1m"),
 			LivenessProbe: &v1alpha1.Probe{

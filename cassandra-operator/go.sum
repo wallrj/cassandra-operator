@@ -77,8 +77,6 @@ github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORN
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0 h1:45sCR5RtlFHMR4UwH9sdQ5TC8v0qDQCHnXt+kaKSTVE=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
-github.com/kragniz/licence-compliance-checker v1.0.1-0.20190514150619-bdce557862df h1:GyJp0EJwsE6+tviCqEA+y0LotnAmsu8rMjFcwoaZ3kc=
-github.com/kragniz/licence-compliance-checker v1.0.1-0.20190514150619-bdce557862df/go.mod h1:EOczEhrP2Dj8B+lNnMTX8ak1YF/hUCvBUBiqE0/41IQ=
 github.com/matttproud/golang_protobuf_extensions v1.0.1 h1:4hp9jkHxhMHkqkrB3Ix0jegS5sx/RkqARlsWZ6pIwiU=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/mitchellh/go-homedir v0.0.0-20161203194507-b8bc1bf76747 h1:eQox4Rh4ewJF+mqYPxCkmBAirRnPaHEB26UkNuPyjlk=
@@ -125,7 +123,6 @@ github.com/shurcooL/sanitized_anchor_name v0.0.0-20170918181015-86672fcb3f95/go.
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.3.0 h1:hI/7Q+DtNZ2kINb6qt/lS+IyXnHQe9e90POfeewL/ME=
 github.com/sirupsen/logrus v1.3.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
-github.com/sky-uk/licence-compliance-checker v1.0.0/go.mod h1:aV8k9xf/XY+DLnPXQvscJpgHMiB2PTZ4rD2gq1vMK8U=
 github.com/sky-uk/licence-compliance-checker v1.1.0 h1:S3l+chcLXeTk7DoHUR+DNYOTP8k3HEMbkiz1871yl1A=
 github.com/sky-uk/licence-compliance-checker v1.1.0/go.mod h1:aV8k9xf/XY+DLnPXQvscJpgHMiB2PTZ4rD2gq1vMK8U=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=

@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"io/ioutil"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -56,7 +57,7 @@ func Rack(rackName string, replicas int32) v1alpha1.Rack {
 
 func SnapshotSchedule(cron string) *v1alpha1.Snapshot {
 	return &v1alpha1.Snapshot{
-		Image:    CassandraSnapshotImageName,
+		Image:    &CassandraSnapshotImageName,
 		Schedule: cron,
 	}
 }
@@ -64,10 +65,10 @@ func SnapshotSchedule(cron string) *v1alpha1.Snapshot {
 func clusterDefaultSpec() *v1alpha1.CassandraSpec {
 	return &v1alpha1.CassandraSpec{
 		Racks:       []v1alpha1.Rack{},
-		UseEmptyDir: false,
+		UseEmptyDir: ptr.Bool(false),
 		Pod: v1alpha1.Pod{
-			BootstrapperImage: CassandraBootstrapperImageName,
-			Image:             CassandraImageName,
+			BootstrapperImage: &CassandraBootstrapperImageName,
+			Image:             &CassandraImageName,
 			Memory:            resource.MustParse(PodMemory),
 			CPU:               resource.MustParse(PodCPU),
 			StorageSize:       resource.MustParse(podStorageSize),

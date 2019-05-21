@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +72,7 @@ func (c *ClusterBuilder) IsDefined() {
 
 	if c.useEmptyDir {
 		c.clusterSpec.Pod.StorageSize = resource.MustParse("0")
-		c.clusterSpec.UseEmptyDir = true
+		c.clusterSpec.UseEmptyDir = ptr.Bool(true)
 	}
 
 	if !c.withoutCustomConfig {
@@ -106,7 +107,7 @@ func TheClusterPodSpecAreChangedTo(namespace, clusterName string, podSpec v1alph
 
 func TheImageImmutablePropertyIsChangedTo(namespace, clusterName, imageName string) {
 	mutateCassandraSpec(namespace, clusterName, func(spec *v1alpha1.CassandraSpec) {
-		spec.Pod.Image = imageName
+		spec.Pod.Image = &imageName
 	})
 	log.Infof("Updated pod image for cluster %s", clusterName)
 }

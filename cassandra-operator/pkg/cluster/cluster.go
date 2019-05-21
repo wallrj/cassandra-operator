@@ -7,6 +7,7 @@ import (
 
 	"github.com/robfig/cron"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 	appsv1 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
@@ -28,17 +29,8 @@ const (
 	RackLabel       = "rack"
 	customConfigDir = "/custom-config"
 
-	// DefaultCassandraImage is the name of the default Docker image used on Cassandra pods
-	DefaultCassandraImage = "cassandra:3.11"
-
-	// DefaultCassandraSnapshotImage is the name of the Docker image used to make and cleanup snapshots
-	DefaultCassandraSnapshotImage = "skyuk/cassandra-snapshot:latest"
-
 	cassandraContainerName             = "cassandra"
 	cassandraBootstrapperContainerName = "cassandra-bootstrapper"
-
-	// DefaultCassandraBootstrapperImage is the name of the Docker image used to prepare the configuration for the Cassandra node before it can be started
-	DefaultCassandraBootstrapperImage = "skyuk/cassandra-bootstrapper:latest"
 
 	storageVolumeMountPath       = "/var/lib/cassandra"
 	configurationVolumeMountPath = "/etc/cassandra"
@@ -92,22 +84,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 		return err
 	}
 
-	cassandraImage := clusterDefinition.Spec.Pod.Image
-	if cassandraImage == "" {
-		cassandraImage = DefaultCassandraImage
-	}
-
-	bootstrapperImage := clusterDefinition.Spec.Pod.BootstrapperImage
-	if bootstrapperImage == "" {
-		bootstrapperImage = DefaultCassandraBootstrapperImage
-	}
-
-	if clusterDefinition.Spec.Snapshot != nil {
-		if clusterDefinition.Spec.Snapshot.Image == "" {
-			clusterDefinition.Spec.Snapshot.Image = DefaultCassandraSnapshotImage
-		}
-	}
-
 	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
 		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()
 	} else {
@@ -131,8 +107,16 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	}
 
 	cluster.definition = clusterDefinition.DeepCopy()
-	cluster.definition.Spec.Pod.BootstrapperImage = bootstrapperImage
-	cluster.definition.Spec.Pod.Image = cassandraImage
+	bootstrapperImage := v1alpha1helpers.GetBootstrapperImage(cluster.definition)
+	cluster.definition.Spec.Pod.BootstrapperImage = &bootstrapperImage
+
+	cassandraImage := v1alpha1helpers.GetCassandraImage(cluster.definition)
+	cluster.definition.Spec.Pod.Image = &cassandraImage
+
+	if cluster.definition.Spec.Snapshot != nil {
+		snapshotImage := v1alpha1helpers.GetSnapshopImage(cluster.definition)
+		cluster.definition.Spec.Snapshot.Image = &snapshotImage
+	}
 	return nil
 }
 
@@ -149,9 +133,9 @@ func validateRacks(clusterDefinition *v1alpha1.Cassandra) error {
 	for _, rack := range clusterDefinition.Spec.Racks {
 		if rack.Replicas < 1 {
 			return fmt.Errorf("invalid rack replicas value %d provided for Cassandra cluster definition: %s.%s", rack.Replicas, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.StorageClass == "" && !clusterDefinition.Spec.UseEmptyDir {
+		} else if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
 			return fmt.Errorf("rack named '%s' with no storage class specified, either set useEmptyDir to true or specify storage class: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.Zone == "" && !clusterDefinition.Spec.UseEmptyDir {
+		} else if rack.Zone == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
 			return fmt.Errorf("rack named '%s' with no zone specified, either set useEmptyDir to true or specify zone: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
 		}
 	}
@@ -163,11 +147,11 @@ func validatePodResources(clusterDefinition *v1alpha1.Cassandra) error {
 		return fmt.Errorf("no podMemory property provided for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 
-	if clusterDefinition.Spec.UseEmptyDir && !clusterDefinition.Spec.Pod.StorageSize.IsZero() {
+	if v1alpha1helpers.UseEmptyDir(clusterDefinition) && !clusterDefinition.Spec.Pod.StorageSize.IsZero() {
 		return fmt.Errorf("podStorageSize property provided when useEmptyDir is true for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 
-	if !clusterDefinition.Spec.UseEmptyDir && clusterDefinition.Spec.Pod.StorageSize.IsZero() {
+	if !v1alpha1helpers.UseEmptyDir(clusterDefinition) && clusterDefinition.Spec.Pod.StorageSize.IsZero() {
 		return fmt.Errorf("no podStorageSize property provided and useEmptyDir false for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 	return nil
@@ -414,7 +398,7 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotJobName(),
-		Image:   snapshot.Image,
+		Image:   v1alpha1helpers.GetSnapshopImage(c.definition),
 		Command: backupCommand,
 	}
 }
@@ -451,7 +435,7 @@ func (c *Cluster) CreateSnapshotCleanupContainer(snapshot *v1alpha1.Snapshot) *v
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotCleanupJobName(),
-		Image:   snapshot.Image,
+		Image:   v1alpha1helpers.GetSnapshopImage(c.definition),
 		Command: cleanupCommand,
 	}
 }
@@ -496,7 +480,7 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 
 	return v1.Container{
 		Name:  cassandraContainerName,
-		Image: c.definition.Spec.Pod.Image,
+		Image: v1alpha1helpers.GetCassandraImage(c.definition),
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "internode",
@@ -555,7 +539,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 		},
 		{
 			Name:  "CLUSTER_DATA_CENTER",
-			Value: c.definition.Spec.GetDatacenter(),
+			Value: v1alpha1helpers.GetDatacenter(c.definition),
 		},
 		{
 			Name: "NODE_LISTEN_ADDRESS",
@@ -581,7 +565,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 func (c *Cluster) createCassandraDataPersistentVolumeClaimForRack(rack *v1alpha1.Rack) []v1.PersistentVolumeClaim {
 	var persistentVolumeClaim []v1.PersistentVolumeClaim
 
-	if !c.definition.Spec.UseEmptyDir {
+	if !v1alpha1helpers.UseEmptyDir(c.definition) {
 		persistentVolumeClaim = append(persistentVolumeClaim, v1.PersistentVolumeClaim{
 			ObjectMeta: c.objectMetadata(c.definition.StorageVolumeName(), RackLabel, rack.Name, "app", c.definition.Name),
 			Spec: v1.PersistentVolumeClaimSpec{
@@ -626,7 +610,7 @@ func (c *Cluster) createPodVolumes(customConfigMap *v1.ConfigMap) []v1.Volume {
 		volumes = append(volumes, c.createConfigMapVolume(customConfigMap))
 	}
 
-	if c.definition.Spec.UseEmptyDir {
+	if v1alpha1helpers.UseEmptyDir(c.definition) {
 		volumes = append(volumes, emptyDir(c.definition.StorageVolumeName()))
 	}
 
@@ -716,7 +700,7 @@ func (c *Cluster) customConfigMapVolumeName() string {
 func (c *Cluster) createInitConfigContainer() v1.Container {
 	return v1.Container{
 		Name:    "init-config",
-		Image:   c.definition.Spec.Pod.Image,
+		Image:   v1alpha1helpers.GetCassandraImage(c.definition),
 		Command: []string{"sh", "-c", "cp -vr /etc/cassandra/* /configuration"},
 		VolumeMounts: []v1.VolumeMount{
 			{Name: "configuration", MountPath: "/configuration"},
@@ -737,7 +721,7 @@ func (c *Cluster) createCassandraBootstrapperContainer(rack *v1alpha1.Rack, cust
 	return v1.Container{
 		Name:         cassandraBootstrapperContainerName,
 		Env:          c.createEnvironmentVariableDefinition(rack),
-		Image:        c.definition.Spec.Pod.BootstrapperImage,
+		Image:        v1alpha1helpers.GetBootstrapperImage(c.definition),
 		Resources:    c.createResourceRequirements(),
 		VolumeMounts: mounts,
 	}

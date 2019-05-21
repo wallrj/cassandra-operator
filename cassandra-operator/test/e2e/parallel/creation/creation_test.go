@@ -46,8 +46,8 @@ func createClustersInParallel(multipleRacksCluster, emptyDirCluster *TestCluster
 	AClusterWithName(multipleRacksCluster.Name).AndClusterSpec(&v1alpha1.CassandraSpec{
 		Datacenter: ptr.String("custom-dc"),
 		Pod: v1alpha1.Pod{
-			BootstrapperImage: CassandraBootstrapperImageName,
-			Image:             CassandraImageName,
+			BootstrapperImage: &CassandraBootstrapperImageName,
+			Image:             &CassandraImageName,
 			Memory:            resource.MustParse("987Mi"),
 			CPU:               resource.MustParse("1m"),
 			StorageSize:       resource.MustParse("100Mi"),

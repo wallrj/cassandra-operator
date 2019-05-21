@@ -13,11 +13,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
 	informers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/informers/externalversions"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
@@ -184,9 +186,9 @@ func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
 }
 
 func (o *Operator) adjustUseEmptyDir(cluster *v1alpha1.Cassandra) {
-	if cluster.Spec.UseEmptyDir && !o.config.AllowEmptyDir {
+	if v1alpha1helpers.UseEmptyDir(cluster) && !o.config.AllowEmptyDir {
 		log.Warnf("Cluster %s.%s cannot be configured to use emptyDir, as the operator is configured not to allow the creation of clusters which use emptyDir storage.", cluster.Namespace, cluster.Name)
-		cluster.Spec.UseEmptyDir = false
+		cluster.Spec.UseEmptyDir = ptr.Bool(false)
 	}
 }
 

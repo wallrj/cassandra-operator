@@ -3,7 +3,7 @@ package e2e
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"os"
 	"time"
 
@@ -90,7 +90,7 @@ func init() {
 		CassandraLivenessProbeFailureThreshold = 3
 		CassandraReadinessProbeFailureThreshold = 3
 	} else {
-		CassandraImageName = cluster.DefaultCassandraImage
+		CassandraImageName = v1alpha1.DefaultCassandraImage
 		CassandraInitialDelay = 30
 		CassandraLivenessPeriod = 30
 		CassandraReadinessPeriod = 15
@@ -98,8 +98,8 @@ func init() {
 		CassandraReadinessProbeFailureThreshold = 8 // allow 2mins
 	}
 
-	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", cluster.DefaultCassandraBootstrapperImage)
-	CassandraSnapshotImageName = getEnvOrDefault("CASSANDRA_SNAPSHOT_IMAGE", cluster.DefaultCassandraSnapshotImage)
+	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", v1alpha1.DefaultCassandraBootstrapperImage)
+	CassandraSnapshotImageName = getEnvOrDefault("CASSANDRA_SNAPSHOT_IMAGE", v1alpha1.DefaultCassandraSnapshotImage)
 
 	Namespace = os.Getenv("NAMESPACE")
 	if Namespace == "" {

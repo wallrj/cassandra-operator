@@ -14,8 +14,18 @@ import (
 const (
 	NodeServiceAccountName     = "cassandra-node"
 	SnapshotServiceAccountName = "cassandra-snapshot"
+
 	// DefaultDCName is the default data center name which each Cassandra pod belongs to
 	DefaultDCName = "dc1"
+
+	// DefaultCassandraImage is the name of the default Docker image used on Cassandra pods
+	DefaultCassandraImage = "cassandra:3.11"
+
+	// DefaultCassandraBootstrapperImage is the name of the Docker image used to prepare the configuration for the Cassandra node before it can be started
+	DefaultCassandraBootstrapperImage = "skyuk/cassandra-bootstrapper:latest"
+
+	// DefaultCassandraSnapshotImage is the name of the Docker image used to make and cleanup snapshots
+	DefaultCassandraSnapshotImage = "skyuk/cassandra-snapshot:latest"
 )
 
 // +genclient
@@ -36,8 +46,8 @@ type CassandraSpec struct {
 	Datacenter *string `json:"datacenter,omitempty"`
 	Racks      []Rack  `json:"racks"`
 	// +optional
-	UseEmptyDir bool `json:"useEmptyDir"`
-	Pod         Pod  `json:"pod"`
+	UseEmptyDir *bool `json:"useEmptyDir,omitempty"`
+	Pod         Pod   `json:"pod"`
 	// +optional
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
 }
@@ -57,9 +67,9 @@ type Probe struct {
 
 type Pod struct {
 	// +optional
-	BootstrapperImage string `json:"bootstrapperImage"`
+	BootstrapperImage *string `json:"bootstrapperImage,omitempty"`
 	// +optional
-	Image       string            `json:"image"`
+	Image       *string           `json:"image,omitempty"`
 	StorageSize resource.Quantity `json:"storageSize"`
 	Memory      resource.Quantity `json:"memory"`
 	CPU         resource.Quantity `json:"cpu"`
@@ -93,7 +103,7 @@ type Rack struct {
 // Snapshot defines the snapshot creation and deletion configuration
 type Snapshot struct {
 	// +optional
-	Image string `json:"image"`
+	Image *string `json:"image,omitempty"`
 	// Schedule follows the cron format, see https://en.wikipedia.org/wiki/Cron
 	Schedule string `json:"schedule"`
 	// +optional
@@ -153,14 +163,6 @@ func (c *Cassandra) RackName(rack *Rack) string {
 // CustomConfigMapName returns the expected config map name for this cluster. This will return a value even if the config map does not exist.
 func (c *Cassandra) CustomConfigMapName() string {
 	return fmt.Sprintf("%s-config", c.Name)
-}
-
-// TODO: Move this to Cassandra top-level object
-func (c *CassandraSpec) GetDatacenter() string {
-	if c.Datacenter == nil {
-		return DefaultDCName
-	}
-	return *c.Datacenter
 }
 
 // SnapshotPropertiesUpdated returns false when snapshot1 and snapshot2 have the same properties disregarding retention policy
