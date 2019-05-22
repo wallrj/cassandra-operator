@@ -1,5 +1,57 @@
 # Cassandra Reaper Operator
 
+## Sidecar Deployment Method
+
+* Get PR 622
+https://github.com/thelastpickle/cassandra-reaper/pull/622
+
+hub pr checkout 622
+
+* Compile and push
+
+```
+mvn package
+mvn -B -pl src/server/ docker:build -Ddocker.directory=src/server/src/main/docker
+docker tag cassandra-reaper:latest gcr.io/jetstack-richard/cassandra-reaper:latest
+docker push gcr.io/jetstack-richard/cassandra-reaper:latest
+```
+
+* Edit the cluster statefulset
+
+  ```
+     containers:
+     - env:
+       - name: REAPER_STORAGE_TYPE
+         value: cassandra
+       - name: REAPER_CASS_CLUSTER_NAME
+         value: My Cluster
+       - name: REAPER_ENABLE_WEBUI_AUTH
+         value: "true"
+       - name: REAPER_WEBUI_USER
+         value: anon
+       - name: REAPER_WEBUI_PASSWORD
+         value: anon
+       - name: REAPER_DATACENTER_AVAILABILITY
+         value: SIDECAR
+       - name: REAPER_LOGGING_ROOT_LEVEL
+         value: DEBUG
+       - name: REAPER_CASS_CONTACT_POINTS
+         value: '["127.0.0.1"]'
+       image: gcr.io/jetstack-richard/cassandra-reaper:latest
+       imagePullPolicy: Always
+       name: cassandra-reaper
+
+  ```
+
+* Delete the pod and see it restarts
+
+* Create keyspace
+
+http://cassandra-reaper.io/docs/backends/cassandra/
+
+kubectl -n test-cassandra-operator  exec mycluster-a-0 -c cassandra -it -- cqlsh -e "CREATE KEYSPACE reaper_db WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 0 };"
+
+
 ## Architecture
 
 Cassandra Reaper Operator (CRO):
