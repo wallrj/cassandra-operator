@@ -53,9 +53,6 @@ type CassandraSpec struct {
 	Pod         Pod   `json:"pod"`
 	// +optional
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
-
-	// +optional
-	ManagerImage *string `json:"managerImage,omitempty"`
 }
 
 type Probe struct {
@@ -74,6 +71,10 @@ type Probe struct {
 type Pod struct {
 	// +optional
 	BootstrapperImage *string `json:"bootstrapperImage,omitempty"`
+
+	// +optional
+	ManagerImage *string `json:"managerImage,omitempty"`
+
 	// +optional
 	Image       *string           `json:"image,omitempty"`
 	StorageSize resource.Quantity `json:"storageSize"`

@@ -30,8 +30,8 @@ func GetBootstrapperImage(c *v1alpha1.Cassandra) string {
 
 // GetBootstrapperImage returns the bootstrapper image for a cluster
 func GetCassandraManagerImage(c *v1alpha1.Cassandra) string {
-	if c.Spec.ManagerImage != nil {
-		return *c.Spec.ManagerImage
+	if c.Spec.Pod.ManagerImage != nil {
+		return *c.Spec.Pod.ManagerImage
 	}
 	return v1alpha1.DefaultCassandraManagerImage
 }
