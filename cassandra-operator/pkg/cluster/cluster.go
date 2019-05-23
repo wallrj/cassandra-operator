@@ -299,7 +299,6 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 					},
 					Containers: []v1.Container{
 						c.createCassandraContainer(rack, customConfigMap),
-						c.createReaperKeyspaceContainer(rack, customConfigMap),
 						c.createReaperContainer(rack, customConfigMap),
 					},
 					Volumes: c.createPodVolumes(customConfigMap),
@@ -481,6 +480,12 @@ func (c *Cluster) objectMetadata(name string, extraLabels ...string) metav1.Obje
 
 func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
 
+	createKeyspaceCommand := fmt.Sprintf(
+		`cqlsh -e "CREATE KEYSPACE IF NOT EXISTS reaper_db WITH REPLICATION = {'class': 'NetworkTopologyStrategy', '%s': %d};"`,
+		v1alpha1helpers.GetDatacenter(c.Definition()),
+		rack.Replicas,
+	)
+
 	return v1.Container{
 		Name:  cassandraContainerName,
 		Image: v1alpha1helpers.GetCassandraImage(c.definition),
@@ -511,9 +516,17 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 				ContainerPort: 9042,
 			},
 		},
-		Resources:      c.createResourceRequirements(),
-		LivenessProbe:  createProbe(c.definition.Spec.Pod.LivenessProbe, "/bin/sh", "-c", "nodetool info"),
-		ReadinessProbe: createProbe(c.definition.Spec.Pod.ReadinessProbe, "/bin/sh", "-c", "nodetool status | grep -E \"^UN\\s+${NODE_LISTEN_ADDRESS}\""),
+		Resources:     c.createResourceRequirements(),
+		LivenessProbe: createProbe(c.definition.Spec.Pod.LivenessProbe, "/bin/sh", "-c", "nodetool info"),
+		ReadinessProbe: createProbe(
+			c.definition.Spec.Pod.ReadinessProbe,
+			"/bin/sh",
+			"-c",
+			fmt.Sprintf(
+				"nodetool status | grep -E \"^UN\\s+${NODE_LISTEN_ADDRESS}\" && %s",
+				createKeyspaceCommand,
+			),
+		),
 		Lifecycle: &v1.Lifecycle{
 			PreStop: &v1.Handler{
 				Exec: &v1.ExecAction{
@@ -575,22 +588,6 @@ func (c *Cluster) createReaperContainer(rack *v1alpha1.Rack, customConfigMap *v1
 				Name:  "REAPER_CASS_ACTIVATE_QUERY_LOGGER",
 				Value: "true",
 			},
-		},
-	}
-}
-
-func (c *Cluster) createReaperKeyspaceContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
-	return v1.Container{
-		Name:  "reaper-keyspace-ensurer",
-		Image: v1alpha1helpers.GetCassandraImage(c.definition),
-		Command: []string{
-			"cqlsh",
-			"-e",
-			fmt.Sprintf(
-				"CREATE KEYSPACE IF NOT EXISTS reaper_db WITH REPLICATION = {'class': 'NetworkTopologyStrategy', '%s': %d};",
-				v1alpha1helpers.GetDatacenter(c.Definition()),
-				rack.Replicas,
-			),
 		},
 	}
 }
