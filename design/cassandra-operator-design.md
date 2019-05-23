@@ -3,7 +3,7 @@
 The Cassandra Operator is primarily composed of 3 components:
 - [cassandra-operator](../cassandra-operator/README.md): the operator responsible for the lifecycle of the clusters in Kubernetes
 - [cassandra-bootstrapper](../cassandra-bootstrapper/README.md): a component responsible for configuring the Cassandra node before it can be started
-- [cassandra-snapshot](../cassandra-snapshot/README.md): a component responsible for taking and deleting snapshots given a retention policy 
+- [cassandra-snapshot](../cassandra-snapshot/README.md): a component responsible for taking and deleting snapshots given a retention policy
 
 It allows users to run Cassandra clusters within Kubernetes without needing to manually perform tasks
 such as creating `StatefulSet` resources or manually configuring Cassandra when new members are added. The user can specify
@@ -13,9 +13,9 @@ These definitions are stored and retrieved from the Kubernetes API Server and mu
 For each defined cluster, the operator will create `StatefulSet` resources for each availability zone (rack), a headless `Service`
 for instance discovery via DNS and, if automatic snapshots are enabled, `CronJob` resources for initiating snapshots and snapshot cleanups. It is
 important to note that the operator does not manage the Cassandra pods directly, instead transforming the CRD into other Kubernetes
-resources which are then managed by their own Kubernetes Controllers. 
+resources which are then managed by their own Kubernetes Controllers.
 
-The following table outlines how the Cassandra concepts are represented in Kubernetes. 
+The following table outlines how the Cassandra concepts are represented in Kubernetes.
 
 | Cassandra | Kubernetes Resource |
 | --- | --- |
@@ -33,7 +33,7 @@ minimum.
 The configuration for Cassandra will use the default configuration files from the user provided image with some changes
 applied by the bootstrapping process to enable it to work within Kubernetes. However, the user of the operator can
 change the cassandra configuration by adding a companion `ConfigMap`, which allows the user to replace any default file
-within the Cassandra configuration directory. This includes logback configuration as well as the cassandra.yaml file. 
+within the Cassandra configuration directory. This includes logback configuration as well as the cassandra.yaml file.
 It should be noted that this replaces the default configuration only, so the bootstrapping process will still apply its changes
 to allow the cluster to work within Kubernetes.
 
@@ -55,11 +55,11 @@ That is, commands such as `kubectl get cassandra` are supported. An example of a
 ### Stateful Sets
 
 The operator uses `StatefulSet` resources as each Cassandra instance must maintain an identity, that is pods should have the same cluster ID
-and dataset even if a pod is restarted. 
+and dataset even if a pod is restarted.
 
 The operator creates a `StatefulSet` definition for each Cassandra rack so that the configured racks can mirror the [zones](https://kubernetes.io/docs/setup/multiple-zones)
 concept within Kubernetes. It achieves this by creating a `StatefulSet` for each zone and then using the Pod Node Affinity to schedule each cassandra pod
-within a Kubernetes failure zone by using the `failure-domain.beta.kubernetes.io/zone` label. The value of the Zone field within the rack definition is matched with the 
+within a Kubernetes failure zone by using the `failure-domain.beta.kubernetes.io/zone` label. The value of the Zone field within the rack definition is matched with the
 value of the `failure-domain.beta.kubernetes.io/zone` label.
 
 The operator creates `StatefulSet` definitions one zone at a
@@ -69,7 +69,7 @@ instance at a time will be rolled out by the operator including across multiple 
 for each rack in the Custom Resource Definition.
 
 When a `StatefulSet` is created, the `StatefulSet` controller within Kubernetes will create each pod starting from index 0 to the number
-of replicas defined. Updates to the `StatefulSet` resources managed by the operator are rolled out in the same way as they are created, however 
+of replicas defined. Updates to the `StatefulSet` resources managed by the operator are rolled out in the same way as they are created, however
 the instances are restarted in reverse order as is usual for a `StatefulSet` using a `RollingUpdate` strategy.
 
 # Seed Nodes
@@ -128,10 +128,10 @@ However, in order to be compatible with the initialisation process outlined abov
 - Default config must be located in `/etc/cassandra`
 - Cassandra expects config to be in `/etc/cassandra`
 - Adds the directories specified in the `EXTRA_CLASSPATH` environment variable to the Cassandra JVM classpath
-  
+
 The initialisation process has been designed to be compatible with the [Apache Cassandra image](https://hub.docker.com/_/cassandra) and has been tested with version 3.11, which is also the default.
 Other 3.x versions are likely to be compatible but are not currently being tested with the operator.
- 
+
 Each Cassandra instance is configured by the [cassandra-bootstrapper](../cassandra-bootstrapper/README.md) to use a custom seed provider.
 This [seed-provider](../cassandra-bootstrapper/seed-provider/README.md) uses the Kubernetes API Server to discover the other Cassandra instances.
 
@@ -152,3 +152,44 @@ trigger an unnecessary rolling restart. Further, this design also ensures that i
 severe enough to cause Cassandra to fail to start, the rollout will stop at the first instance.
 
 If the `ConfigMap` is removed the associated label is also removed.
+
+# Cassandra Reaper
+
+Cassandra Reaper is deployed using the `SIDECAR` deployment method on every C* node pod,
+as a [Sidecar container](https://kubernetes.io/docs/tasks/access-application-cluster/communicate-containers-same-pod-shared-volume/),
+alongside the main Cassandra container.
+
+The Cassandra Reaper side car process will interact with Cassandra JMX port via a loop back IP address,
+so there is no need to configure remote JMX access Cassandra.
+This is possible, because all containers in a pod share the same network namespace.
+
+In `SIDECAR` mode, the Cassandra Reaper *must* be configured to use [Cassandra Storage Backend](http://cassandra-reaper.io/docs/backends/cassandra/).
+The Cassandra Operator automatically configures Cassandra Reaper to use the local Cassandra cluster.
+And it will automatically create a `Keyspace` called `reaper_db` in the local Cassandra cluster when it first starts up.
+
+## Building a Cassandra Reaper Image
+
+`SIDECAR` mode is an unreleased feature of Cassandra Reaper, so you need to compile Cassandra Reaper from the
+[PR 622: Implement the sidecar mode](https://github.com/thelastpickle/cassandra-reaper/pull/622) feature branch
+and compile as follows:
+
+```
+mvn package
+mvn -B -pl src/server/ docker:build -Ddocker.directory=src/server/src/main/docker
+```
+
+Then re-tag the generated image, so that it can be pushed to your cluster. E.g.
+
+```
+gcloud docker -a
+docker tag cassandra-reaper:latest gcr.io/jetstack-richard/cassandra-reaper:latest
+docker push gcr.io/jetstack-richard/cassandra-reaper:latest
+```
+
+## Debugging Cassandra Reaper
+
+* View reaper logs
+  `kubectl -n test-cassandra-operator logs mycluster-a-0 reaper`
+
+* View cassandra logs
+  `kubectl -n test-cassandra-operator logs mycluster-a-0 cassandra`
