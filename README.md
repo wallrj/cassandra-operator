@@ -15,13 +15,13 @@ It is not yet recommended for use in production environments.
 * deployable cluster-wide
 * customisable Cassandra config (`cassandra.yaml`, `jvm.options`, extra libs)
 * customisable liveness / readiness probes
-* automated rolling update of Cassandra cluster definition changes
+* automated rolling update of Cassandra cluster definition changes 
 * cluster and node level metrics
 * a comprehensive e2e test suite
 
 ## How to use it?
 
-Instructions on how to deploy the Cassandra Operator and provision Cassandra clusters can be found on the [WIKI](https://github.com/sky-uk/cassandra-operator/wiki)
+Instructions on how to deploy the Cassandra Operator and provision Cassandra clusters can be found on the [WIKI](https://github.com/sky-uk/cassandra-operator/wiki)  
 
 ## Project structure
 
@@ -34,7 +34,7 @@ This project is composed of several sub-modules that are either part of the Cass
 
 ## Design
 
-The Cassandra Operator and the components it uses are described here: [Cassandra Operator Design](design/cassandra-operator-design.md)
+The Cassandra Operator and the components it uses are described here: [Cassandra Operator Design](design/cassandra-operator-design.md) 
 
 ## Supported versions
 
