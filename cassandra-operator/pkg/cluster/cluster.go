@@ -571,6 +571,10 @@ func (c *Cluster) createReaperContainer(rack *v1alpha1.Rack, customConfigMap *v1
 				Name:  "REAPER_CASS_CONTACT_POINTS",
 				Value: `["127.0.0.1"]`,
 			},
+			{
+				Name:  "REAPER_CASS_ACTIVATE_QUERY_LOGGER",
+				Value: "true",
+			},
 		},
 	}
 }
