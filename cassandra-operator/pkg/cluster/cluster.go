@@ -511,8 +511,8 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 			},
 		},
 		Resources:      c.createResourceRequirements(),
-		LivenessProbe:  createProbe(c.definition.Spec.Pod.LivenessProbe, "/bin/sh", "-c", "nodetool info"),
-		ReadinessProbe: createProbe(c.definition.Spec.Pod.ReadinessProbe, "/bin/sh", "-c", "nodetool status | grep -E \"^UN\\s+${NODE_LISTEN_ADDRESS}\""),
+		LivenessProbe:  createHTTPProbe(c.definition.Spec.Pod.LivenessProbe, "/live", 8080),
+		ReadinessProbe: createHTTPProbe(c.definition.Spec.Pod.ReadinessProbe, "/ready", 8080),
 		Lifecycle: &v1.Lifecycle{
 			PreStop: &v1.Handler{
 				Exec: &v1.ExecAction{
@@ -658,6 +658,21 @@ func createProbe(probe *v1alpha1.Probe, command ...string) *v1.Probe {
 		Handler: v1.Handler{
 			Exec: &v1.ExecAction{
 				Command: command,
+			},
+		},
+		InitialDelaySeconds: probe.InitialDelaySeconds,
+		PeriodSeconds:       probe.PeriodSeconds,
+		TimeoutSeconds:      probe.TimeoutSeconds,
+		FailureThreshold:    probe.FailureThreshold,
+		SuccessThreshold:    probe.SuccessThreshold,
+	}
+}
+
+func createHTTPProbe(probe *v1alpha1.Probe, path string, port int) *v1.Probe {
+	return &v1.Probe{
+		Handler: v1.Handler{
+			HTTPGet: &v1.HTTPGetAction{
+				Port: intstr.FromInt(port),
 			},
 		},
 		InitialDelaySeconds: probe.InitialDelaySeconds,
