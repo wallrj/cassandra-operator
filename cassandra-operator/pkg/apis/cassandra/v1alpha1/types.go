@@ -26,6 +26,9 @@ const (
 
 	// DefaultCassandraSnapshotImage is the name of the Docker image used to make and cleanup snapshots
 	DefaultCassandraSnapshotImage = "skyuk/cassandra-snapshot:latest"
+
+	// DefaultCassandraManagerImage is the name of the Docker image used to inform liveness/readiness probes
+	DefaultCassandraManagerImage = "skyuk/cassandra-manager:latest"
 )
 
 // +genclient
@@ -50,6 +53,9 @@ type CassandraSpec struct {
 	Pod         Pod   `json:"pod"`
 	// +optional
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
+
+	// +optional
+	ManagerImage *string `json:"managerImage,omitempty"`
 }
 
 type Probe struct {

@@ -28,6 +28,14 @@ func GetBootstrapperImage(c *v1alpha1.Cassandra) string {
 	return v1alpha1.DefaultCassandraBootstrapperImage
 }
 
+// GetBootstrapperImage returns the bootstrapper image for a cluster
+func GetCassandraManagerImage(c *v1alpha1.Cassandra) string {
+	if c.Spec.ManagerImage != nil {
+		return *c.Spec.ManagerImage
+	}
+	return v1alpha1.DefaultCassandraManagerImage
+}
+
 // GetSnapshopImage returns the snapshot image for a cluster
 func GetSnapshopImage(c *v1alpha1.Cassandra) string {
 	if c.Spec.Snapshot != nil {
