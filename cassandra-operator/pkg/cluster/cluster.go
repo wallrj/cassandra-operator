@@ -673,6 +673,7 @@ func createHTTPProbe(probe *v1alpha1.Probe, path string, port int) *v1.Probe {
 		Handler: v1.Handler{
 			HTTPGet: &v1.HTTPGetAction{
 				Port: intstr.FromInt(port),
+				Path: path,
 			},
 		},
 		InitialDelaySeconds: probe.InitialDelaySeconds,
