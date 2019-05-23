@@ -299,6 +299,7 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 					},
 					Containers: []v1.Container{
 						c.createCassandraContainer(rack, customConfigMap),
+						c.createReaperKeyspaceContainer(rack, customConfigMap),
 						c.createReaperContainer(rack, customConfigMap),
 					},
 					Volumes: c.createPodVolumes(customConfigMap),
@@ -526,7 +527,6 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 }
 
 func (c *Cluster) createReaperContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
-
 	return v1.Container{
 		Name:  reaperContainerName,
 		Image: v1alpha1helpers.GetReaperImage(c.definition),
@@ -571,6 +571,18 @@ func (c *Cluster) createReaperContainer(rack *v1alpha1.Rack, customConfigMap *v1
 				Name:  "REAPER_CASS_CONTACT_POINTS",
 				Value: `["127.0.0.1"]`,
 			},
+		},
+	}
+}
+
+func (c *Cluster) createReaperKeyspaceContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
+	return v1.Container{
+		Name:  "reaper-keyspace-ensurer",
+		Image: v1alpha1helpers.GetCassandraImage(c.definition),
+		Command: []string{
+			"cqlsh",
+			"-e",
+			"CREATE KEYSPACE IF NOT EXISTS reaper_db WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 0 };",
 		},
 	}
 }
