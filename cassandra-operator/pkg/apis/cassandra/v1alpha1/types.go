@@ -26,6 +26,9 @@ const (
 
 	// DefaultCassandraSnapshotImage is the name of the Docker image used to make and cleanup snapshots
 	DefaultCassandraSnapshotImage = "skyuk/cassandra-snapshot:latest"
+
+	// DefaultReaperImage is the name of the Docker image used for Cassandra reaper
+	DefaultReaperImage = "thelastpickle/cassandra-reaper:latest"
 )
 
 // +genclient
@@ -70,6 +73,7 @@ type Pod struct {
 	BootstrapperImage *string `json:"bootstrapperImage,omitempty"`
 	// +optional
 	Image       *string           `json:"image,omitempty"`
+	ReaperImage *string           `json:"reaperImage,omitempty"`
 	StorageSize resource.Quantity `json:"storageSize"`
 	Memory      resource.Quantity `json:"memory"`
 	CPU         resource.Quantity `json:"cpu"`

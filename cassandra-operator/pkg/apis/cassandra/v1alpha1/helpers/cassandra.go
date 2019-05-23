@@ -20,6 +20,14 @@ func GetCassandraImage(c *v1alpha1.Cassandra) string {
 	return v1alpha1.DefaultCassandraImage
 }
 
+// GetReaperImage returns the image for Cassandra Reaper
+func GetReaperImage(c *v1alpha1.Cassandra) string {
+	if c.Spec.Pod.ReaperImage != nil {
+		return *c.Spec.Pod.ReaperImage
+	}
+	return v1alpha1.DefaultReaperImage
+}
+
 // GetBootstrapperImage returns the bootstrapper image for a cluster
 func GetBootstrapperImage(c *v1alpha1.Cassandra) string {
 	if c.Spec.Pod.BootstrapperImage != nil {

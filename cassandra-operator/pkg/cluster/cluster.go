@@ -30,6 +30,7 @@ const (
 	customConfigDir = "/custom-config"
 
 	cassandraContainerName             = "cassandra"
+	reaperContainerName                = "reaper"
 	cassandraBootstrapperContainerName = "cassandra-bootstrapper"
 
 	storageVolumeMountPath       = "/var/lib/cassandra"
@@ -298,6 +299,7 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 					},
 					Containers: []v1.Container{
 						c.createCassandraContainer(rack, customConfigMap),
+						c.createReaperContainer(rack, customConfigMap),
 					},
 					Volumes: c.createPodVolumes(customConfigMap),
 					Affinity: &v1.Affinity{
@@ -520,6 +522,56 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 		},
 		Env:          []v1.EnvVar{{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"}},
 		VolumeMounts: c.createVolumeMounts(customConfigMap),
+	}
+}
+
+func (c *Cluster) createReaperContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
+
+	return v1.Container{
+		Name:  reaperContainerName,
+		Image: v1alpha1helpers.GetReaperImage(c.definition),
+		Ports: []v1.ContainerPort{
+			{
+				Name:          "application",
+				Protocol:      v1.ProtocolTCP,
+				ContainerPort: 8080,
+			},
+			{
+				Name:          "admin",
+				Protocol:      v1.ProtocolTCP,
+				ContainerPort: 8081,
+			},
+		},
+		Env: []v1.EnvVar{
+			{
+				Name:  "REAPER_STORAGE_TYPE",
+				Value: "cassandra",
+			},
+			{
+				Name:  "REAPER_CASS_CLUSTER_NAME",
+				Value: c.Name(),
+			},
+			{
+				Name:  "REAPER_ENABLE_WEBUI_AUTH",
+				Value: "true",
+			},
+			{
+				Name:  "REAPER_WEBUI_USER",
+				Value: "anon",
+			},
+			{
+				Name:  "REAPER_WEBUI_PASSWORD",
+				Value: "anon",
+			},
+			{
+				Name:  "REAPER_DATACENTER_AVAILABILITY",
+				Value: "SIDECAR",
+			},
+			{
+				Name:  "REAPER_CASS_CONTACT_POINTS",
+				Value: `["127.0.0.1"]`,
+			},
+		},
 	}
 }
 
