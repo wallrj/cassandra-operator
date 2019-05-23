@@ -193,7 +193,7 @@ func (p *podIPMapper) withPodNameDoOrError(podIP string, action func(string)) {
 	}
 }
 
-func (u *randomisingJolokiaURLProvider) urlFor(cluster *cluster.Cluster) string {
+func (u *randomisingJolokiaURLProvider) UrlFor(cluster *cluster.Cluster) string {
 	var jolokiaHostname string
 	podsWithIPAddresses, err := u.podsWithIPAddresses(cluster)
 

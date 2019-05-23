@@ -107,3 +107,7 @@ func transformClusterStatus(clusterStatus *clusterStatus) map[string]*nodeStatus
 
 	return podIPToNodeStatus
 }
+
+func (s *clusterStatus) IsUpAndNormal() bool {
+	return true
+}

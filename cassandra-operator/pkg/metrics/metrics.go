@@ -21,7 +21,7 @@ type Config struct {
 }
 
 type jolokiaURLProvider interface {
-	urlFor(*cluster.Cluster) string
+	UrlFor(*cluster.Cluster) string
 }
 
 type jolokiaGatherer struct {
@@ -104,7 +104,7 @@ func (m *jolokiaGatherer) GatherMetricsFor(cluster *cluster.Cluster) (*clusterSt
 }
 
 func (m *jolokiaGatherer) collectRackInfoFor(cluster *cluster.Cluster, liveNodes []string, unreachableNodes []string) (map[string]string, error) {
-	clusterJolokiaEndpoint := m.jolokiaURLProvider.urlFor(cluster)
+	clusterJolokiaEndpoint := m.jolokiaURLProvider.UrlFor(cluster)
 
 	var allNodes []string
 	allNodes = append(allNodes, liveNodes...)
@@ -125,7 +125,7 @@ func (m *jolokiaGatherer) collectRackInfoFor(cluster *cluster.Cluster, liveNodes
 }
 
 func (m *jolokiaGatherer) collectMbeanStatusValuesFor(cluster *cluster.Cluster) (map[string][]string, error) {
-	clusterJolokiaEndpoint := m.jolokiaURLProvider.urlFor(cluster)
+	clusterJolokiaEndpoint := m.jolokiaURLProvider.UrlFor(cluster)
 	mbeanValues := map[string][]string{"LiveNodes": nil, "UnreachableNodes": nil, "JoiningNodes": nil, "LeavingNodes": nil, "MovingNodes": nil}
 
 	for mbean := range mbeanValues {
