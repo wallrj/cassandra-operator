@@ -582,7 +582,7 @@ func (c *Cluster) createReaperKeyspaceContainer(rack *v1alpha1.Rack, customConfi
 		Command: []string{
 			"cqlsh",
 			"-e",
-			"CREATE KEYSPACE IF NOT EXISTS reaper_db WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 0 };",
+			"CREATE KEYSPACE IF NOT EXISTS reaper_db WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };",
 		},
 	}
 }
