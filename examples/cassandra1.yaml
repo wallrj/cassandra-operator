@@ -5,11 +5,12 @@ metadata:
 spec:
   pod:
     image: "cassandra:3.11"
+    reaperImage: "gcr.io/jetstack-richard/cassandra-reaper:latest"
     cpu: 0.5m
     memory: 1Gi
     storageSize: 100Mi
   racks:
   - name: a
-    replicas: 1
+    replicas: 3
     storageClass: standard
     zone: europe-west1-b
