@@ -12,7 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -299,7 +299,7 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 					},
 					Containers: []v1.Container{
 						c.createCassandraContainer(rack, customConfigMap),
-						c.createCassandraManagerContainer(),
+						c.createCassandraManagerContainer(rack),
 					},
 					Volumes: c.createPodVolumes(customConfigMap),
 					Affinity: &v1.Affinity{
@@ -525,7 +525,7 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 	}
 }
 
-func (c *Cluster) createCassandraManagerContainer() v1.Container {
+func (c *Cluster) createCassandraManagerContainer(rack *v1alpha1.Rack) v1.Container {
 	return v1.Container{
 		Name:  cassandraManagerContainerName,
 		Image: v1alpha1helpers.GetCassandraManagerImage(c.definition),
@@ -536,6 +536,9 @@ func (c *Cluster) createCassandraManagerContainer() v1.Container {
 				ContainerPort: 8080,
 			},
 		},
+		// TODO: Add requests and limits for this container.
+		// Update the environmentvariables to exclude these.
+		Env: c.createEnvironmentVariableDefinition(rack),
 	}
 }
 

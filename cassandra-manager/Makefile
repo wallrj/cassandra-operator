@@ -41,7 +41,9 @@ setup:
 	@echo "== setup"
 	go install \
 		github.com/sky-uk/licence-compliance-checker \
-		github.com/onsi/ginkgo/ginkgo
+		github.com/onsi/ginkgo/ginkgo \
+		golang.org/x/tools/cmd/goimports \
+		golang.org/x/lint/golint
 
 go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"
