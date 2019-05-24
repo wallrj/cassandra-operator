@@ -1,37 +1,46 @@
 package metrics
 
 import (
-	"testing"
-
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Test(t *testing.T) {
-	c, err := cluster.New(
-		&v1alpha1.Cassandra{
-			Spec: v1alpha1.CassandraSpec{
-				UseEmptyDir: ptr.Bool(true),
-				Racks: []v1alpha1.Rack{
-					{
-						Name:     "rack1",
-						Zone:     "a",
-						Replicas: 1,
-					},
-				},
-				Pod: v1alpha1.Pod{
-					Memory: resource.MustParse("1Gi"),
-				},
-			},
-		},
+var _ = Describe("Nodetool Readiness", func() {
+	var (
+		jolokiaURLProvider *staticURLProvider
+		// metricsGatherer    Gatherer
+		cluster *cluster.Cluster
 	)
-	require.NoError(t, err)
-	nt := NewNodetool(c)
-	ready, err := nt.IsLocalNodeReady()
-	require.NoError(t, err)
-	assert.True(t, ready)
-}
+
+	BeforeEach(func() {
+		jolokia.responsePrimers = make(map[string]jolokiaResponsePrimer)
+
+		jolokia.returnsNoLiveNodes()
+		jolokia.returnsNoUnreachableNodes()
+		jolokia.returnsNoJoiningNodes()
+		jolokia.returnsNoLeavingNodes()
+		jolokia.returnsNoMovingNodes()
+		jolokia.returnsRackForNode("racka", "172.16.46.58")
+		jolokia.returnsRackForNode("racka", "172.16.101.30")
+
+		jolokiaURLProvider = &staticURLProvider{serverURL}
+		// metricsGatherer = NewGatherer(jolokiaURLProvider, &Config{1 * time.Second})
+
+		cluster = aCluster("testcluster", "test")
+	})
+
+	Context("Nodetool", func() {
+		It("responds to a request", func() {
+			// given
+			nt := NewNodetool(cluster, jolokiaURLProvider)
+
+			// when
+			ready, err := nt.IsLocalNodeReady()
+
+			// then
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ready).To(Equal(true))
+		})
+	})
+})

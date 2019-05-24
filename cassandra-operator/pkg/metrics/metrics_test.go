@@ -1,13 +1,12 @@
 package metrics
 
 import (
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	"testing"
-
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"strings"
+
+	"math/rand"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,30 +15,14 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/stub"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"math/rand"
-	"time"
 )
-
-func TestMetrics(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Metrics Suite", test.CreateParallelReporters("metrics"))
-}
 
 var _ = Describe("Cluster Metrics", func() {
 	var (
-		server             *httptest.Server
-		serverURL          string
-		jolokia            *jolokiaHandler
 		jolokiaURLProvider *stubbedJolokiaURLProvider
 		metricsGatherer    Gatherer
 		cluster            *cluster.Cluster
 	)
-
-	BeforeSuite(func() {
-		jolokia = &jolokiaHandler{}
-		server = httptest.NewServer(jolokia)
-		serverURL = server.URL
-	})
 
 	BeforeEach(func() {
 		jolokia.responsePrimers = make(map[string]jolokiaResponsePrimer)
@@ -56,10 +39,6 @@ var _ = Describe("Cluster Metrics", func() {
 		metricsGatherer = NewGatherer(jolokiaURLProvider, &Config{1 * time.Second})
 
 		cluster = aCluster("testcluster", "test")
-	})
-
-	AfterSuite(func() {
-		server.Close()
 	})
 
 	Context("A cluster has been defined", func() {
