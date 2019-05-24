@@ -24,14 +24,20 @@ type Nodetool struct {
 	urlProvider jolokiaURLProvider
 }
 
+// Newnodetool creates a NodeTool
+// urlProvider is optional
+// if ommitted a default will be used
 func NewNodetool(cluster *cluster.Cluster, urlProvider jolokiaURLProvider) *Nodetool {
+	if urlProvider == nil {
+		urlProvider = &staticURLProvider{url: defaultLocalUrl}
+	}
 	return &Nodetool{
 		cluster:     cluster,
 		urlProvider: urlProvider,
 	}
 }
 
-func (n *Nodetool) IsLocalNodeReady() (bool, error) {
+func (n *Nodetool) IsNodeReady(host string) (bool, error) {
 	gatherer := NewGatherer(n.urlProvider, &Config{
 		RequestTimeout: 20 * time.Second,
 	})
@@ -39,6 +45,12 @@ func (n *Nodetool) IsLocalNodeReady() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	log.Println("STATUS", status)
-	return true, nil
+	statusMap := transformClusterStatus(status)
+	hostInfo, found := statusMap[host]
+	if !found {
+		log.Printf("couldn't find status for node: %s", host)
+		return false, nil
+	}
+	log.Println("STATUS", hostInfo)
+	return hostInfo.IsUpAndNormal(), nil
 }
