@@ -34,6 +34,7 @@ var _ = Describe("Nodetool Readiness", func() {
 	})
 
 	Context("Nodetool", func() {
+
 		It("reports ready when node is healthy", func() {
 			// given
 			jolokia.returns2LiveNodes()
@@ -45,6 +46,7 @@ var _ = Describe("Nodetool Readiness", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(ready).To(Equal(true))
 		})
+
 		It("reports unready when node is joining", func() {
 			// given
 			jolokia.returns2LiveNodes()
