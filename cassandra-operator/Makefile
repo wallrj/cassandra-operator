@@ -7,6 +7,7 @@ POD_START_TIMEOUT ?= 120s
 USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
+CASSANDRA_MANAGER_IMAGE ?= $(TEST_REGISTRY)/cassandra-manager:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 DOMAIN ?= localhost
 IMAGE_TO_DEPLOY ?= $(dockerTestImage)
