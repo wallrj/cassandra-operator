@@ -55,20 +55,24 @@ func main() {
 		}
 		if !ready {
 			w.WriteHeader(500)
-			log.Println("IsLocalNodeReady failed")
+			log.Println("IsNodeReady failed")
 		}
 		fmt.Fprintf(w, "cassandra node status: ready: %#v", ready)
 	})
 
 	http.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("/live called")
-		/*
-			if !cql.IsLocalNodeResponding() {
-				w.WriteHeader(500)
-				log.Println("IsLocalNodeResponding failed")
-			}
-		*/
-		fmt.Fprintf(w, "cassandra node status: ready")
+
+		status := "succeeded"
+
+		_, err := nt.IsNodeReady(nodeAddress)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(500)
+			log.Println("IsNodeReady failed")
+			status = "failed"
+		}
+		fmt.Fprintf(w, "cassandra node status: %s", status)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
