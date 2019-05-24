@@ -5,12 +5,17 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/sky-uk/cassandra-operator/cassandra-manager/pkg/nodetool"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 )
 
 func main() {
+
+	cluster := cluster.New(&v1alpha1.Cassandra{})
+	nt := NewNodetool(nil, nil)
+
 	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
-		if !nodetool.IsLocalNodeReady() {
+		if !nt.IsNodeReady("192.0.2.1") {
 			w.WriteHeader(500)
 			log.Println("IsLocalNodeReady failed")
 		}
