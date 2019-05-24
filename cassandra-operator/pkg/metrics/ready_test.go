@@ -1,9 +1,8 @@
-package nodetool_test
+package metrics
 
 import (
 	"testing"
 
-	"github.com/sky-uk/cassandra-operator/cassandra-manager/pkg/nodetool"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
@@ -31,7 +30,7 @@ func Test(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	nt := nodetool.New(c)
+	nt := NewNodetool(c)
 	ready, err := nt.IsLocalNodeReady()
 	require.NoError(t, err)
 	assert.True(t, ready)
