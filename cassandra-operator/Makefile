@@ -1,4 +1,4 @@
-DEFAULT_GOAL := travis
+.DEFAULT_GOAL := travis
 .PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style
 
 # Default context is running locally against a dind cluster
