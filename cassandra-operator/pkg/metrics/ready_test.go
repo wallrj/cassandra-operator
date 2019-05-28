@@ -8,10 +8,9 @@ import (
 
 var _ = Describe("Nodetool Readiness", func() {
 	var (
-		jolokiaURLProvider *staticURLProvider
-		// metricsGatherer    Gatherer
-		cluster *cluster.Cluster
-		nt      *Nodetool
+		jolokiaURLProvider *stubbedJolokiaURLProvider
+		cluster            *cluster.Cluster
+		nt                 *Nodetool
 	)
 
 	BeforeEach(func() {
@@ -26,8 +25,7 @@ var _ = Describe("Nodetool Readiness", func() {
 		jolokia.returnsRackForNode("racka", "172.16.46.58")
 		jolokia.returnsRackForNode("racka", "172.16.101.30")
 
-		jolokiaURLProvider = &staticURLProvider{serverURL}
-		// metricsGatherer = NewGatherer(jolokiaURLProvider, &Config{1 * time.Second})
+		jolokiaURLProvider = &stubbedJolokiaURLProvider{serverURL}
 
 		cluster = aCluster("testcluster", "test")
 		nt = NewNodetool(cluster, jolokiaURLProvider)
@@ -60,16 +58,16 @@ var _ = Describe("Nodetool Readiness", func() {
 			Expect(ready).To(Equal(false))
 		})
 
-		// It("returns an error when jolokia is not available", func() {
-		// 	// given
-		// 	jolokiaURLProvider.jolokiaIsUnavailable()
+		It("returns an error when jolokia is not available", func() {
+			// given
+			jolokiaURLProvider.jolokiaIsUnavailable()
 
-		// 	// when
-		// 	ready, err := nt.IsNodeReady("172.16.46.58")
+			// when
+			_, err := nt.IsNodeReady("172.16.46.58")
 
-		// 	// then
-		// 	Expect(err).To(HaveOccurred())
-		// })
+			// then
+			Expect(err).To(HaveOccurred())
+		})
 
 		It("returns an error when jolokia returns an error response", func() {
 			// given
