@@ -176,7 +176,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		// when
 		urlsProvided := make(map[string]int)
 		for i := 0; i < 10; i++ {
-			urlProvided := urlProvider.UrlFor(cluster)
+			urlProvided := urlProvider.URLFor(cluster)
 			urlsProvided[urlProvided] = 1
 		}
 
@@ -192,7 +192,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 		// when
-		urlProvided := urlProvider.UrlFor(cluster)
+		urlProvided := urlProvider.URLFor(cluster)
 
 		// then
 		Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -204,7 +204,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 		// when
-		urlProvided := urlProvider.UrlFor(cluster)
+		urlProvided := urlProvider.URLFor(cluster)
 
 		// then
 		Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -218,7 +218,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 
 			for i := 0; i < 10; i++ {
 				// when
-				urlProvided := urlProvider.UrlFor(cluster)
+				urlProvided := urlProvider.URLFor(cluster)
 
 				// then
 				Expect(urlProvided).To(Equal("http://10.0.0.1:7777"))
@@ -231,7 +231,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 			urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 			// when
-			urlProvided := urlProvider.UrlFor(cluster)
+			urlProvided := urlProvider.URLFor(cluster)
 
 			// then
 			Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -379,7 +379,7 @@ type stubbedJolokiaURLProvider struct {
 	baseURL string
 }
 
-func (p *stubbedJolokiaURLProvider) UrlFor(cluster *cluster.Cluster) string {
+func (p *stubbedJolokiaURLProvider) URLFor(cluster *cluster.Cluster) string {
 	return p.baseURL
 }
 

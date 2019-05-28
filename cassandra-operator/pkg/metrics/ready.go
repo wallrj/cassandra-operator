@@ -15,7 +15,7 @@ type staticURLProvider struct {
 	url string
 }
 
-func (l *staticURLProvider) UrlFor(*cluster.Cluster) string {
+func (l *staticURLProvider) URLFor(*cluster.Cluster) string {
 	return l.url
 }
 

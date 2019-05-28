@@ -6,8 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"time"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 )
 
 // Gatherer defines how metrics will be collected for a cluster
@@ -21,7 +22,7 @@ type Config struct {
 }
 
 type jolokiaURLProvider interface {
-	UrlFor(*cluster.Cluster) string
+	URLFor(*cluster.Cluster) string
 }
 
 type jolokiaGatherer struct {
@@ -104,7 +105,7 @@ func (m *jolokiaGatherer) GatherMetricsFor(cluster *cluster.Cluster) (*clusterSt
 }
 
 func (m *jolokiaGatherer) collectRackInfoFor(cluster *cluster.Cluster, liveNodes []string, unreachableNodes []string) (map[string]string, error) {
-	clusterJolokiaEndpoint := m.jolokiaURLProvider.UrlFor(cluster)
+	clusterJolokiaEndpoint := m.jolokiaURLProvider.URLFor(cluster)
 
 	var allNodes []string
 	allNodes = append(allNodes, liveNodes...)
@@ -125,7 +126,7 @@ func (m *jolokiaGatherer) collectRackInfoFor(cluster *cluster.Cluster, liveNodes
 }
 
 func (m *jolokiaGatherer) collectMbeanStatusValuesFor(cluster *cluster.Cluster) (map[string][]string, error) {
-	clusterJolokiaEndpoint := m.jolokiaURLProvider.UrlFor(cluster)
+	clusterJolokiaEndpoint := m.jolokiaURLProvider.URLFor(cluster)
 	mbeanValues := map[string][]string{"LiveNodes": nil, "UnreachableNodes": nil, "JoiningNodes": nil, "LeavingNodes": nil, "MovingNodes": nil}
 
 	for mbean := range mbeanValues {
