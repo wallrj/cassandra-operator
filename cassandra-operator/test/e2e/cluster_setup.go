@@ -68,7 +68,7 @@ func clusterDefaultSpec() *v1alpha1.CassandraSpec {
 		UseEmptyDir: ptr.Bool(false),
 		Pod: v1alpha1.Pod{
 			BootstrapperImage: &CassandraBootstrapperImageName,
-			ManagerImage:      &CassandraManagerImageName,
+			SidecarImage:      &CassandraSidecarImageName,
 			Image:             &CassandraImageName,
 			Memory:            resource.MustParse(PodMemory),
 			CPU:               resource.MustParse(PodCPU),

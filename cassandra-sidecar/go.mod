@@ -1,4 +1,4 @@
-module github.com/sky-uk/cassandra-operator/cassandra-manager
+module github.com/sky-uk/cassandra-operator/cassandra-sidecar
 
 go 1.12
 

@@ -1,4 +1,4 @@
-# Cassandra Manager
+# Cassandra Sidecar
 
 An application which sits alongside a cassandra node to perform a few actions:
 

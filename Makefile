@@ -58,7 +58,7 @@ install-all:
 	$(MAKE) -C cassandra-bootstrapper install
 	$(MAKE) -C cassandra-snapshot install
 	$(MAKE) -C cassandra-operator install
-	$(MAKE) -C cassandra-manager install
+	$(MAKE) -C cassandra-sidecar install
 
 clean-all:
 	@echo "== clean-all"
@@ -66,7 +66,7 @@ clean-all:
 	$(MAKE) -C cassandra-bootstrapper clean
 	$(MAKE) -C cassandra-snapshot clean
 	$(MAKE) -C cassandra-operator clean
-	$(MAKE) -C cassandra-manager clean
+	$(MAKE) -C cassandra-sidecar clean
 
 setup-all:
 	@echo "== setup-all"
@@ -74,7 +74,7 @@ setup-all:
 	$(MAKE) -C cassandra-bootstrapper setup
 	$(MAKE) -C cassandra-snapshot setup
 	$(MAKE) -C cassandra-operator setup
-	$(MAKE) -C cassandra-manager setup
+	$(MAKE) -C cassandra-sidecar setup
 
 recreate-dind-cluster:
 	@echo "== recreate dind cluster"
@@ -86,7 +86,7 @@ release-all:
 	$(MAKE) -C cassandra-bootstrapper release
 	$(MAKE) -C cassandra-snapshot release
 	$(MAKE) -C cassandra-operator release
-	$(MAKE) -C cassandra-manager release
+	$(MAKE) -C cassandra-sidecar release
 
 check-style-all:
 	@echo "== check-style-all"
@@ -94,4 +94,4 @@ check-style-all:
 	$(MAKE) -C cassandra-bootstrapper check-style
 	$(MAKE) -C cassandra-snapshot check-style
 	$(MAKE) -C cassandra-operator check-style
-	$(MAKE) -C cassandra-manager check-style
+	$(MAKE) -C cassandra-sidecar check-style

@@ -31,7 +31,7 @@ const (
 
 	cassandraContainerName             = "cassandra"
 	cassandraBootstrapperContainerName = "cassandra-bootstrapper"
-	cassandraManagerContainerName      = "cassandra-manager"
+	cassandraSidecarContainerName      = "cassandra-sidecar"
 
 	storageVolumeMountPath       = "/var/lib/cassandra"
 	configurationVolumeMountPath = "/etc/cassandra"
@@ -299,7 +299,7 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 					},
 					Containers: []v1.Container{
 						c.createCassandraContainer(rack, customConfigMap),
-						c.createCassandraManagerContainer(rack),
+						c.createCassandraSidecarContainer(rack),
 					},
 					Volumes: c.createPodVolumes(customConfigMap),
 					Affinity: &v1.Affinity{
@@ -525,10 +525,10 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 	}
 }
 
-func (c *Cluster) createCassandraManagerContainer(rack *v1alpha1.Rack) v1.Container {
+func (c *Cluster) createCassandraSidecarContainer(rack *v1alpha1.Rack) v1.Container {
 	return v1.Container{
-		Name:  cassandraManagerContainerName,
-		Image: v1alpha1helpers.GetCassandraManagerImage(c.definition),
+		Name:  cassandraSidecarContainerName,
+		Image: v1alpha1helpers.GetCassandraSidecarImage(c.definition),
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "api",

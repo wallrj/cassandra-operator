@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := travis
+DEFAULT_GOAL := travis
 .PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style
 
 # Default context is running locally against a dind cluster
@@ -7,7 +7,7 @@ POD_START_TIMEOUT ?= 120s
 USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
-CASSANDRA_MANAGER_IMAGE ?= $(TEST_REGISTRY)/cassandra-manager:v$(gitRev)
+CASSANDRA_SIDECAR_IMAGE ?= $(TEST_REGISTRY)/cassandra-sidecar:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 DOMAIN ?= localhost
 IMAGE_TO_DEPLOY ?= $(dockerTestImage)

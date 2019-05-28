@@ -27,7 +27,7 @@ var (
 	UseMockedImage                          bool
 	CassandraImageName                      string
 	CassandraBootstrapperImageName          string
-	CassandraManagerImageName               string
+	CassandraSidecarImageName               string
 	CassandraSnapshotImageName              string
 	CassandraInitialDelay                   int32
 	CassandraLivenessPeriod                 int32
@@ -100,7 +100,7 @@ func init() {
 	}
 
 	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", v1alpha1.DefaultCassandraBootstrapperImage)
-	CassandraManagerImageName = getEnvOrDefault("CASSANDRA_MANAGER_IMAGE", v1alpha1.DefaultCassandraManagerImage)
+	CassandraSidecarImageName = getEnvOrDefault("CASSANDRA_SIDECAR_IMAGE", v1alpha1.DefaultCassandraSidecarImage)
 	CassandraSnapshotImageName = getEnvOrDefault("CASSANDRA_SNAPSHOT_IMAGE", v1alpha1.DefaultCassandraSnapshotImage)
 
 	Namespace = os.Getenv("NAMESPACE")
