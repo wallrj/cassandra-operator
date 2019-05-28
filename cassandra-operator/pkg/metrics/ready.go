@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	defaultLocalUrl = "http://127.0.0.1:7777"
+	defaultLocalURL = "http://127.0.0.1:7777"
 )
 
 type staticURLProvider struct {
@@ -19,17 +19,19 @@ func (l *staticURLProvider) URLFor(*cluster.Cluster) string {
 	return l.url
 }
 
+// Nodetool provides a subset of the functions of Cassandra `nodetool`
+// as a light weight library.
 type Nodetool struct {
 	cluster     *cluster.Cluster
 	urlProvider jolokiaURLProvider
 }
 
-// Newnodetool creates a NodeTool
+// NewNodetool creates a NodeTool
 // urlProvider is optional
 // if ommitted a default will be used
 func NewNodetool(cluster *cluster.Cluster, urlProvider jolokiaURLProvider) *Nodetool {
 	if urlProvider == nil {
-		urlProvider = &staticURLProvider{url: defaultLocalUrl}
+		urlProvider = &staticURLProvider{url: defaultLocalURL}
 	}
 	return &Nodetool{
 		cluster:     cluster,
@@ -37,6 +39,7 @@ func NewNodetool(cluster *cluster.Cluster, urlProvider jolokiaURLProvider) *Node
 	}
 }
 
+// IsNodeReady checks whether a particular C* node is UP and NORMAL
 func (n *Nodetool) IsNodeReady(host string) (bool, error) {
 	gatherer := NewGatherer(n.urlProvider, &Config{
 		RequestTimeout: 20 * time.Second,
