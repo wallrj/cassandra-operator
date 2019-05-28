@@ -16,7 +16,6 @@ var _ = Describe("Nodetool Readiness", func() {
 	BeforeEach(func() {
 		jolokia.responsePrimers = make(map[string]jolokiaResponsePrimer)
 
-		// jolokia.returns2LiveNodes()
 		jolokia.returnsNoLiveNodes()
 		jolokia.returnsNoUnreachableNodes()
 		jolokia.returnsNoJoiningNodes()
