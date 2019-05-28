@@ -28,7 +28,7 @@ func GetBootstrapperImage(c *v1alpha1.Cassandra) string {
 	return v1alpha1.DefaultCassandraBootstrapperImage
 }
 
-// GetBootstrapperImage returns the bootstrapper image for a cluster
+// GetCassandraSidecarImage returns the sidecar image for a cluster
 func GetCassandraSidecarImage(c *v1alpha1.Cassandra) string {
 	if c.Spec.Pod.SidecarImage != nil {
 		return *c.Spec.Pod.SidecarImage
