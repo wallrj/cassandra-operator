@@ -1,5 +1,5 @@
-.DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style
+.DEFAULT_GOAL := all
+.PHONY: all clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -23,7 +23,7 @@ testPkgs := $(shell go list ./... | grep /test/e2e)
 
 include $(projectDir)/../MakefileDocker
 
-travis: clean install check
+all: clean install check
 
 build: go-build go-install docker-image
 
