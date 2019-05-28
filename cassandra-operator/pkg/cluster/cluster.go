@@ -13,6 +13,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -536,9 +537,17 @@ func (c *Cluster) createCassandraSidecarContainer(rack *v1alpha1.Rack) v1.Contai
 				ContainerPort: 8080,
 			},
 		},
-		// TODO: Add requests and limits for this container.
-		// Update the environmentvariables to exclude these.
 		Env: c.createEnvironmentVariableDefinition(rack),
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("200m"),
+				v1.ResourceMemory: resource.MustParse("50Mi"),
+			},
+			Limits: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("200m"),
+				v1.ResourceMemory: resource.MustParse("50Mi"),
+			},
+		},
 	}
 }
 
