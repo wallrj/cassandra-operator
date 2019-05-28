@@ -72,6 +72,14 @@ func New(clusterDefinition *v1alpha1.Cassandra) (*Cluster, error) {
 	return cluster, nil
 }
 
+// NewWithoutValidation creates a new cluster definition from the supplied Cassandra definition without performing validation
+func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
+	cluster := &Cluster{
+		definition: clusterDefinition,
+	}
+	return cluster
+}
+
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	if err := validateRacks(clusterDefinition); err != nil {
