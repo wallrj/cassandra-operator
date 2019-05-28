@@ -1,6 +1,13 @@
 # Cassandra Sidecar
 
-An application which sits alongside a cassandra node to perform a few actions:
+A golang server which runs in a sidecar container on each cassandra node.
+It checks the status of the local C* node by connecting to the local Jolokia service.
+It reports readiness liveness via the endpoints:
+ * http://localhost:8080/ready
+ * http://localhost:8080/live
 
-- Check the status of the local node for reporting to readiness/liveliness probes
-- Run keyspace operations to set up cassandra-reaper default keyspace
+These are consumed by Kubernetes HTTP readiness and liveness probes.
+
+This approach avoids having to run Cassandra `nodetool` which,
+because it is written in Java,
+is resource intensive and slow to start.
