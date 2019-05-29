@@ -32,6 +32,9 @@ check-system-dependencies:
 ifeq (, $(shell which go))
 	$(error "golang not found in PATH")
 endif
+ifeq (, $(shell which rsync))
+	$(error "rsync not found in PATH")
+endif
 ifeq (, $(shell which docker))
 	$(error "docker not found in PATH")
 endif

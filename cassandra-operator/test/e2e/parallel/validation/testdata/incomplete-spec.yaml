@@ -1,0 +1,7 @@
+apiVersion: core.sky.uk/v1alpha1
+kind: Cassandra
+metadata:
+  name: incompletecluster
+spec:
+  pod:
+    image: "cassandra:3.11"
