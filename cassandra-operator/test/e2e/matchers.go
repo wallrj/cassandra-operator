@@ -2,14 +2,15 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/onsi/gomega/types"
-	"k8s.io/api/apps/v1beta2"
-	batch "k8s.io/api/batch/v1beta1"
-	coreV1 "k8s.io/api/core/v1"
 	"math"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/onsi/gomega/types"
+	"k8s.io/api/apps/v1beta2"
+	batch "k8s.io/api/batch/v1beta1"
+	coreV1 "k8s.io/api/core/v1"
 )
 
 //
@@ -161,6 +162,7 @@ func HaveASingleContainer(expected interface{}) types.GomegaMatcher {
 
 type ContainerExpectation struct {
 	BootstrapperImageName          string
+	SidecarImageName               string
 	ContainerName                  string
 	ImageName                      string
 	ContainerPorts                 map[string]int

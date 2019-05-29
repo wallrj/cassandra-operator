@@ -2,6 +2,9 @@ package modification
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
@@ -11,10 +14,8 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e/parallel"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"testing"
-	"time"
 )
 
 var (
@@ -80,6 +81,7 @@ var _ = Context("Allowable cluster modifications", func() {
 		revisionsBeforeUpdate := statefulSetRevisions(clusterName, racks)
 		TheClusterPodSpecAreChangedTo(Namespace, clusterName, v1alpha1.Pod{
 			BootstrapperImage: &CassandraBootstrapperImageName,
+			SidecarImage:      &CassandraSidecarImageName,
 			Image:             &CassandraImageName,
 			Memory:            resource.MustParse("999Mi"),
 			CPU:               resource.MustParse("1m"),
@@ -104,6 +106,7 @@ var _ = Context("Allowable cluster modifications", func() {
 			HaveDifferentRevisionTo(revisionsBeforeUpdate),
 			HaveASingleContainer(ContainerExpectation{
 				BootstrapperImageName:          CassandraBootstrapperImageName,
+				SidecarImageName:               CassandraSidecarImageName,
 				ImageName:                      CassandraImageName,
 				ContainerName:                  "cassandra",
 				MemoryRequest:                  "999Mi",
