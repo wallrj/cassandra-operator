@@ -25,9 +25,9 @@ include $(projectDir)/../MakefileDocker
 
 all: clean install check
 
-build: go-build go-install docker-image
+build: go-build docker-image
 
-install: build push-image
+install: build go-install push-image
 
 check-style: fmt vet lint
 
