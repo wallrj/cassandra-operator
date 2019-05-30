@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-.PHONY: all check-style clean-all build-all setup setup-all check-style-all
+.PHONY: all check-style clean-all build-all setup setup-all check-style-all run-local-registry
 
 TEST_REGISTRY ?= localhost:5000
 POD_START_TIMEOUT ?= 120s
@@ -17,8 +17,7 @@ projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 
 all: setup install dind check
 
-setup: check-system-dependencies setup-all
-	docker run -d --name=dind-registry --rm -p 5000:5000 registry:2
+setup: check-system-dependencies setup-all run-local-registry
 
 build: build-all
 
@@ -31,6 +30,9 @@ clean: clean-all
 release: release-all
 
 check-style: check-style-all
+
+run-local-registry:
+	docker run -d --name=dind-registry --rm -p 5000:5000 registry:2
 
 check-system-dependencies:
 	@echo "== check-system-dependencies"
