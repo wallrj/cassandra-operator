@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/mitchellh/go-homedir v1.0.0 // indirect
-	github.com/onsi/ginkgo v1.7.0
+	github.com/onsi/ginkgo v1.8.0
 	github.com/sirupsen/logrus v1.3.0
 	github.com/sky-uk/cassandra-operator/cassandra-operator v0.0.0-00010101000000-000000000000
 	github.com/sky-uk/licence-compliance-checker v1.1.0
@@ -13,8 +13,7 @@ require (
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	golang.org/x/net v0.0.0-20190522155817-f3200d17e092 // indirect
 	golang.org/x/sys v0.0.0-20190523142557-0e01d883c5c5 // indirect
-	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/tools v0.0.0-20190311212946-11955173bddd
+	golang.org/x/tools v0.0.0-20190501045030-23463209683d
 	k8s.io/apimachinery v0.0.0-20190502092502-a44ef629a3c9
 )
 
