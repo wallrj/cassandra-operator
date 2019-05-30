@@ -25,7 +25,7 @@ include $(projectDir)/../MakefileDocker
 
 all: clean install check
 
-build: check-style validate-licences validate-crds go-build docker-image
+build: go-build check-style validate-licences validate-crds docker-image
 
 install: build go-install push-image
 

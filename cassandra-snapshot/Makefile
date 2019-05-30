@@ -22,7 +22,7 @@ include $(projectDir)/../MakefileDocker
 
 all: clean install check
 
-build: check-style validate-licences go-build docker-image
+build: go-build check-style validate-licences docker-image
 
 install: build go-install push-image
 
