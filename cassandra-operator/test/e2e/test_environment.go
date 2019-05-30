@@ -110,12 +110,13 @@ func init() {
 	}
 
 	log.Infof(
-		"Running tests against Kubernetes context:%s in namespace: %s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s",
+		"Running tests against Kubernetes context:%s in namespace: %s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s, sidecar image: %s",
 		kubeContext,
 		Namespace,
 		CassandraImageName,
 		CassandraBootstrapperImageName,
 		CassandraSnapshotImageName,
+		CassandraSidecarImageName,
 	)
 }
 
