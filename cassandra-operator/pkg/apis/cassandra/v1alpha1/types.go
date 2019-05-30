@@ -36,8 +36,8 @@ type Cassandra struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CassandraSpec   `json:"spec"`
-	Status CassandraStatus `json:"status"`
+	Spec   CassandraSpec   `json:"spec,omitempty"`
+	Status CassandraStatus `json:"status,omitempty"`
 }
 
 // CassandraSpec is the specification for the Cassandra resource

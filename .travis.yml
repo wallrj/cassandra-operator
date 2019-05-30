@@ -10,7 +10,7 @@ services:
 
 install:
 - sudo apt-get update
-- sudo apt-get install -y curl
+- sudo apt-get install -y curl rsync
 - BIN_DIR=/usr/local/bin sudo hack/install-system-dependencies.sh
 
 script: make all
