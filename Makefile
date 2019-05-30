@@ -4,7 +4,7 @@
 TEST_REGISTRY ?= localhost:5000
 POD_START_TIMEOUT ?= 120s
 KUBE_CONTEXT ?= dind
-USE_MOCK ?= true
+USE_MOCK ?= false
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
 CASSANDRA_SIDECAR_IMAGE ?= $(TEST_REGISTRY)/cassandra-sidecar:v$(gitRev)

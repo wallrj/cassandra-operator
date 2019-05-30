@@ -3,7 +3,7 @@
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
-USE_MOCK ?= true
+USE_MOCK ?= false
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 IMAGE_UNDER_TEST ?= $(dockerTestImage)
 NAMESPACE ?= test-cassandra-operator
@@ -89,20 +89,20 @@ integration-test: ensure-test-report-dir-exists
 ifeq ($(strip $(USE_MOCK)),true)
 	@echo "== e2e-test integration test against real cassandra"
 	IMAGE_UNDER_TEST=$(dockerTestImage) \
-        KUBE_CONTEXT=$(KUBE_CONTEXT) \
-        NAMESPACE=$(NAMESPACE) \
-        USE_MOCK=false \
-        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/create -- -junit-report-dir $(junitReportDir)
+				KUBE_CONTEXT=$(KUBE_CONTEXT) \
+				NAMESPACE=$(NAMESPACE) \
+				USE_MOCK=false \
+				ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/create -- -junit-report-dir $(junitReportDir)
 endif
 
 e2e-test: ensure-test-report-dir-exists
 	@echo "== e2e-test"
 	IMAGE_UNDER_TEST=$(IMAGE_UNDER_TEST) \
-        FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
-        KUBE_CONTEXT=$(KUBE_CONTEXT) \
-        NAMESPACE=$(NAMESPACE) \
-        USE_MOCK=$(USE_MOCK) \
-        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
+				FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
+				KUBE_CONTEXT=$(KUBE_CONTEXT) \
+				NAMESPACE=$(NAMESPACE) \
+				USE_MOCK=$(USE_MOCK) \
+				ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 
