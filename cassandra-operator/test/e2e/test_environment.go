@@ -2,10 +2,11 @@ package e2e
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
@@ -92,11 +93,11 @@ func init() {
 		CassandraReadinessProbeFailureThreshold = 3
 	} else {
 		CassandraImageName = v1alpha1.DefaultCassandraImage
-		CassandraInitialDelay = 30
-		CassandraLivenessPeriod = 30
-		CassandraReadinessPeriod = 15
-		CassandraLivenessProbeFailureThreshold = 4  // allow 2mins
-		CassandraReadinessProbeFailureThreshold = 8 // allow 2mins
+		CassandraInitialDelay = 10
+		CassandraLivenessPeriod = 2
+		CassandraReadinessPeriod = 2
+		CassandraLivenessProbeFailureThreshold = 10  // allow 30s
+		CassandraReadinessProbeFailureThreshold = 10 // allow 30s
 	}
 
 	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", v1alpha1.DefaultCassandraBootstrapperImage)
