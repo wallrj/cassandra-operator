@@ -2,10 +2,11 @@ package e2e
 
 import (
 	"fmt"
-	coreV1 "k8s.io/api/core/v1"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
+
+	coreV1 "k8s.io/api/core/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func PrintDiagnosis(namespace string, testStartTime time.Time, clusterNames ...string) {
@@ -31,7 +32,7 @@ func operatorDiagnosis(namespace string, logSince time.Time) string {
 	}
 	operatorPod := pods.Items[0]
 	diagnosis = append(diagnosis, fmt.Sprintf("==== Logs for Operator pod %s since %v =====", operatorPod.Name, logSince))
-	diagnosis = append(diagnosis, fmt.Sprintf("%v", podLogsSince(namespace, &operatorPod, logSince)))
+	diagnosis = append(diagnosis, fmt.Sprintf("%v", podLogsSince(namespace, &operatorPod, "cassandra-operator", logSince)))
 	return strings.Join(diagnosis, "\n")
 }
 
@@ -49,7 +50,7 @@ func clusterDiagnosis(namespace, clusterName string) string {
 		diagnosis = append(diagnosis, fmt.Sprintf("\n==== Describing pod %s =====", pod.Name))
 		diagnosis = append(diagnosis, fmt.Sprintf("%v", podDescription(namespace, &pod)))
 		diagnosis = append(diagnosis, fmt.Sprintf("\n==== Logs for pod %s ====", pod.Name))
-		diagnosis = append(diagnosis, fmt.Sprintf("%v", podLogs(namespace, &pod)))
+		diagnosis = append(diagnosis, fmt.Sprintf("%v", podLogs(namespace, &pod, "cassandra")))
 		diagnosis = append(diagnosis, "\n\n")
 	}
 	return strings.Join(diagnosis, "\n")
@@ -63,10 +64,10 @@ func podDescription(namespace string, pod *coreV1.Pod) string {
 	return KubectlOutputAsString(namespace, "describe", "pod", pod.Name)
 }
 
-func podLogsSince(namespace string, pod *coreV1.Pod, logSince time.Time) string {
-	return KubectlOutputAsString(namespace, "logs", pod.Name, fmt.Sprintf("--since-time=%s", logSince.Format(time.RFC3339)))
+func podLogsSince(namespace string, pod *coreV1.Pod, containerName string, logSince time.Time) string {
+	return KubectlOutputAsString(namespace, "logs", "--container", containerName, pod.Name, fmt.Sprintf("--since-time=%s", logSince.Format(time.RFC3339)))
 }
 
-func podLogs(namespace string, pod *coreV1.Pod) string {
-	return KubectlOutputAsString(namespace, "logs", pod.Name)
+func podLogs(namespace string, pod *coreV1.Pod, containerName string) string {
+	return KubectlOutputAsString(namespace, "logs", "--container", containerName, pod.Name)
 }
