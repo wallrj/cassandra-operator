@@ -1,5 +1,5 @@
-.DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style validate-crds generate-crds
+.DEFAULT_GOAL := all
+.PHONY: all clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style validate-crds generate-crds
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -23,15 +23,15 @@ testPkgs := $(shell go list ./... | grep /test/e2e)
 
 include $(projectDir)/../MakefileDocker
 
-travis: clean install check
+all: clean install check
 
-build: go-build go-install docker-image
+build: go-build check-style validate-licences validate-crds docker-image
 
-install: build push-image
+install: build go-install push-image
 
 check-style: fmt vet lint
 
-check: check-style validate-licences validate-crds test deploy-operator integration-test e2e-test
+check: test deploy-operator integration-test e2e-test
 
 ensure-go-modules:
 ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')

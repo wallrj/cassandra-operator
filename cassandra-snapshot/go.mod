@@ -20,10 +20,8 @@ require (
 	github.com/sky-uk/licence-compliance-checker v1.1.0
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
-	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9 // indirect
-	golang.org/x/net v0.0.0-20181207154023-610586996380 // indirect
+	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect
-	golang.org/x/sys v0.0.0-20181212120007-b05ddf57801d // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/appengine v1.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
