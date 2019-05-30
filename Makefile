@@ -15,9 +15,10 @@ GINKGO_COMPILERS ?= 0
 gitRev := $(shell git rev-parse --short HEAD)
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 
-all: setup check-style build dind install check
+all: setup install dind check
 
 setup: check-system-dependencies setup-all
+	docker run -d --name=dind-registry --rm -p 5000:5000 registry:2
 
 build: build-all
 

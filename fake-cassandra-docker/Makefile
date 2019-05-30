@@ -9,7 +9,7 @@ include $(projectDir)/../MakefileDocker
 
 all: clean install check
 
-build: jar docker-image
+build: check-style jar docker-image
 
 install: build push-image
 

@@ -22,13 +22,13 @@ include $(projectDir)/../MakefileDocker
 
 all: clean install check
 
-build: go-build docker-image
+build: check-style validate-licences go-build docker-image
 
 install: build go-install push-image
 
 check-style: fmt vet lint
 
-check: check-style validate-licences test prepare-deployment integration-test e2e-test
+check: test prepare-deployment integration-test e2e-test
 
 ensure-go-modules:
 ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')
