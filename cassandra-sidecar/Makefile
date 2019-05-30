@@ -63,6 +63,7 @@ validate-licences:
 	restricted=$$(paste -s -d ',' restricted-licences.txt) ;\
 	licence-compliance-checker -L error -E -r $$restricted \
 		-m github.com/sky-uk/cassandra-operator/cassandra-sidecar=BSD-3-Clause \
+		-m github.com/sky-uk/cassandra-operator/cassandra-operator=BSD-3-Clause \
 		-m sigs.k8s.io/yaml=BSD-3-Clause \
 		--check-go-modules ;\
 
