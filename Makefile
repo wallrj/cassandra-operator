@@ -15,7 +15,7 @@ GINKGO_COMPILERS ?= 0
 gitRev := $(shell git rev-parse --short HEAD)
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 
-all: setup install dind check
+all: install dind check
 
 setup: check-system-dependencies setup-all run-local-registry
 
