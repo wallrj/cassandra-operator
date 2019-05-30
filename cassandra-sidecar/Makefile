@@ -3,7 +3,7 @@
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
-USE_MOCK ?= false
+USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 IMAGE_UNDER_TEST ?= $(dockerTestImage)
 NAMESPACE ?= test-cassandra-operator
