@@ -84,6 +84,11 @@ func start(_ *cobra.Command, _ []string) error {
 	)
 
 	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		logger := logger.WithFields(
+			log.Fields{
+				"endpoint": "/ready",
+			},
+		)
 		ready, err := nt.IsNodeReady(nodeAddress)
 		if err != nil {
 			w.WriteHeader(500)
@@ -96,11 +101,16 @@ func start(_ *cobra.Command, _ []string) error {
 		}
 		_, err = fmt.Fprintf(w, "ok")
 		if err != nil {
-			log.WithError(err).Error("Fprintf failed")
+			logger.WithError(err).Error("Fprintf failed")
 		}
 	})
 
 	http.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
+		logger := logger.WithFields(
+			log.Fields{
+				"endpoint": "/live",
+			},
+		)
 		_, err := nt.IsNodeReady(nodeAddress)
 		if err != nil {
 			w.WriteHeader(500)
@@ -109,7 +119,7 @@ func start(_ *cobra.Command, _ []string) error {
 		}
 		_, err = fmt.Fprintf(w, "ok")
 		if err != nil {
-			log.WithError(err).Error("Fprintf failed")
+			logger.WithError(err).Error("Fprintf failed")
 		}
 	})
 
