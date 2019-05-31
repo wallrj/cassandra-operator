@@ -39,6 +39,11 @@ const (
 	extraLibVolumeMountPath      = "/extra-lib"
 	configurationVolumeName      = "configuration"
 	extraLibVolumeName           = "extra-lib"
+
+	defaultSidecarMemoryLimit   = "50Mi"
+	defaultSidecarMemoryRequest = "50Mi"
+	defaultSidecarCPULimit      = "200m"
+	defaultSidecarCPURequest    = "200m"
 )
 
 var defaultLivenessProbe = v1alpha1.Probe{
@@ -55,6 +60,20 @@ var defaultReadinessProbe = v1alpha1.Probe{
 	PeriodSeconds:       int32(15),
 	SuccessThreshold:    int32(1),
 	TimeoutSeconds:      int32(5),
+}
+
+var (
+	sidecarMemoryRequest resource.Quantity
+	sidecarMemoryLimit   resource.Quantity
+	sidecarCPURequest    resource.Quantity
+	sidecarCPULimit      resource.Quantity
+)
+
+func init() {
+	sidecarMemoryRequest = resource.MustParse(defaultSidecarMemoryRequest)
+	sidecarMemoryLimit = resource.MustParse(defaultSidecarMemoryLimit)
+	sidecarCPURequest = resource.MustParse(defaultSidecarCPURequest)
+	sidecarCPULimit = resource.MustParse(defaultSidecarCPULimit)
 }
 
 // Cluster defines the properties of a Cassandra cluster which the operator should manage.
@@ -548,12 +567,12 @@ func (c *Cluster) createCassandraSidecarContainer(rack *v1alpha1.Rack) v1.Contai
 		Env: c.createEnvironmentVariableDefinition(rack),
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("200m"),
-				v1.ResourceMemory: resource.MustParse("50Mi"),
+				v1.ResourceCPU:    sidecarCPURequest,
+				v1.ResourceMemory: sidecarMemoryRequest,
 			},
 			Limits: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("200m"),
-				v1.ResourceMemory: resource.MustParse("50Mi"),
+				v1.ResourceCPU:    sidecarCPULimit,
+				v1.ResourceMemory: sidecarMemoryLimit,
 			},
 		},
 	}
