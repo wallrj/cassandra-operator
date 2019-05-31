@@ -36,6 +36,10 @@ jobs:
       name: fake-cassandra-docker
       script: make -C fake-cassandra-docker check
 
+    - stage: test
+      name: cassandra-sidecar
+      script: make -C cassandra-sidecar check
+
 deploy:
 - provider: script
   skip_cleanup: true
