@@ -14,6 +14,9 @@ build: go-build check-style validate-licences docker-image
 
 install: build go-install push-image
 
+check:
+	@echo "== check not implemented"
+
 check-style: fmt vet lint
 
 ensure-go-modules:
