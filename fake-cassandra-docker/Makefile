@@ -16,7 +16,7 @@ install: build push-image
 check-style:
 	@echo "== check-style not implemented"
 
-check: check-style dgoss
+check: dgoss
 
 setup:
 	@echo "== setup"

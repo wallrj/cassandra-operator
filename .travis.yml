@@ -12,10 +12,29 @@ before_install:
 - sudo apt-get update
 - sudo apt-get install -y curl rsync
 - BIN_DIR=/usr/local/bin sudo hack/install-system-dependencies.sh
+- make setup
 
-install: make setup
+install: make install
 
-script: make all
+jobs:
+  include:
+    - stage: test
+      name: cassandra-operator
+      before_script: make dind
+      script: make -C cassandra-operator check
+
+    - stage: test
+      name: cassandra-bootstrapper
+      script: make -C cassandra-bootstrapper check
+
+    - stage: test
+      name: cassandra-snapshot
+      before_script: make dind
+      script: make -C cassandra-snapshot check
+
+    - stage: test
+      name: fake-cassandra-docker
+      script: make -C fake-cassandra-docker check
 
 deploy:
 - provider: script
