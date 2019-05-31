@@ -11,16 +11,30 @@ services:
 before_install:
 - sudo apt-get update
 - sudo apt-get install -y curl rsync
-- sudo curl -L https://storage.googleapis.com/kubernetes-release/release/v1.10.13/bin/linux/amd64/kubectl -o /usr/local/bin/kubectl
-- sudo chmod +x  /usr/local/bin/kubectl
-- sudo curl -L https://github.com/aelsabbahy/goss/releases/download/v0.3.5/goss-linux-amd64 -o /usr/local/bin/goss
-- sudo chmod +rx /usr/local/bin/goss
-- sudo curl -L https://raw.githubusercontent.com/aelsabbahy/goss/v0.3.5/extras/dgoss/dgoss -o /usr/local/bin/dgoss
-- sudo chmod +rx /usr/local/bin/dgoss
+- BIN_DIR=/usr/local/bin sudo hack/install-system-dependencies.sh
+- make setup
 
-install: make setup
+install: make install
 
-script: make travis
+jobs:
+  include:
+    - stage: test
+      name: cassandra-operator
+      before_script: make dind
+      script: make -C cassandra-operator check
+
+    - stage: test
+      name: cassandra-bootstrapper
+      script: make -C cassandra-bootstrapper check
+
+    - stage: test
+      name: cassandra-snapshot
+      before_script: make dind
+      script: make -C cassandra-snapshot check
+
+    - stage: test
+      name: fake-cassandra-docker
+      script: make -C fake-cassandra-docker check
 
 deploy:
 - provider: script
