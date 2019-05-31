@@ -10,7 +10,7 @@ include $(projectDir)/../MakefileDocker
 
 travis: clean install
 
-build: check-style validate-licences go-build docker-image
+build: go-build check-style validate-licences docker-image
 
 install: build go-install push-image
 
