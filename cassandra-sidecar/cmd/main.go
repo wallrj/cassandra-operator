@@ -25,7 +25,7 @@ var rootCmd = &cobra.Command{
 	Use:               "cassandra-sidecar",
 	Short:             "Sidecar for interacting with Cassandra nodes",
 	PersistentPreRunE: handleArgs,
-	RunE:              startOperator,
+	RunE:              start,
 }
 
 func main() {
@@ -63,7 +63,7 @@ func handleArgs(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func startOperator(_ *cobra.Command, _ []string) error {
+func start(_ *cobra.Command, _ []string) error {
 	logger := log.WithFields(
 		log.Fields{
 			"clusterName":      clusterName,
