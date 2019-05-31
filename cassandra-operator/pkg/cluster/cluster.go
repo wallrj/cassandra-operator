@@ -124,7 +124,7 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	cluster.definition.Spec.Pod.Image = &cassandraImage
 
 	if cluster.definition.Spec.Snapshot != nil {
-		snapshotImage := v1alpha1helpers.GetSnapshopImage(cluster.definition)
+		snapshotImage := v1alpha1helpers.GetSnapshotImage(cluster.definition)
 		cluster.definition.Spec.Snapshot.Image = &snapshotImage
 	}
 	return nil
@@ -409,7 +409,7 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotJobName(),
-		Image:   v1alpha1helpers.GetSnapshopImage(c.definition),
+		Image:   v1alpha1helpers.GetSnapshotImage(c.definition),
 		Command: backupCommand,
 	}
 }
@@ -446,7 +446,7 @@ func (c *Cluster) CreateSnapshotCleanupContainer(snapshot *v1alpha1.Snapshot) *v
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotCleanupJobName(),
-		Image:   v1alpha1helpers.GetSnapshopImage(c.definition),
+		Image:   v1alpha1helpers.GetSnapshotImage(c.definition),
 		Command: cleanupCommand,
 	}
 }
