@@ -99,27 +99,25 @@ var _ = Context("When a cluster with a given name doesn't already exist", func()
 		By("creating all pods only once")
 		Expect(PodRestartForCluster(Namespace, multipleRacksCluster.Name)()).Should(Equal(0))
 
-		// By("creating pods with the specified resources")
-		// Expect(PodsForCluster(Namespace, multipleRacksCluster.Name)()).Should(Each(And(
-		//	HaveASingleContainer(ContainerExpectation{
-		//		BootstrapperImageName:          CassandraBootstrapperImageName,
-		//		SidecarImageName:               CassandraSidecarImageName,
-		//		ImageName:                      CassandraImageName,
-		//		ContainerName:                  "cassandra",
-		//		MemoryRequest:                  "987Mi",
-		//		MemoryLimit:                    "987Mi",
-		//		CPURequest:                     "1m",
-		//		LivenessProbePeriod:            DurationSeconds(CassandraLivenessPeriod),
-		//		LivenessProbeFailureThreshold:  CassandraLivenessProbeFailureThreshold,
-		//		LivenessProbeInitialDelay:      DurationSeconds(CassandraInitialDelay),
-		//		LivenessProbeTimeout:           7 * time.Second,
-		//		ReadinessProbeTimeout:          6 * time.Second,
-		//		ReadinessProbePeriod:           DurationSeconds(CassandraReadinessPeriod),
-		//		ReadinessProbeFailureThreshold: CassandraReadinessProbeFailureThreshold,
-		//		ReadinessProbeInitialDelay:     DurationSeconds(CassandraInitialDelay),
-		//		ReadinessProbeSuccessThreshold: 1,
-		//		ContainerPorts:                 map[string]int{"internode": 7000, "jmx-exporter": 7070, "cassandra-jmx": 7199, "jolokia": 7777, "client": 9042}})),
-		// ))
+		By("creating pods with the specified resources")
+		Expect(PodsForCluster(Namespace, multipleRacksCluster.Name)()).Should(Each(And(
+			HaveContainer(ContainerExpectation{
+				ImageName:                      CassandraImageName,
+				ContainerName:                  "cassandra",
+				MemoryRequest:                  "987Mi",
+				MemoryLimit:                    "987Mi",
+				CPURequest:                     "1m",
+				LivenessProbePeriod:            DurationSeconds(CassandraLivenessPeriod),
+				LivenessProbeFailureThreshold:  CassandraLivenessProbeFailureThreshold,
+				LivenessProbeInitialDelay:      DurationSeconds(CassandraInitialDelay),
+				LivenessProbeTimeout:           7 * time.Second,
+				ReadinessProbeTimeout:          6 * time.Second,
+				ReadinessProbePeriod:           DurationSeconds(CassandraReadinessPeriod),
+				ReadinessProbeFailureThreshold: CassandraReadinessProbeFailureThreshold,
+				ReadinessProbeInitialDelay:     DurationSeconds(CassandraInitialDelay),
+				ReadinessProbeSuccessThreshold: 1,
+				ContainerPorts:                 map[string]int{"internode": 7000, "jmx-exporter": 7070, "cassandra-jmx": 7199, "jolokia": 7777, "client": 9042}})),
+		))
 
 		By("creating a StatefulSet for each rack")
 		Expect(StatefulSetsForCluster(Namespace, multipleRacksCluster.Name)()).Should(Each(And(

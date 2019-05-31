@@ -104,25 +104,23 @@ var _ = Context("Allowable cluster modifications", func() {
 		By("updating only the CPU and memory for each pod within the cluster")
 		Eventually(PodsForCluster(Namespace, clusterName), 2*NodeRestartDuration, CheckInterval).Should(Each(And(
 			HaveDifferentRevisionTo(revisionsBeforeUpdate),
-		//	HaveASingleContainer(ContainerExpectation{
-		//		BootstrapperImageName:          CassandraBootstrapperImageName,
-		//		SidecarImageName:               CassandraSidecarImageName,
-		//		ImageName:                      CassandraImageName,
-		//		ContainerName:                  "cassandra",
-		//		MemoryRequest:                  "999Mi",
-		//		MemoryLimit:                    "999Mi",
-		//		CPURequest:                     "1m",
-		//		LivenessProbeFailureThreshold:  CassandraLivenessProbeFailureThreshold + 1,
-		//		LivenessProbeInitialDelay:      DurationSeconds(CassandraInitialDelay),
-		//		LivenessProbePeriod:            DurationSeconds(CassandraLivenessPeriod),
-		//		LivenessProbeTimeout:           6 * time.Second,
-		//		ReadinessProbeFailureThreshold: CassandraReadinessProbeFailureThreshold + 1,
-		//		ReadinessProbeInitialDelay:     DurationSeconds(CassandraInitialDelay),
-		//		ReadinessProbePeriod:           DurationSeconds(CassandraReadinessPeriod),
-		//		ReadinessProbeTimeout:          4 * time.Second,
-		//		ReadinessProbeSuccessThreshold: 1,
-		//		ContainerPorts:                 map[string]int{"internode": 7000, "jmx-exporter": 7070, "cassandra-jmx": 7199, "jolokia": 7777, "client": 9042},
-		//	}),
+			HaveContainer(ContainerExpectation{
+				ImageName:                      CassandraImageName,
+				ContainerName:                  "cassandra",
+				MemoryRequest:                  "999Mi",
+				MemoryLimit:                    "999Mi",
+				CPURequest:                     "1m",
+				LivenessProbeFailureThreshold:  CassandraLivenessProbeFailureThreshold + 1,
+				LivenessProbeInitialDelay:      DurationSeconds(CassandraInitialDelay),
+				LivenessProbePeriod:            DurationSeconds(CassandraLivenessPeriod),
+				LivenessProbeTimeout:           6 * time.Second,
+				ReadinessProbeFailureThreshold: CassandraReadinessProbeFailureThreshold + 1,
+				ReadinessProbeInitialDelay:     DurationSeconds(CassandraInitialDelay),
+				ReadinessProbePeriod:           DurationSeconds(CassandraReadinessPeriod),
+				ReadinessProbeTimeout:          4 * time.Second,
+				ReadinessProbeSuccessThreshold: 1,
+				ContainerPorts:                 map[string]int{"internode": 7000, "jmx-exporter": 7070, "cassandra-jmx": 7199, "jolokia": 7777, "client": 9042},
+			}),
 		)))
 
 		By("restarting one stateful set at a time")
