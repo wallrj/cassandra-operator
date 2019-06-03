@@ -30,12 +30,12 @@ common-docker-release:
 	@echo "== common-docker-release"
 ifeq ($(strip $(gitTag)),)
 	@echo "Releasing candidate based on rev: $(gitRev). Docker image: $(dockerReleaseCandidateImage)"
-	@echo "$DOCKER_PASSWORD" | docker login -u $(DOCKER_USERNAME) --password-stdin
+	@echo "$(DOCKER_PASSWORD)" | docker login -u $(DOCKER_USERNAME) --password-stdin
 	docker tag $(dockerTestImage) $(dockerReleaseCandidateImage)
 	docker push $(dockerReleaseCandidateImage)
 else
 	@echo "Releasing based on tag: $(gitTag). Docker image: $(dockerReleaseImage)"
-	@echo "$DOCKER_PASSWORD" | docker login -u $(DOCKER_USERNAME) --password-stdin
+	@echo "$(DOCKER_PASSWORD)" | docker login -u $(DOCKER_USERNAME) --password-stdin
 	docker pull $(dockerReleaseCandidateImage)
 	docker tag $(dockerReleaseCandidateImage) $(dockerReleaseImage)
 	docker tag $(dockerReleaseCandidateImage) $(dockerReleaseLatestImage)
