@@ -3,54 +3,65 @@ language: go
 sudo: required
 
 go:
-- 1.12
+  - 1.12
 
 services:
-- docker
+  - docker
+
+env:
+  global:
+    # DOCKER_USERNAME
+    - secure: LMRp4oZRTnDvbSSitlqrVyeIlvJaDFQWYaCcuGrscjC/h//kILsAxl9WgJKv1mNYVDeeIeC49fO7qyLDge+lPSEpEKh+tCXKe/NmIWnDEsnE1ZMvTk7FcMl3gHvsTSDbTCoPCQsyW04DELtGJbb5I4g849/12OLPPsywl6WiLuvv/1p7GqlQq07r1jJ4KwZeLj0000UL2Sr3yGGKWZ3+EquWcUiUgirpY7zAuT2XiDnYaKV5aOiAdlpINFvUvZH7tV9fpjDqjhTXwOs9UPuPebeoei6Jwp+EpAgs9iC51sRXv8tvo0rSnCxPwVfuUQ54i7HbdO4GWh8byH5wa4SQmo6CsDsldmJ+IUjmdkJ8rJKT7x2uOGPkw2O9KEpyeaG5MHEP4Rd1YQDJN+OjtcTYFh524gB9IAMm7Tv9FpNmfdiKuBM20yb3pikhW0ArED10Ay8Fu/+xALbb8O1BaD+9Il1UK0gekB9UYzA+L2hHBe9i30iWKR8ZTQQvSkagieGShYaHjZpBsIbZbhr4RS+jqPvnoFsNysTfrckjSMNldNX00oNT0E2+sEvsoKbB13KAV2Q9MzBBCF+k2u5Mj5Eu3jZK8EeaPvIiROKvbhl3bObjh/MuCL/OJyy+d6+oVmjOyBGFxyNxMXi7NITq90iAgYH9kL2X37+QTpcAzCD5RFo=
+    # DOCKER_PASSWORD
+    - secure: yK3dkfdQOUn+vUk8t+H5j3XdL5N3twk1SNBHzHSv1fB+Gldu9W5KfmM+4yhS7HQnbn2xa5mmgPxfwdasOyj+GtX+I6smTs+QvUqFwA50X1JMLJKjzfTEnbSiqrxjpwWH37Tvt8jYk5cIRt7VQFEfJGTZBMC+uFQMV4IziSTjeEo45DIBDHBKlnHwIzDZJBRbFHfqJVUs8DF91w5ETY6EkQWgg869q+d1yIRQpl6XoGh5vMRuSeS+GlKU+xyfZYIq23MqRAyUEHr+t2KsWmi/Ttk8Ae8PM1ofv149UXF8r9mOFVauTKIfV9qhvPrldsFDaqILXtUSDq5a1V+N3k1JoMqhQIsA6/HyE2fya3vPxTenYnvVsM7v29flXynFQXdXvrAmED60eViVSc+ftbADzAHI3IsjgzDBdQ0BDrwwHexDOhvUtA7G3eMOutGFPbo4jENVETe50+UANQUqCEWxtC8BH/10YtLXR4JXugiSxNr6+VeAl9svN/ARGoO1lgHvQGpG2Biz+cJCYAtSUbyNcnbLitbGE7SRZ95vjsHYlISSCWh0M84R3nOltDAwZD1AOjGjy8fsRU2poHw4SyRqSCmi80VmArcBzYoT/deIa/OiKBZ6/cIfyqeD1cjL+HbEzI8eMLsqiW3gr4DoWpQvwKmv+LCz4QpJpvcTzTGJ5uI=
+    - GO111MODULE: "on"
+
+# This applies to `push` types only, not pull request
+# Travis will trigger `push` builds on master or tag to avoid building branches twice for pull requests - see https://docs.travis-ci.com/user/pull-requests/#double-builds-on-pull-requests
+# The tag to build should follow semantic versioning - e.g. v0.70.0-alpha or v1.0.0
+branches:
+  only:
+    - master
+    - /^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/
+
+stages:
+  - name: test
+    if: NOT (tag =~ /^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/)
+  - name: deploy
+    if: type = push AND (branch = master OR tag =~ /^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/)
 
 before_install:
-- sudo apt-get update
-- sudo apt-get install -y curl rsync
-- BIN_DIR=/usr/local/bin sudo hack/install-system-dependencies.sh
-- make setup
-
-install: make install
+  - sudo apt-get update
+  - sudo apt-get install -y curl rsync
+  - BIN_DIR=/usr/local/bin sudo hack/install-system-dependencies.sh
 
 jobs:
   include:
     - stage: test
       name: cassandra-operator
-      before_script: make dind
+      before_script: make setup install dind
       script: make -C cassandra-operator check
 
     - stage: test
       name: cassandra-bootstrapper
+      before_script: make setup install
       script: make -C cassandra-bootstrapper check
 
     - stage: test
       name: cassandra-snapshot
-      before_script: make dind
+      before_script: make setup install dind
       script: make -C cassandra-snapshot check
 
     - stage: test
       name: fake-cassandra-docker
+      before_script: make setup install
       script: make -C fake-cassandra-docker check
 
-deploy:
-- provider: script
-  skip_cleanup: true
-  script: make release
-  on:
-    tags: true
-
-env:
-  global:
-  # DOCKER_USERNAME
-  - secure: LMRp4oZRTnDvbSSitlqrVyeIlvJaDFQWYaCcuGrscjC/h//kILsAxl9WgJKv1mNYVDeeIeC49fO7qyLDge+lPSEpEKh+tCXKe/NmIWnDEsnE1ZMvTk7FcMl3gHvsTSDbTCoPCQsyW04DELtGJbb5I4g849/12OLPPsywl6WiLuvv/1p7GqlQq07r1jJ4KwZeLj0000UL2Sr3yGGKWZ3+EquWcUiUgirpY7zAuT2XiDnYaKV5aOiAdlpINFvUvZH7tV9fpjDqjhTXwOs9UPuPebeoei6Jwp+EpAgs9iC51sRXv8tvo0rSnCxPwVfuUQ54i7HbdO4GWh8byH5wa4SQmo6CsDsldmJ+IUjmdkJ8rJKT7x2uOGPkw2O9KEpyeaG5MHEP4Rd1YQDJN+OjtcTYFh524gB9IAMm7Tv9FpNmfdiKuBM20yb3pikhW0ArED10Ay8Fu/+xALbb8O1BaD+9Il1UK0gekB9UYzA+L2hHBe9i30iWKR8ZTQQvSkagieGShYaHjZpBsIbZbhr4RS+jqPvnoFsNysTfrckjSMNldNX00oNT0E2+sEvsoKbB13KAV2Q9MzBBCF+k2u5Mj5Eu3jZK8EeaPvIiROKvbhl3bObjh/MuCL/OJyy+d6+oVmjOyBGFxyNxMXi7NITq90iAgYH9kL2X37+QTpcAzCD5RFo=
-  # DOCKER_PASSWORD
-  - secure: yK3dkfdQOUn+vUk8t+H5j3XdL5N3twk1SNBHzHSv1fB+Gldu9W5KfmM+4yhS7HQnbn2xa5mmgPxfwdasOyj+GtX+I6smTs+QvUqFwA50X1JMLJKjzfTEnbSiqrxjpwWH37Tvt8jYk5cIRt7VQFEfJGTZBMC+uFQMV4IziSTjeEo45DIBDHBKlnHwIzDZJBRbFHfqJVUs8DF91w5ETY6EkQWgg869q+d1yIRQpl6XoGh5vMRuSeS+GlKU+xyfZYIq23MqRAyUEHr+t2KsWmi/Ttk8Ae8PM1ofv149UXF8r9mOFVauTKIfV9qhvPrldsFDaqILXtUSDq5a1V+N3k1JoMqhQIsA6/HyE2fya3vPxTenYnvVsM7v29flXynFQXdXvrAmED60eViVSc+ftbADzAHI3IsjgzDBdQ0BDrwwHexDOhvUtA7G3eMOutGFPbo4jENVETe50+UANQUqCEWxtC8BH/10YtLXR4JXugiSxNr6+VeAl9svN/ARGoO1lgHvQGpG2Biz+cJCYAtSUbyNcnbLitbGE7SRZ95vjsHYlISSCWh0M84R3nOltDAwZD1AOjGjy8fsRU2poHw4SyRqSCmi80VmArcBzYoT/deIa/OiKBZ6/cIfyqeD1cjL+HbEzI8eMLsqiW3gr4DoWpQvwKmv+LCz4QpJpvcTzTGJ5uI=
-  - GO111MODULE: "on"
-
-branches:
-  only:
-    - master
+    - stage: deploy
+      deploy:
+        - provider: script
+          skip_cleanup: true
+          script: make release
+          on:
+            # assumes this stage is only included on the correct branch or tag
+            all_branches: true
