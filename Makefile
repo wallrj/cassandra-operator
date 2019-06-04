@@ -32,7 +32,10 @@ release: release-all
 check-style: check-style-all
 
 run-local-registry:
+	@echo "== run-local-registry"
+ifeq (, $(shell  docker ps --filter=name="dind-registry" --format="{{.Names}}"))
 	docker run -d --name=dind-registry --rm -p 5000:5000 registry:2
+endif
 
 check-system-dependencies:
 	@echo "== check-system-dependencies"

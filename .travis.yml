@@ -27,8 +27,10 @@ branches:
 stages:
   - name: test
     if: NOT (tag =~ /^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/)
-  - name: deploy
-    if: type = push AND (branch = master OR tag =~ /^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/)
+  - name: deploy-release-candidate
+    if: type = push AND branch = master
+  - name: deploy-release
+    if: type = push AND tag =~ /^v([0-9]+)\.([0-9]+)\.([0-9]+).*$/
 
 before_install:
   - sudo apt-get update
@@ -57,7 +59,16 @@ jobs:
       before_script: make setup install
       script: make -C fake-cassandra-docker check
 
-    - stage: deploy
+    - stage: deploy-release-candidate
+      deploy:
+        - provider: script
+          skip_cleanup: true
+          script: make setup install release
+          on:
+            # assumes this stage is only included on the correct branch or tag
+            all_branches: true
+
+    - stage: deploy-release
       deploy:
         - provider: script
           skip_cleanup: true
