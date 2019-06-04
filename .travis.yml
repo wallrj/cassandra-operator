@@ -37,6 +37,9 @@ before_install:
   - sudo apt-get install -y curl rsync
   - BIN_DIR=/usr/local/bin sudo hack/install-system-dependencies.sh
 
+# skip script phase which defaults to running `make` for go languages
+script: true
+
 jobs:
   include:
     - stage: test
