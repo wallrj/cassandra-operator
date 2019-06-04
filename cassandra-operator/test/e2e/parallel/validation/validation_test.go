@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 	"os/exec"
 	"testing"
 
@@ -17,13 +18,13 @@ func TestValidation(t *testing.T) {
 
 var _ = Context("Cassandra resource validation", func() {
 	It("should fail with an incomplete cassandra spec", func() {
-		output, err := exec.Command("kubectl", "apply", "-f", "testdata/incomplete-spec.yaml").CombinedOutput()
+		output, err := exec.Command("kubectl", "-n", e2e.Namespace, "apply", "-f", "testdata/incomplete-spec.yaml").CombinedOutput()
 		Expect(err).To(HaveOccurred())
 		Expect(string(output)).To(ContainSubstring(`spec.racks in body is required`))
 	})
 
 	It("should fail with an invalid field in a cassandra spec", func() {
-		output, err := exec.Command("kubectl", "apply", "-f", "testdata/invalid-value-spec.yaml").CombinedOutput()
+		output, err := exec.Command("kubectl", "-n", e2e.Namespace, "apply", "-f", "testdata/invalid-value-spec.yaml").CombinedOutput()
 		Expect(err).To(HaveOccurred())
 		Expect(string(output)).To(ContainSubstring(`spec.racks.replicas in body must be of type integer: "string"`))
 	})
