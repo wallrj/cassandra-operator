@@ -81,11 +81,10 @@ you should look for an issue with a `good first issue` or `bug` label.
 1. If your changes include multiple commits, please squash them into a single commit.  Stack Overflow
    and various blogs can help with this process if you're not already familiar with it.
 2. Update the README.md / WIKI where relevant.
-3. Update the CHANGELOG.md with details of the change and referencing the issue you worked on.
-4. When submitting your pull request, please provide a comment which describes the change and the problem
+3. When submitting your pull request, please provide a comment which describes the change and the problem
    it is intended to resolve. If your pull request is fixing something for which there is a related GitHub issue,
    make reference to that issue with the text "Closes #<issue-number>" in the pull request description.
-5. You may merge the pull request to master once a reviewer has approved it. If you do not have permission to
+4. You may merge the pull request to master once a reviewer has approved it. If you do not have permission to
    do that, you may request the reviewer to merge it for you.
 
 ## Pinning dependencies
@@ -105,8 +104,11 @@ For example, to pin both of these:
 
 ## Releasing
 
-Once a pull request has been merged, the commit in master should be tagged with a new version number and pushed.
-Only maintainers are able to do this.
+Only maintainers would need to do this:
+- Update the CHANGELOG.md with details of all the changes that have been merged since the last release
+- Tag the master branch with a new version number; this will trigger a new build which will release
+docker images labelled after the tag
+- Publish the release (via github), referencing issues and contributors
 
 This project follows the [Semantic Versioning](https://semver.org/) specification, and version numbers
 should be chosen accordingly.
