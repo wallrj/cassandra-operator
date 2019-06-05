@@ -10,7 +10,6 @@ import (
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"os/exec"
 	"regexp"
 	"strings"
 	"time"
@@ -305,29 +304,6 @@ func SnapshotJobsFor(clusterName string) func() (int, error) {
 	}
 }
 
-func KubectlOutputAsString(namespace string, args ...string) string {
-	command, outputBytes, err := Kubectl(namespace, args...)
-	if err != nil {
-		return fmt.Sprintf("command was %v.\nOutput was:\n%s\n. Error: %v", command, outputBytes, err)
-	}
-	return strings.TrimSpace(string(outputBytes))
-}
-
-func Kubectl(namespace string, args ...string) (*exec.Cmd, []byte, error) {
-	argList := []string{
-		fmt.Sprintf("--kubeconfig=%s", kubeconfigLocation),
-		fmt.Sprintf("--context=%s", kubeContext),
-		fmt.Sprintf("--namespace=%s", namespace),
-	}
-
-	for _, word := range args {
-		argList = append(argList, word)
-	}
-
-	cmd := exec.Command("kubectl", argList...)
-	output, err := cmd.CombinedOutput()
-	return cmd, output, err
-}
 
 func CassandraDefinitions(namespace string) ([]v1alpha1.Cassandra, error) {
 	cassandras, err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).List(metaV1.ListOptions{})
