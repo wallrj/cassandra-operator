@@ -1,13 +1,12 @@
 package metrics
 
 import (
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	"testing"
-
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"strings"
+
+	"math/rand"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,30 +15,14 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/stub"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"math/rand"
-	"time"
 )
-
-func TestMetrics(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Metrics Suite", test.CreateParallelReporters("metrics"))
-}
 
 var _ = Describe("Cluster Metrics", func() {
 	var (
-		server             *httptest.Server
-		serverURL          string
-		jolokia            *jolokiaHandler
 		jolokiaURLProvider *stubbedJolokiaURLProvider
 		metricsGatherer    Gatherer
 		cluster            *cluster.Cluster
 	)
-
-	BeforeSuite(func() {
-		jolokia = &jolokiaHandler{}
-		server = httptest.NewServer(jolokia)
-		serverURL = server.URL
-	})
 
 	BeforeEach(func() {
 		jolokia.responsePrimers = make(map[string]jolokiaResponsePrimer)
@@ -56,10 +39,6 @@ var _ = Describe("Cluster Metrics", func() {
 		metricsGatherer = NewGatherer(jolokiaURLProvider, &Config{1 * time.Second})
 
 		cluster = aCluster("testcluster", "test")
-	})
-
-	AfterSuite(func() {
-		server.Close()
 	})
 
 	Context("A cluster has been defined", func() {
@@ -197,7 +176,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		// when
 		urlsProvided := make(map[string]int)
 		for i := 0; i < 10; i++ {
-			urlProvided := urlProvider.urlFor(cluster)
+			urlProvided := urlProvider.URLFor(cluster)
 			urlsProvided[urlProvided] = 1
 		}
 
@@ -213,7 +192,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 		// when
-		urlProvided := urlProvider.urlFor(cluster)
+		urlProvided := urlProvider.URLFor(cluster)
 
 		// then
 		Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -225,7 +204,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 		// when
-		urlProvided := urlProvider.urlFor(cluster)
+		urlProvided := urlProvider.URLFor(cluster)
 
 		// then
 		Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -239,7 +218,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 
 			for i := 0; i < 10; i++ {
 				// when
-				urlProvided := urlProvider.urlFor(cluster)
+				urlProvided := urlProvider.URLFor(cluster)
 
 				// then
 				Expect(urlProvided).To(Equal("http://10.0.0.1:7777"))
@@ -252,7 +231,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 			urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 			// when
-			urlProvided := urlProvider.urlFor(cluster)
+			urlProvided := urlProvider.URLFor(cluster)
 
 			// then
 			Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -400,7 +379,7 @@ type stubbedJolokiaURLProvider struct {
 	baseURL string
 }
 
-func (p *stubbedJolokiaURLProvider) urlFor(cluster *cluster.Cluster) string {
+func (p *stubbedJolokiaURLProvider) URLFor(cluster *cluster.Cluster) string {
 	return p.baseURL
 }
 

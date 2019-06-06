@@ -7,6 +7,7 @@ KUBE_CONTEXT ?= dind
 USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
+CASSANDRA_SIDECAR_IMAGE ?= $(TEST_REGISTRY)/cassandra-sidecar:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 NAMESPACE ?= test-cassandra-operator
 GINKGO_NODES ?= 0
@@ -62,13 +63,15 @@ check-all:
 	@echo "== check-all"
 	$(MAKE) -C cassandra-bootstrapper check
 	$(MAKE) -C fake-cassandra-docker check
+	$(MAKE) -C cassandra-sidecar check
 	GINKGO_NODES=$(GINKGO_NODES) GINKGO_COMPILERS=$(GINKGO_COMPILERS) KUBE_CONTEXT=$(KUBE_CONTEXT) TEST_REGISTRY=$(TEST_REGISTRY) FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) USE_MOCK=$(USE_MOCK) $(MAKE) -C cassandra-snapshot check
-	GINKGO_NODES=$(GINKGO_NODES) GINKGO_COMPILERS=$(GINKGO_COMPILERS) KUBE_CONTEXT=$(KUBE_CONTEXT) TEST_REGISTRY=$(TEST_REGISTRY) FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) USE_MOCK=$(USE_MOCK) POD_START_TIMEOUT=$(POD_START_TIMEOUT) $(MAKE) -C cassandra-operator check
+	GINKGO_NODES=$(GINKGO_NODES) GINKGO_COMPILERS=$(GINKGO_COMPILERS) KUBE_CONTEXT=$(KUBE_CONTEXT) TEST_REGISTRY=$(TEST_REGISTRY) FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) USE_MOCK=false POD_START_TIMEOUT=$(POD_START_TIMEOUT) $(MAKE) -C cassandra-operator check
 
 build-all:
 	@echo "== build-all"
 	$(MAKE) -C fake-cassandra-docker build
 	$(MAKE) -C cassandra-bootstrapper build
+	$(MAKE) -C cassandra-sidecar build
 	$(MAKE) -C cassandra-snapshot build
 	$(MAKE) -C cassandra-operator build
 
@@ -78,6 +81,7 @@ install-all:
 	$(MAKE) -C cassandra-bootstrapper install
 	$(MAKE) -C cassandra-snapshot install
 	$(MAKE) -C cassandra-operator install
+	$(MAKE) -C cassandra-sidecar install
 
 clean-all:
 	@echo "== clean-all"
@@ -85,6 +89,7 @@ clean-all:
 	$(MAKE) -C cassandra-bootstrapper clean
 	$(MAKE) -C cassandra-snapshot clean
 	$(MAKE) -C cassandra-operator clean
+	$(MAKE) -C cassandra-sidecar clean
 
 setup-all:
 	@echo "== setup-all"
@@ -92,6 +97,7 @@ setup-all:
 	$(MAKE) -C cassandra-bootstrapper setup
 	$(MAKE) -C cassandra-snapshot setup
 	$(MAKE) -C cassandra-operator setup
+	$(MAKE) -C cassandra-sidecar setup
 
 dind:
 	@echo "== recreate dind cluster"
@@ -103,6 +109,7 @@ release-all:
 	$(MAKE) -C cassandra-bootstrapper release
 	$(MAKE) -C cassandra-snapshot release
 	$(MAKE) -C cassandra-operator release
+	$(MAKE) -C cassandra-sidecar release
 
 check-style-all:
 	@echo "== check-style-all"
@@ -110,3 +117,4 @@ check-style-all:
 	$(MAKE) -C cassandra-bootstrapper check-style
 	$(MAKE) -C cassandra-snapshot check-style
 	$(MAKE) -C cassandra-operator check-style
+	$(MAKE) -C cassandra-sidecar check-style

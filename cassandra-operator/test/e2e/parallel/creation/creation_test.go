@@ -47,6 +47,7 @@ func createClustersInParallel(multipleRacksCluster, emptyDirCluster *TestCluster
 		Datacenter: ptr.String("custom-dc"),
 		Pod: v1alpha1.Pod{
 			BootstrapperImage: &CassandraBootstrapperImageName,
+			SidecarImage:      &CassandraSidecarImageName,
 			Image:             &CassandraImageName,
 			Memory:            resource.MustParse("987Mi"),
 			CPU:               resource.MustParse("1m"),
@@ -100,8 +101,7 @@ var _ = Context("When a cluster with a given name doesn't already exist", func()
 
 		By("creating pods with the specified resources")
 		Expect(PodsForCluster(Namespace, multipleRacksCluster.Name)()).Should(Each(And(
-			HaveASingleContainer(ContainerExpectation{
-				BootstrapperImageName:          CassandraBootstrapperImageName,
+			HaveContainer(ContainerExpectation{
 				ImageName:                      CassandraImageName,
 				ContainerName:                  "cassandra",
 				MemoryRequest:                  "987Mi",

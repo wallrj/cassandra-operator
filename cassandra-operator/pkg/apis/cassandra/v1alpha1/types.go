@@ -26,6 +26,9 @@ const (
 
 	// DefaultCassandraSnapshotImage is the name of the Docker image used to make and cleanup snapshots
 	DefaultCassandraSnapshotImage = "skyuk/cassandra-snapshot:latest"
+
+	// DefaultCassandraSidecarImage is the name of the Docker image used to inform liveness/readiness probes
+	DefaultCassandraSidecarImage = "skyuk/cassandra-sidecar:latest"
 )
 
 // +genclient
@@ -68,6 +71,10 @@ type Probe struct {
 type Pod struct {
 	// +optional
 	BootstrapperImage *string `json:"bootstrapperImage,omitempty"`
+
+	// +optional
+	SidecarImage *string `json:"sidecarImage,omitempty"`
+
 	// +optional
 	Image       *string           `json:"image,omitempty"`
 	StorageSize resource.Quantity `json:"storageSize"`

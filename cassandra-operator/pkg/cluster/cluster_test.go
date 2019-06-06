@@ -2,6 +2,10 @@ package cluster
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -10,12 +14,9 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
-	"strconv"
-	"testing"
 )
 
 const (
@@ -487,7 +488,6 @@ var _ = Describe("creation of stateful sets", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		statefulSet := cluster.createStatefulSetForRack(&clusterDef.Spec.Racks[0], nil)
-		Expect(statefulSet.Spec.Template.Spec.Containers).To(HaveLen(1))
 		Expect(statefulSet.Spec.Template.Spec.Containers[0].Env).To(ContainElement(v1.EnvVar{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"}))
 	})
 

@@ -2,12 +2,13 @@ package e2e
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
@@ -29,6 +30,7 @@ var (
 	UseMockedImage                          bool
 	CassandraImageName                      string
 	CassandraBootstrapperImageName          string
+	CassandraSidecarImageName               string
 	CassandraSnapshotImageName              string
 	CassandraInitialDelay                   int32
 	CassandraLivenessPeriod                 int32
@@ -94,13 +96,14 @@ func init() {
 	} else {
 		CassandraImageName = v1alpha1.DefaultCassandraImage
 		CassandraInitialDelay = 30
-		CassandraLivenessPeriod = 30
-		CassandraReadinessPeriod = 15
-		CassandraLivenessProbeFailureThreshold = 4  // allow 2mins
-		CassandraReadinessProbeFailureThreshold = 8 // allow 2mins
+		CassandraLivenessPeriod = 2
+		CassandraReadinessPeriod = 2
+		CassandraLivenessProbeFailureThreshold = 5
+		CassandraReadinessProbeFailureThreshold = 3
 	}
 
 	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", v1alpha1.DefaultCassandraBootstrapperImage)
+	CassandraSidecarImageName = getEnvOrDefault("CASSANDRA_SIDECAR_IMAGE", v1alpha1.DefaultCassandraSidecarImage)
 	CassandraSnapshotImageName = getEnvOrDefault("CASSANDRA_SNAPSHOT_IMAGE", v1alpha1.DefaultCassandraSnapshotImage)
 
 	Namespace = os.Getenv("NAMESPACE")
@@ -109,12 +112,13 @@ func init() {
 	}
 
 	log.Infof(
-		"Running tests against Kubernetes context:%s in namespace: %s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s",
+		"Running tests against Kubernetes context:%s in namespace: %s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s, sidecar image: %s",
 		kubeContext,
 		Namespace,
 		CassandraImageName,
 		CassandraBootstrapperImageName,
 		CassandraSnapshotImageName,
+		CassandraSidecarImageName,
 	)
 }
 
