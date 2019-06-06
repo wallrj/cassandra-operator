@@ -95,11 +95,11 @@ func init() {
 		CassandraReadinessProbeFailureThreshold = 3
 	} else {
 		CassandraImageName = v1alpha1.DefaultCassandraImage
-		CassandraInitialDelay = 30
-		CassandraLivenessPeriod = 2
-		CassandraReadinessPeriod = 2
-		CassandraLivenessProbeFailureThreshold = 5
-		CassandraReadinessProbeFailureThreshold = 3
+		CassandraInitialDelay = 10
+		CassandraLivenessPeriod = 1
+		CassandraReadinessPeriod = 1
+		CassandraLivenessProbeFailureThreshold = 10
+		CassandraReadinessProbeFailureThreshold = 2
 	}
 
 	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", v1alpha1.DefaultCassandraBootstrapperImage)

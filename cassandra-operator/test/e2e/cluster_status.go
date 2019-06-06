@@ -304,7 +304,6 @@ func SnapshotJobsFor(clusterName string) func() (int, error) {
 	}
 }
 
-
 func CassandraDefinitions(namespace string) ([]v1alpha1.Cassandra, error) {
 	cassandras, err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).List(metaV1.ListOptions{})
 	if err != nil {

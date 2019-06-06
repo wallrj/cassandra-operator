@@ -548,7 +548,10 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 				},
 			},
 		},
-		Env:          []v1.EnvVar{{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"}},
+		Env: []v1.EnvVar{
+			{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"},
+			{Name: "JVM_EXTRA_OPTS", Value: "-Dcassandra.skip_wait_for_gossip_to_settle=0"},
+		},
 		VolumeMounts: c.createVolumeMounts(customConfigMap),
 	}
 }
