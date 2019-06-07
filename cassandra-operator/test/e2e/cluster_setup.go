@@ -2,18 +2,19 @@ package e2e
 
 import (
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
-	"io/ioutil"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 const (
@@ -74,14 +75,14 @@ func clusterDefaultSpec() *v1alpha1.CassandraSpec {
 			CPU:               resource.MustParse(PodCPU),
 			StorageSize:       resource.MustParse(podStorageSize),
 			LivenessProbe: &v1alpha1.Probe{
-				FailureThreshold:    CassandraLivenessProbeFailureThreshold,
-				InitialDelaySeconds: CassandraInitialDelay,
-				PeriodSeconds:       CassandraLivenessPeriod,
+				FailureThreshold:    ptr.Int32(CassandraLivenessProbeFailureThreshold),
+				InitialDelaySeconds: ptr.Int32(CassandraInitialDelay),
+				PeriodSeconds:       ptr.Int32(CassandraLivenessPeriod),
 			},
 			ReadinessProbe: &v1alpha1.Probe{
-				FailureThreshold:    CassandraReadinessProbeFailureThreshold,
-				InitialDelaySeconds: CassandraInitialDelay,
-				PeriodSeconds:       CassandraReadinessPeriod,
+				FailureThreshold:    ptr.Int32(CassandraReadinessProbeFailureThreshold),
+				InitialDelaySeconds: ptr.Int32(CassandraInitialDelay),
+				PeriodSeconds:       ptr.Int32(CassandraReadinessPeriod),
 			},
 		},
 	}
