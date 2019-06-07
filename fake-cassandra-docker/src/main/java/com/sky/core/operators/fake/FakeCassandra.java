@@ -9,16 +9,22 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class FakeCassandra {
     private static final int[] DUMMY_PORTS = new int[]{7000, 7199, 9042};
+    public static String nodeListenAddress;
 
     public static void main(String[] args) {
+        nodeListenAddress = System.getenv("NODE_LISTEN_ADDRESS");
+        if (nodeListenAddress == null) {
+            nodeListenAddress = "127.0.0.1";
+        }
+
         final FakeCassandra fc = new FakeCassandra();
         try {
             fc.run();
@@ -106,12 +112,22 @@ class FakeMetricsServer extends NanoHTTPD {
 }
 
 class FakeJolokiaServer extends NanoHTTPD {
-
-    private static final Set<String> PERMITTED_PATHS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "/jolokia/exec/org.apache.cassandra.db:type=EndpointSnitchInfo/getRack/localhost",
-            "/jolokia/read/org.apache.cassandra.db:type=StorageService/LiveNodes,UnreachableNodes,JoiningNodes,LeavingNodes,MovingNodes"
-    )));
-
+    private static Map<String, String> PERMITTED_PATHS;
+    static {
+        PERMITTED_PATHS = new HashMap<>();
+        PERMITTED_PATHS.put("/jolokia/exec/org.apache.cassandra.db:type=EndpointSnitchInfo/getRack/" + FakeCassandra.nodeListenAddress,
+                            "{\"status\":200}");
+        PERMITTED_PATHS.put("/jolokia/read/org.apache.cassandra.db:type=StorageService/LiveNodes",
+                            "{\"status\":200, \"value\":[\"" + FakeCassandra.nodeListenAddress+ "\"]}");
+        PERMITTED_PATHS.put("/jolokia/read/org.apache.cassandra.db:type=StorageService/UnreachableNodes",
+                            "{\"status\":200}");
+        PERMITTED_PATHS.put("/jolokia/read/org.apache.cassandra.db:type=StorageService/JoiningNodes",
+                            "{\"status\":200}");
+        PERMITTED_PATHS.put("/jolokia/read/org.apache.cassandra.db:type=StorageService/LeavingNodes",
+                            "{\"status\":200}");
+        PERMITTED_PATHS.put("/jolokia/read/org.apache.cassandra.db:type=StorageService/MovingNodes",
+                            "{\"status\":200}");
+    }
     public FakeJolokiaServer() {
         super(7777);
     }
@@ -120,8 +136,8 @@ class FakeJolokiaServer extends NanoHTTPD {
     public Response serve(final IHTTPSession session) {
         if (session.getMethod() == Method.POST) {
             return newFixedLengthResponse(Response.Status.FORBIDDEN, "application/text", "HTTP method post is not allowed according to the installed security policy\",\"status\":403");
-        } else if(PERMITTED_PATHS.contains(session.getUri())) {
-            return newFixedLengthResponse("status\":200");
+        } else if(PERMITTED_PATHS.containsKey(session.getUri())) {
+            return newFixedLengthResponse(PERMITTED_PATHS.get(session.getUri()));
         } else {
             return newFixedLengthResponse("status\":403");
         }
