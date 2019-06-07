@@ -43,4 +43,4 @@ replace k8s.io/client-go => k8s.io/client-go v11.0.0+incompatible
 
 replace k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190216013122-f05b8decd79c
 
-replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.0-beta.0
+replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.0-beta.2
