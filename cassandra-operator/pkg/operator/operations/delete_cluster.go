@@ -30,17 +30,6 @@ func (o *DeleteClusterOperation) Execute() {
 	delete(o.clusters, c.QualifiedName())
 	c.Online = false
 	o.metricsPoller.DeleteMetrics(c)
-
-	if err := o.clusterAccessor.DeleteStatefulSetsForCluster(c); err != nil {
-		log.Errorf("Error while deleting stateful sets for cluster %s: %v", c.QualifiedName(), err)
-	}
-	log.Infof("Deleted stateful sets for cluster: %s", c.QualifiedName())
-
-	if err := o.clusterAccessor.DeleteServiceForCluster(c); err != nil {
-		log.Errorf("Error while deleting service for cluster %s: %v", c.QualifiedName(), err)
-	}
-	log.Infof("Deleted headless service for cluster: %s", c.QualifiedName())
-	log.Infof("Existing Cassandra cluster removed: %s", c.QualifiedName())
 }
 
 func (o *DeleteClusterOperation) String() string {

@@ -17,10 +17,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var (
-	statefulSetCascadingPolicy = metaV1.DeletePropagationForeground
-)
-
 // Accessor exposes operations to access various kubernetes resources belonging to a Cluster
 type Accessor struct {
 	kubeClientset      *kubernetes.Clientset
@@ -45,18 +41,6 @@ func (h *Accessor) GetCassandraForCluster(c *Cluster) (*v1alpha1.Cassandra, erro
 // CreateServiceForCluster creates a Kubernetes service from the supplied cluster definition
 func (h *Accessor) CreateServiceForCluster(c *Cluster) (*v1.Service, error) {
 	return h.kubeClientset.CoreV1().Services(c.Namespace()).Create(c.CreateService())
-}
-
-// DeleteServiceForCluster deletes the Kubernetes service for the supplied cluster definition
-func (h *Accessor) DeleteServiceForCluster(c *Cluster) error {
-	return h.kubeClientset.CoreV1().Services(c.Namespace()).Delete(c.Name(), metaV1.NewDeleteOptions(0))
-}
-
-// DeleteStatefulSetsForCluster deletes all Kubernetes stateful sets related to the supplied cluster definition
-func (h *Accessor) DeleteStatefulSetsForCluster(c *Cluster) error {
-	return h.kubeClientset.AppsV1beta2().StatefulSets(c.Namespace()).DeleteCollection(
-		&metaV1.DeleteOptions{PropagationPolicy: &statefulSetCascadingPolicy},
-		metaV1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", OperatorLabel, c.Name())})
 }
 
 // FindCustomConfigMap looks for a custom config map which is associated with a given named cluster in a given

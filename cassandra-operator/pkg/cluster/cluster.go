@@ -271,7 +271,7 @@ func (c *Cluster) Racks() []v1alpha1.Rack {
 
 func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) *appsv1.StatefulSet {
 	sts := &appsv1.StatefulSet{
-		ObjectMeta: c.objectMetadata(c.definition.RackName(rack), RackLabel, rack.Name),
+		ObjectMeta: c.objectMetadataWithOwner(c.definition.RackName(rack), RackLabel, rack.Name),
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -345,7 +345,7 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 // CreateService creates a headless service for the supplied cluster definition.
 func (c *Cluster) CreateService() *v1.Service {
 	return &v1.Service{
-		ObjectMeta: c.objectMetadata(c.definition.Name, "app", c.definition.Name),
+		ObjectMeta: c.objectMetadataWithOwner(c.definition.Name, "app", c.definition.Name),
 		Spec: v1.ServiceSpec{
 			Selector: map[string]string{
 				"app": c.definition.Name,
@@ -442,15 +442,15 @@ func (c *Cluster) CreateSnapshotCleanupContainer(snapshot *v1alpha1.Snapshot) *v
 
 func (c *Cluster) createCronJob(objectName, serviceAccountName, schedule string, container *v1.Container) *v1beta1.CronJob {
 	return &v1beta1.CronJob{
-		ObjectMeta: c.objectMetadata(objectName, "app", objectName),
+		ObjectMeta: c.objectMetadataWithOwner(objectName, "app", objectName),
 		Spec: v1beta1.CronJobSpec{
 			Schedule:          schedule,
 			ConcurrencyPolicy: v1beta1.ForbidConcurrent,
 			JobTemplate: v1beta1.JobTemplateSpec{
-				ObjectMeta: c.objectMetadata(objectName, "app", objectName),
+				ObjectMeta: c.objectMetadataWithOwner(objectName, "app", objectName),
 				Spec: batchv1.JobSpec{
 					Template: v1.PodTemplateSpec{
-						ObjectMeta: c.objectMetadata(objectName, "app", objectName),
+						ObjectMeta: c.objectMetadataWithOwner(objectName, "app", objectName),
 						Spec: v1.PodSpec{
 							RestartPolicy:      v1.RestartPolicyOnFailure,
 							ServiceAccountName: serviceAccountName,
@@ -474,6 +474,12 @@ func (c *Cluster) objectMetadata(name string, extraLabels ...string) metav1.Obje
 		Namespace: c.Namespace(),
 		Labels:    labels,
 	}
+}
+
+func (c *Cluster) objectMetadataWithOwner(name string, extraLabels ...string) metav1.ObjectMeta {
+	meta := c.objectMetadata(name, extraLabels...)
+	meta.OwnerReferences = []metav1.OwnerReference{v1alpha1helpers.NewControllerRef(c.definition)}
+	return meta
 }
 
 func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {

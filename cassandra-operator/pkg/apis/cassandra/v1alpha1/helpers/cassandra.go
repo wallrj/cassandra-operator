@@ -1,8 +1,20 @@
 package helpers
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 )
+
+func NewControllerRef(c *v1alpha1.Cassandra) metav1.OwnerReference {
+	return *metav1.NewControllerRef(c, schema.GroupVersionKind{
+		Group:   cassandra.GroupName,
+		Version: cassandra.Version,
+		Kind:    cassandra.Kind,
+	})
+}
 
 // UseEmptyDir returns a dereferenced value for Spec.UseEmptyDir
 func UseEmptyDir(c *v1alpha1.Cassandra) bool {

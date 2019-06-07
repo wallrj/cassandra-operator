@@ -81,7 +81,7 @@ var _ = Context("Cluster and node deletion", func() {
 			Eventually(StatefulSetsForCluster(Namespace, singleNodeCluster.Name), NodeTerminationDuration, CheckInterval).Should(BeEmpty())
 			Expect(HeadlessServiceForCluster(Namespace, singleNodeCluster.Name)()).Should(BeNil())
 			Expect(PodsForCluster(Namespace, singleNodeCluster.Name)()).Should(HaveLen(0))
-			Expect(SnapshotJobsFor(singleNodeCluster.Name)()).Should(BeZero())
+			Eventually(SnapshotJobsFor(singleNodeCluster.Name), NodeTerminationDuration, CheckInterval).Should(BeZero())
 
 			Expect(PersistentVolumeClaimsForCluster(Namespace, singleNodeCluster.Name)()).Should(HaveLen(1))
 
