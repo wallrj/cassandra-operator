@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -83,7 +84,18 @@ func startOperator(_ *cobra.Command, _ []string) error {
 func kubernetesConfig() *rest.Config {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Unable to obtain in-cluster config: %v", err)
+		log.Warnf("Falling back to default client config: %v", err)
+
+		apiConfig, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+
+		if err != nil {
+			log.Fatalf("Unable to obtain cluster config: %v", err)
+		}
+
+		config, err = clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
+		if err != nil {
+			log.Fatalf("Unable to obtain cluster client config: %v", err)
+		}
 	}
 	return config
 }
