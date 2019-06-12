@@ -731,11 +731,11 @@ func createHTTPProbe(probe *v1alpha1.Probe, path string, port int) *v1.Probe {
 				Path: path,
 			},
 		},
-		InitialDelaySeconds: probe.InitialDelaySeconds,
-		PeriodSeconds:       probe.PeriodSeconds,
-		TimeoutSeconds:      probe.TimeoutSeconds,
-		FailureThreshold:    probe.FailureThreshold,
-		SuccessThreshold:    probe.SuccessThreshold,
+		InitialDelaySeconds: *probe.InitialDelaySeconds,
+		PeriodSeconds:       *probe.PeriodSeconds,
+		TimeoutSeconds:      *probe.TimeoutSeconds,
+		FailureThreshold:    *probe.FailureThreshold,
+		SuccessThreshold:    *probe.SuccessThreshold,
 	}
 }
 
