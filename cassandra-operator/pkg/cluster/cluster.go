@@ -6,15 +6,17 @@ import (
 	"time"
 
 	"github.com/robfig/cron"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 	appsv1 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 )
 
 const (
@@ -31,12 +33,15 @@ const (
 
 	cassandraContainerName             = "cassandra"
 	cassandraBootstrapperContainerName = "cassandra-bootstrapper"
+	cassandraSidecarContainerName      = "cassandra-sidecar"
 
 	storageVolumeMountPath       = "/var/lib/cassandra"
 	configurationVolumeMountPath = "/etc/cassandra"
 	extraLibVolumeMountPath      = "/extra-lib"
 	configurationVolumeName      = "configuration"
 	extraLibVolumeName           = "extra-lib"
+
+	healthServerPort = 8080
 )
 
 var defaultLivenessProbe = v1alpha1.Probe{
@@ -55,6 +60,20 @@ var defaultReadinessProbe = v1alpha1.Probe{
 	TimeoutSeconds:      int32(5),
 }
 
+var (
+	maxSidecarMemoryRequest resource.Quantity
+	sidecarMemoryLimit      resource.Quantity
+	maxSidecarCPURequest    resource.Quantity
+	sidecarCPULimit         resource.Quantity
+)
+
+func init() {
+	maxSidecarMemoryRequest = resource.MustParse("50Mi")
+	sidecarMemoryLimit = resource.MustParse("50Mi")
+	maxSidecarCPURequest = resource.MustParse("100m")
+	sidecarCPULimit = resource.MustParse("200m")
+}
+
 // Cluster defines the properties of a Cassandra cluster which the operator should manage.
 type Cluster struct {
 	definition *v1alpha1.Cassandra
@@ -68,6 +87,14 @@ func New(clusterDefinition *v1alpha1.Cassandra) (*Cluster, error) {
 		return nil, err
 	}
 	return cluster, nil
+}
+
+// NewWithoutValidation creates a new cluster definition from the supplied Cassandra definition without performing validation
+func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
+	cluster := &Cluster{
+		definition: clusterDefinition,
+	}
+	return cluster
 }
 
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
@@ -114,7 +141,7 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	cluster.definition.Spec.Pod.Image = &cassandraImage
 
 	if cluster.definition.Spec.Snapshot != nil {
-		snapshotImage := v1alpha1helpers.GetSnapshopImage(cluster.definition)
+		snapshotImage := v1alpha1helpers.GetSnapshotImage(cluster.definition)
 		cluster.definition.Spec.Snapshot.Image = &snapshotImage
 	}
 	return nil
@@ -298,6 +325,7 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 					},
 					Containers: []v1.Container{
 						c.createCassandraContainer(rack, customConfigMap),
+						c.createCassandraSidecarContainer(rack),
 					},
 					Volumes: c.createPodVolumes(customConfigMap),
 					Affinity: &v1.Affinity{
@@ -398,7 +426,7 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotJobName(),
-		Image:   v1alpha1helpers.GetSnapshopImage(c.definition),
+		Image:   v1alpha1helpers.GetSnapshotImage(c.definition),
 		Command: backupCommand,
 	}
 }
@@ -435,7 +463,7 @@ func (c *Cluster) CreateSnapshotCleanupContainer(snapshot *v1alpha1.Snapshot) *v
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotCleanupJobName(),
-		Image:   v1alpha1helpers.GetSnapshopImage(c.definition),
+		Image:   v1alpha1helpers.GetSnapshotImage(c.definition),
 		Command: cleanupCommand,
 	}
 }
@@ -483,7 +511,6 @@ func (c *Cluster) objectMetadataWithOwner(name string, extraLabels ...string) me
 }
 
 func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
-
 	return v1.Container{
 		Name:  cassandraContainerName,
 		Image: v1alpha1helpers.GetCassandraImage(c.definition),
@@ -515,8 +542,8 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 			},
 		},
 		Resources:      c.createResourceRequirements(),
-		LivenessProbe:  createProbe(c.definition.Spec.Pod.LivenessProbe, "/bin/sh", "-c", "nodetool info"),
-		ReadinessProbe: createProbe(c.definition.Spec.Pod.ReadinessProbe, "/bin/sh", "-c", "nodetool status | grep -E \"^UN\\s+${NODE_LISTEN_ADDRESS}\""),
+		LivenessProbe:  createHTTPProbe(c.definition.Spec.Pod.LivenessProbe, "/live", healthServerPort),
+		ReadinessProbe: createHTTPProbe(c.definition.Spec.Pod.ReadinessProbe, "/ready", healthServerPort),
 		Lifecycle: &v1.Lifecycle{
 			PreStop: &v1.Handler{
 				Exec: &v1.ExecAction{
@@ -524,8 +551,45 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 				},
 			},
 		},
-		Env:          []v1.EnvVar{{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"}},
+		Env: []v1.EnvVar{
+			{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"},
+		},
 		VolumeMounts: c.createVolumeMounts(customConfigMap),
+	}
+}
+
+func (c *Cluster) createCassandraSidecarContainer(rack *v1alpha1.Rack) v1.Container {
+	return v1.Container{
+		Name:  cassandraSidecarContainerName,
+		Image: v1alpha1helpers.GetCassandraSidecarImage(c.definition),
+		Ports: []v1.ContainerPort{
+			{
+				Name:          "api",
+				Protocol:      v1.ProtocolTCP,
+				ContainerPort: healthServerPort,
+			},
+		},
+		Env: c.createEnvironmentVariableDefinition(rack),
+		Args: []string{
+			"--log-level=info",
+			fmt.Sprintf("--health-server-port=%d", healthServerPort),
+		},
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU: minQuantity(
+					c.definition.Spec.Pod.CPU,
+					maxSidecarCPURequest,
+				),
+				v1.ResourceMemory: minQuantity(
+					c.definition.Spec.Pod.Memory,
+					maxSidecarMemoryRequest,
+				),
+			},
+			Limits: v1.ResourceList{
+				v1.ResourceCPU:    sidecarCPULimit,
+				v1.ResourceMemory: sidecarMemoryLimit,
+			},
+		},
 	}
 }
 
@@ -658,6 +722,22 @@ func createProbe(probe *v1alpha1.Probe, command ...string) *v1.Probe {
 	}
 }
 
+func createHTTPProbe(probe *v1alpha1.Probe, path string, port int) *v1.Probe {
+	return &v1.Probe{
+		Handler: v1.Handler{
+			HTTPGet: &v1.HTTPGetAction{
+				Port: intstr.FromInt(port),
+				Path: path,
+			},
+		},
+		InitialDelaySeconds: probe.InitialDelaySeconds,
+		PeriodSeconds:       probe.PeriodSeconds,
+		TimeoutSeconds:      probe.TimeoutSeconds,
+		FailureThreshold:    probe.FailureThreshold,
+		SuccessThreshold:    probe.SuccessThreshold,
+	}
+}
+
 // AddCustomConfigVolumeToStatefulSet updates the provided statefulset to mount the configmap as a volume
 func (c *Cluster) AddCustomConfigVolumeToStatefulSet(statefulSet *appsv1.StatefulSet, customConfigMap *v1.ConfigMap) error {
 	if statefulSet.Spec.Template.Annotations == nil {
@@ -774,4 +854,12 @@ func durationDays(days *int32) time.Duration {
 
 func durationSeconds(seconds *int32) time.Duration {
 	return time.Duration(*seconds) * time.Second
+}
+
+func minQuantity(r1, r2 resource.Quantity) resource.Quantity {
+	d := r1.Cmp(r2)
+	if d > 0 {
+		return r2
+	}
+	return r1
 }

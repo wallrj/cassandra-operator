@@ -126,6 +126,11 @@ func (in *Pod) DeepCopyInto(out *Pod) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.SidecarImage != nil {
+		in, out := &in.SidecarImage, &out.SidecarImage
+		*out = new(string)
+		**out = **in
+	}
 	if in.Image != nil {
 		in, out := &in.Image, &out.Image
 		*out = new(string)

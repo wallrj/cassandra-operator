@@ -2,16 +2,17 @@ package metrics
 
 import (
 	"fmt"
-	"k8s.io/api/core/v1"
+	"math/rand"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	coreV1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"math/rand"
-	"time"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 )
 
 type clusterMetrics struct {
@@ -193,7 +194,7 @@ func (p *podIPMapper) withPodNameDoOrError(podIP string, action func(string)) {
 	}
 }
 
-func (u *randomisingJolokiaURLProvider) urlFor(cluster *cluster.Cluster) string {
+func (u *randomisingJolokiaURLProvider) URLFor(cluster *cluster.Cluster) string {
 	var jolokiaHostname string
 	podsWithIPAddresses, err := u.podsWithIPAddresses(cluster)
 

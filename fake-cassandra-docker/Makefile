@@ -31,7 +31,7 @@ push-image: docker-image common-docker-push
 
 dgoss:
 	@echo "== dgoss"
-	dgoss run --env "NODE_LISTEN_ADDRESS=192.0.2.100" $(dockerTestImage)
+	dgoss run $(dockerTestImage)
 
 clean: common-docker-clean
 	@echo "== clean"

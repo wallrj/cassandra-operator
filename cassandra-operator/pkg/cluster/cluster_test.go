@@ -2,20 +2,23 @@ package cluster
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	"k8s.io/api/batch/v1beta1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
-	"strconv"
-	"testing"
 )
 
 const (
@@ -429,9 +432,11 @@ var _ = Describe("creation of stateful sets", func() {
 			Spec: v1alpha1.CassandraSpec{
 				Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
 				Pod: v1alpha1.Pod{
-					Memory:      resource.MustParse("1Gi"),
-					CPU:         resource.MustParse("100m"),
-					StorageSize: resource.MustParse("1Gi"),
+					Memory:         resource.MustParse("1Gi"),
+					CPU:            resource.MustParse("100m"),
+					StorageSize:    resource.MustParse("1Gi"),
+					ReadinessProbe: defaultReadinessProbe.DeepCopy(),
+					LivenessProbe:  defaultLivenessProbe.DeepCopy(),
 				},
 			},
 		}
@@ -487,7 +492,6 @@ var _ = Describe("creation of stateful sets", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		statefulSet := cluster.createStatefulSetForRack(&clusterDef.Spec.Racks[0], nil)
-		Expect(statefulSet.Spec.Template.Spec.Containers).To(HaveLen(1))
 		Expect(statefulSet.Spec.Template.Spec.Containers[0].Env).To(ContainElement(v1.EnvVar{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"}))
 	})
 
@@ -609,6 +613,84 @@ var _ = Describe("creation of stateful sets", func() {
 			Expect(bootstrapContainerVolumeMounts).To(haveExactly(0, matchingVolumeMount("cassandra-custom-config-mycluster", "/custom-config")))
 			Expect(bootstrapContainerVolumeMounts).To(haveExactly(1, matchingVolumeMount("configuration", "/configuration")))
 			Expect(bootstrapContainerVolumeMounts).To(haveExactly(1, matchingVolumeMount("extra-lib", "/extra-lib")))
+		})
+	})
+	Context("sidecar container", func() {
+		It("configure the environment variables required by the cassandra-sidecar server", func() {
+			// given
+			cluster, err := ACluster(clusterDef)
+			Expect(err).ToNot(HaveOccurred())
+			statefulSet := cluster.createStatefulSetForRack(&cluster.Racks()[0], nil)
+
+			// when
+			actualEnv := statefulSet.Spec.Template.Spec.Containers[1].Env
+
+			// then
+			Expect(actualEnv).To(And(
+				ContainElement(v1.EnvVar{Name: "NODE_LISTEN_ADDRESS", ValueFrom: &v1.EnvVarSource{
+					FieldRef: &v1.ObjectFieldSelector{
+						FieldPath: "status.podIP",
+					},
+				}}),
+				ContainElement(v1.EnvVar{Name: "CLUSTER_NAME", Value: cluster.Name()}),
+				ContainElement(v1.EnvVar{Name: "CLUSTER_NAMESPACE", Value: cluster.Namespace()}),
+			))
+		})
+
+		It("should use the maxSidecarCPURequest if that is lower than Cassandra.Spec.Pod.CPU", func() {
+			// given
+			clusterDef.Spec.Pod.CPU = resource.MustParse("2")
+			cluster, err := ACluster(clusterDef)
+			Expect(err).ToNot(HaveOccurred())
+			statefulSet := cluster.createStatefulSetForRack(&cluster.Racks()[0], nil)
+
+			// when
+			actualResources := statefulSet.Spec.Template.Spec.Containers[1].Resources
+
+			// then
+			Expect(actualResources.Requests.Cpu()).To(Equal(&maxSidecarCPURequest))
+		})
+
+		It("should allow CPU bursting configurations", func() {
+			// given
+			clusterDef.Spec.Pod.CPU = resource.MustParse("0")
+			cluster, err := ACluster(clusterDef)
+			Expect(err).ToNot(HaveOccurred())
+			statefulSet := cluster.createStatefulSetForRack(&cluster.Racks()[0], nil)
+
+			// when
+			actualResources := statefulSet.Spec.Template.Spec.Containers[1].Resources
+
+			// then
+			Expect(*actualResources.Requests.Cpu()).To(Equal(resource.MustParse("0")))
+		})
+
+		It("should use the maxSidecarMemoryRequest if that is lower than Cassandra.Spec.Pod.Memory", func() {
+			// given
+			clusterDef.Spec.Pod.Memory = resource.MustParse("1Ti")
+			cluster, err := ACluster(clusterDef)
+			Expect(err).ToNot(HaveOccurred())
+			statefulSet := cluster.createStatefulSetForRack(&cluster.Racks()[0], nil)
+
+			// when
+			actualResources := statefulSet.Spec.Template.Spec.Containers[1].Resources
+
+			// then
+			Expect(actualResources.Requests.Memory()).To(Equal(&maxSidecarMemoryRequest))
+		})
+
+		It("should allow Memory bursting configurations", func() {
+			// given
+			clusterDef.Spec.Pod.Memory = resource.MustParse("1")
+			cluster, err := ACluster(clusterDef)
+			Expect(err).ToNot(HaveOccurred())
+			statefulSet := cluster.createStatefulSetForRack(&cluster.Racks()[0], nil)
+
+			// when
+			actualResources := statefulSet.Spec.Template.Spec.Containers[1].Resources
+
+			// then
+			Expect(*actualResources.Requests.Memory()).To(Equal(resource.MustParse("1")))
 		})
 	})
 })
@@ -1123,3 +1205,18 @@ func (h *volumeMountMatcher) FailureMessage(actual interface{}) (message string)
 func (h *volumeMountMatcher) NegatedFailureMessage(actual interface{}) (message string) {
 	return fmt.Sprintf("did not expect volume mount with name %s and path %s", h.mount, h.path)
 }
+
+var _ = Describe("utility functions", func() {
+	DescribeTable(
+		"minQuantity",
+		func(q1, q2, q3 string) {
+			actual := minQuantity(resource.MustParse(q1), resource.MustParse(q2))
+			expected := resource.MustParse(q3)
+			Expect(actual).To(Equal(expected))
+		},
+		Entry("q1 > q2", "2Mi", "1Mi", "1Mi"),
+		Entry("q1 < q2", "300m", "200m", "200m"),
+		Entry("q1 == q2", "4", "4000m", "4"),
+		Entry("q1 == q2 (retain scale)", "4000m", "4", "4000m"),
+	)
+})

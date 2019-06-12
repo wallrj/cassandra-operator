@@ -62,6 +62,11 @@ jobs:
       before_script: make setup install
       script: make -C fake-cassandra-docker check
 
+    - stage: test
+      name: cassandra-sidecar
+      before_script: make setup install
+      script: make -C cassandra-sidecar check
+
     - stage: deploy-release-candidate
       deploy:
         - provider: script

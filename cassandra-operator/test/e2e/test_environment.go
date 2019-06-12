@@ -2,17 +2,18 @@ package e2e
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc" // required for connectivity into dev cluster
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
 )
 
 const (
@@ -29,6 +30,7 @@ var (
 	UseMockedImage                          bool
 	CassandraImageName                      string
 	CassandraBootstrapperImageName          string
+	CassandraSidecarImageName               string
 	CassandraSnapshotImageName              string
 	CassandraInitialDelay                   int32
 	CassandraLivenessPeriod                 int32
@@ -101,6 +103,7 @@ func init() {
 	}
 
 	CassandraBootstrapperImageName = getEnvOrDefault("CASSANDRA_BOOTSTRAPPER_IMAGE", v1alpha1.DefaultCassandraBootstrapperImage)
+	CassandraSidecarImageName = getEnvOrDefault("CASSANDRA_SIDECAR_IMAGE", v1alpha1.DefaultCassandraSidecarImage)
 	CassandraSnapshotImageName = getEnvOrDefault("CASSANDRA_SNAPSHOT_IMAGE", v1alpha1.DefaultCassandraSnapshotImage)
 
 	Namespace = os.Getenv("NAMESPACE")
@@ -109,12 +112,13 @@ func init() {
 	}
 
 	log.Infof(
-		"Running tests against Kubernetes context:%s in namespace: %s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s",
+		"Running tests against Kubernetes context:%s in namespace: %s, using Cassandra cassandraImage: %s, bootstrapper image: %s, snapshot image: %s, sidecar image: %s",
 		kubeContext,
 		Namespace,
 		CassandraImageName,
 		CassandraBootstrapperImageName,
 		CassandraSnapshotImageName,
+		CassandraSidecarImageName,
 	)
 }
 

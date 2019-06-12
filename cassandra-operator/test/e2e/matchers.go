@@ -2,14 +2,16 @@ package e2e
 
 import (
 	"fmt"
-	"github.com/onsi/gomega/types"
-	"k8s.io/api/apps/v1beta2"
-	batch "k8s.io/api/batch/v1beta1"
-	coreV1 "k8s.io/api/core/v1"
 	"math"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/onsi/gomega/types"
+	"k8s.io/api/apps/v1beta2"
+	batch "k8s.io/api/batch/v1beta1"
+	coreV1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 //
@@ -153,14 +155,30 @@ func (matcher *haveEvent) NegatedFailureMessage(actual interface{}) (message str
 }
 
 //
-// HaveASingleContainer matcher
+// HaveContainer matcher
 //
-func HaveASingleContainer(expected interface{}) types.GomegaMatcher {
-	return &haveASingleContainer{expected: expected.(ContainerExpectation)}
+func HaveContainer(expected interface{}) types.GomegaMatcher {
+	return &haveContainer{
+		expected: expected.(ContainerExpectation),
+		containers: func(p coreV1.Pod) []coreV1.Container {
+			return p.Spec.Containers
+		},
+	}
+}
+
+//
+// HaveInitContainer matcher
+//
+func HaveInitContainer(expected interface{}) types.GomegaMatcher {
+	return &haveContainer{
+		expected: expected.(ContainerExpectation),
+		containers: func(p coreV1.Pod) []coreV1.Container {
+			return p.Spec.InitContainers
+		},
+	}
 }
 
 type ContainerExpectation struct {
-	BootstrapperImageName          string
 	ContainerName                  string
 	ImageName                      string
 	ContainerPorts                 map[string]int
@@ -178,29 +196,33 @@ type ContainerExpectation struct {
 	ReadinessProbeInitialDelay     time.Duration
 }
 
-type haveASingleContainer struct {
-	expected ContainerExpectation
+type haveContainer struct {
+	expected   ContainerExpectation
+	containers func(coreV1.Pod) []coreV1.Container
 }
 
-func (matcher *haveASingleContainer) Match(actual interface{}) (success bool, err error) {
+func (matcher *haveContainer) Match(actual interface{}) (success bool, err error) {
 	lr := actual.(*labelledResource)
 	pod := lr.Resource.(coreV1.Pod)
-	if len(pod.Spec.Containers) != 1 {
-		return false, fmt.Errorf("expected a single container in pod, found %d", len(pod.Spec.Containers))
+	containers := matcher.containers(pod)
+	expectedName := matcher.expected.ContainerName
+	var container coreV1.Container
+	containerNames := sets.NewString()
+	for _, c := range containers {
+		containerName := c.Name
+		containerNames.Insert(containerName)
+		if containerName == expectedName {
+			container = c
+			break
+		}
 	}
 
-	bootstrapperInitContainer := pod.Spec.InitContainers[1]
-	if !strings.Contains(bootstrapperInitContainer.Image, matcher.expected.BootstrapperImageName) {
-		return false, fmt.Errorf("expected second init container to use image %s, actual %s", matcher.expected.BootstrapperImageName, bootstrapperInitContainer.Image)
+	if !containerNames.Has(expectedName) {
+		return false, fmt.Errorf("expected a container with name %s, found %v", expectedName, containerNames)
 	}
 
-	container := pod.Spec.Containers[0]
 	if !strings.Contains(container.Image, matcher.expected.ImageName) {
 		return false, fmt.Errorf("expected container to use image %s, actual %s", matcher.expected.ImageName, container.Image)
-	}
-
-	if container.Name != "cassandra" {
-		return false, fmt.Errorf("expected container name to be %s, actual %s", matcher.expected.ContainerName, container.Name)
 	}
 
 	if len(container.Ports) != len(matcher.expected.ContainerPorts) {
@@ -273,11 +295,11 @@ func (matcher *haveASingleContainer) Match(actual interface{}) (success bool, er
 	return true, nil
 }
 
-func (matcher *haveASingleContainer) FailureMessage(actual interface{}) (message string) {
+func (matcher *haveContainer) FailureMessage(actual interface{}) (message string) {
 	return fmt.Sprintf("Actual pod: %s", actual.(*labelledResource).Resource)
 }
 
-func (matcher *haveASingleContainer) NegatedFailureMessage(actual interface{}) (message string) {
+func (matcher *haveContainer) NegatedFailureMessage(actual interface{}) (message string) {
 	return fmt.Sprintf("Actual pod: %s", actual.(*labelledResource).Resource)
 }
 

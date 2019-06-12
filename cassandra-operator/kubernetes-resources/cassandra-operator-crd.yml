@@ -439,6 +439,8 @@ spec:
                   - successThreshold
                   - timeoutSeconds
                   type: object
+                sidecarImage:
+                  type: string
                 storageSize:
                   type: string
               required:
