@@ -3,6 +3,7 @@ package operations
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
@@ -64,11 +65,18 @@ func NewEventReceiver(clusters map[string]*cluster.Cluster, clusterAccessor *clu
 
 // Receive receives operator events and delegates their processing to the appropriate handler
 func (r *Receiver) Receive(event *dispatcher.Event) {
+	logger := log.WithFields(
+		log.Fields{
+			"type": event.Kind,
+			"key": event.Key,
+		},
+	)
+	logger.Debugf("Event received")
 	operations := r.operationsToExecute(event)
-	log.Infof("Event type %s will trigger %d operations", event.Kind, len(operations))
+	logger.Infof("Event will trigger %d operations", len(operations))
 
 	for _, operation := range operations {
-		log.Debugf("Executing operation %s", operation.String())
+		logger.Debugf("Executing operation %s", operation.String())
 		operation.Execute()
 	}
 }
@@ -109,7 +117,7 @@ func (r *Receiver) operationsForAddCluster(cassandra *v1alpha1.Cassandra) []Oper
 	operations := []Operation{r.newAddCluster(cassandra)}
 	if cassandra.Spec.Snapshot != nil {
 		operations = append(operations, r.newAddSnapshot(cassandra))
-		if cassandra.Spec.Snapshot.HasRetentionPolicyEnabled() {
+		if v1alpha1helpers.HasRetentionPolicyEnabled(cassandra.Spec.Snapshot) {
 			operations = append(operations, r.newAddSnapshotCleanup(cassandra))
 		}
 	}
@@ -120,7 +128,7 @@ func (r *Receiver) operationsForDeleteCluster(cassandra *v1alpha1.Cassandra) []O
 	operations := []Operation{r.newDeleteCluster(cassandra)}
 	if cassandra.Spec.Snapshot != nil {
 		operations = append(operations, r.newDeleteSnapshot(cassandra))
-		if cassandra.Spec.Snapshot.HasRetentionPolicyEnabled() {
+		if v1alpha1helpers.HasRetentionPolicyEnabled(cassandra.Spec.Snapshot) {
 			operations = append(operations, r.newDeleteSnapshotCleanup(cassandra))
 		}
 	}
@@ -142,22 +150,22 @@ func (r *Receiver) operationsForUpdateCluster(clusterUpdate ClusterUpdate) []Ope
 	operations = append(operations, r.newUpdateCluster(c, clusterUpdate))
 	if newCluster.Spec.Snapshot == nil && oldCluster.Spec.Snapshot != nil {
 		operations = append(operations, r.newDeleteSnapshot(clusterUpdate.NewCluster))
-		if oldCluster.Spec.Snapshot.HasRetentionPolicyEnabled() {
+		if v1alpha1helpers.HasRetentionPolicyEnabled(oldCluster.Spec.Snapshot) {
 			operations = append(operations, r.newDeleteSnapshotCleanup(clusterUpdate.NewCluster))
 		}
 	} else if newCluster.Spec.Snapshot != nil && oldCluster.Spec.Snapshot != nil {
-		if !newCluster.Spec.Snapshot.HasRetentionPolicyEnabled() && oldCluster.Spec.Snapshot.HasRetentionPolicyEnabled() {
+		if !v1alpha1helpers.HasRetentionPolicyEnabled(newCluster.Spec.Snapshot) && v1alpha1helpers.HasRetentionPolicyEnabled(oldCluster.Spec.Snapshot) {
 			operations = append(operations, r.newDeleteSnapshotCleanup(clusterUpdate.NewCluster))
 		}
-		if v1alpha1.SnapshotPropertiesUpdated(oldCluster.Spec.Snapshot, newCluster.Spec.Snapshot) {
+		if v1alpha1helpers.SnapshotPropertiesUpdated(oldCluster.Spec.Snapshot, newCluster.Spec.Snapshot) {
 			operations = append(operations, r.newUpdateSnapshot(c, newCluster.Spec.Snapshot))
 		}
-		if v1alpha1.SnapshotCleanupPropertiesUpdated(oldCluster.Spec.Snapshot, newCluster.Spec.Snapshot) {
+		if v1alpha1helpers.SnapshotCleanupPropertiesUpdated(oldCluster.Spec.Snapshot, newCluster.Spec.Snapshot) {
 			operations = append(operations, r.newUpdateSnapshotCleanup(c, newCluster.Spec.Snapshot))
 		}
 	} else if newCluster.Spec.Snapshot != nil && oldCluster.Spec.Snapshot == nil {
 		operations = append(operations, r.newAddSnapshot(clusterUpdate.NewCluster))
-		if newCluster.Spec.Snapshot.HasRetentionPolicyEnabled() {
+		if v1alpha1helpers.HasRetentionPolicyEnabled(newCluster.Spec.Snapshot) {
 			operations = append(operations, r.newAddSnapshotCleanup(clusterUpdate.NewCluster))
 		}
 	}

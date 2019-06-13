@@ -79,9 +79,9 @@ var _ = Context("Cluster and node deletion", func() {
 			// then
 			By("removing all Kubernetes resources except for the persistent volumes")
 			Eventually(StatefulSetsForCluster(Namespace, singleNodeCluster.Name), NodeTerminationDuration, CheckInterval).Should(BeEmpty())
-			Expect(HeadlessServiceForCluster(Namespace, singleNodeCluster.Name)()).Should(BeNil())
-			Expect(PodsForCluster(Namespace, singleNodeCluster.Name)()).Should(HaveLen(0))
+			Eventually(PodsForCluster(Namespace, singleNodeCluster.Name), NodeTerminationDuration, CheckInterval).Should(HaveLen(0))
 			Eventually(SnapshotJobsFor(singleNodeCluster.Name), NodeTerminationDuration, CheckInterval).Should(BeZero())
+			Expect(HeadlessServiceForCluster(Namespace, singleNodeCluster.Name)()).Should(BeNil())
 
 			Expect(PersistentVolumeClaimsForCluster(Namespace, singleNodeCluster.Name)()).Should(HaveLen(1))
 

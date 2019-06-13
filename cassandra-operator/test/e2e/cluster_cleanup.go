@@ -61,7 +61,8 @@ func deleteClusterDefinitionsWatchedByOperator(namespace, clusterName string) {
 
 	log.Infof("Deleting cassandra definitions in namespace %s: %v", namespace, cassandrasToDelete)
 	for _, cassandraToDelete := range cassandrasToDelete {
-		propagationPolicy := metaV1.DeletePropagationForeground
+		// orphans or foreground policies result in an additional unneeded cluster update event, instead of just the delete cluster event
+		propagationPolicy := metaV1.DeletePropagationBackground
 		if err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).Delete(cassandraToDelete, &metaV1.DeleteOptions{PropagationPolicy: &propagationPolicy}); err != nil {
 			log.Infof("Error while deleting cassandra resources in namespace %s: %v", namespace, err)
 		}

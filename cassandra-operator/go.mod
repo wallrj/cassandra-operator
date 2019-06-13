@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/PaesslerAG/gval v0.1.1 // indirect
 	github.com/PaesslerAG/jsonpath v0.1.0
+	github.com/davecgh/go-spew v1.1.1
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gofrs/flock v0.7.1 // indirect
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect

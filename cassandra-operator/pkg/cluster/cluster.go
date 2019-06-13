@@ -435,7 +435,7 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 // CreateSnapshotCleanupJob creates a cronjob to trigger the snapshot cleanup
 func (c *Cluster) CreateSnapshotCleanupJob() *v1beta1.CronJob {
 	if c.definition.Spec.Snapshot == nil ||
-		!c.definition.Spec.Snapshot.HasRetentionPolicyEnabled() {
+		!v1alpha1helpers.HasRetentionPolicyEnabled(c.definition.Spec.Snapshot) {
 		return nil
 	}
 

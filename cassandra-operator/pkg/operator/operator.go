@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
@@ -167,7 +168,7 @@ func (o *Operator) clusterDeleted(obj interface{}) {
 func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
 	oldCluster := old.(*v1alpha1.Cassandra)
 	newCluster := new.(*v1alpha1.Cassandra)
-	log.Debugf("Cluster update detected for %s.%s, old: %v \nnew: %v", oldCluster.Namespace, oldCluster.Name, oldCluster.Spec, newCluster.Spec)
+	log.Debug(spew.Sprintf("Cluster update detected for %s.%s, old: %+v \nnew: %+v", oldCluster.Namespace, oldCluster.Name, oldCluster.Spec, newCluster.Spec))
 
 	o.adjustUseEmptyDir(oldCluster)
 	o.adjustUseEmptyDir(newCluster)

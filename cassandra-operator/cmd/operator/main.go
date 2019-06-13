@@ -68,7 +68,7 @@ func startOperator(_ *cobra.Command, _ []string) error {
 		MetricPollInterval:    metricPollInterval,
 		AllowEmptyDir:         allowEmptyDir,
 	}
-	log.Infof("Starting Cassandra operator with config: %v", operatorConfig)
+	log.Infof("Starting Cassandra operator with config: %+v", operatorConfig)
 
 	if err := v1alpha1.AddToScheme(scheme.Scheme); err != nil {
 		return fmt.Errorf("unable to register metadata for Cassandra resources: %v", err)
