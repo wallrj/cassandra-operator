@@ -406,12 +406,6 @@ spec:
                     timeoutSeconds:
                       format: int32
                       type: integer
-                  required:
-                  - failureThreshold
-                  - initialDelaySeconds
-                  - periodSeconds
-                  - successThreshold
-                  - timeoutSeconds
                   type: object
                 memory:
                   type: string
@@ -432,12 +426,6 @@ spec:
                     timeoutSeconds:
                       format: int32
                       type: integer
-                  required:
-                  - failureThreshold
-                  - initialDelaySeconds
-                  - periodSeconds
-                  - successThreshold
-                  - timeoutSeconds
                   type: object
                 sidecarImage:
                   type: string
