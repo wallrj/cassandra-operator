@@ -2,16 +2,17 @@ package cluster
 
 import (
 	"fmt"
+	"time"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
-	"time"
 
 	"github.com/prometheus/common/log"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
 	"k8s.io/api/apps/v1beta2"
 	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -108,10 +109,10 @@ func (h *Accessor) WaitUntilRackChangeApplied(cluster *Cluster, statefulSet *v1b
 	// on all replicas of the stateful set. similarly, there's no point in checking more often than the readiness probe
 	// checks.
 	readinessProbe := cluster.definition.Spec.Pod.ReadinessProbe
-	timeBeforeFirstCheck := time.Duration(*statefulSet.Spec.Replicas*readinessProbe.InitialDelaySeconds) * time.Second
+	timeBeforeFirstCheck := time.Duration(*statefulSet.Spec.Replicas**readinessProbe.InitialDelaySeconds) * time.Second
 
 	// have a lower limit of 5 seconds for time between checks, to avoid spamming events.
-	timeBetweenChecks := time.Duration(max(readinessProbe.PeriodSeconds, 5)) * time.Second
+	timeBetweenChecks := time.Duration(max(*readinessProbe.PeriodSeconds, 5)) * time.Second
 
 	// time.Sleep is fine for us to use because this check is executed in its own goroutine and won't block any other
 	// operations on other clusters.

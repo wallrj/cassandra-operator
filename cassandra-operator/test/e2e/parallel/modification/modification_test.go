@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e/parallel"
@@ -86,16 +87,16 @@ var _ = Context("Allowable cluster modifications", func() {
 			Memory:            resource.MustParse("999Mi"),
 			CPU:               resource.MustParse("1m"),
 			LivenessProbe: &v1alpha1.Probe{
-				FailureThreshold:    CassandraLivenessProbeFailureThreshold + 1,
-				InitialDelaySeconds: CassandraInitialDelay,
-				PeriodSeconds:       CassandraLivenessPeriod,
-				TimeoutSeconds:      6,
+				FailureThreshold:    ptr.Int32(CassandraLivenessProbeFailureThreshold + 1),
+				InitialDelaySeconds: ptr.Int32(CassandraInitialDelay),
+				PeriodSeconds:       ptr.Int32(CassandraLivenessPeriod),
+				TimeoutSeconds:      ptr.Int32(6),
 			},
 			ReadinessProbe: &v1alpha1.Probe{
-				FailureThreshold:    CassandraReadinessProbeFailureThreshold + 1,
-				TimeoutSeconds:      4,
-				InitialDelaySeconds: CassandraInitialDelay,
-				PeriodSeconds:       CassandraReadinessPeriod,
+				FailureThreshold:    ptr.Int32(CassandraReadinessProbeFailureThreshold + 1),
+				TimeoutSeconds:      ptr.Int32(4),
+				InitialDelaySeconds: ptr.Int32(CassandraInitialDelay),
+				PeriodSeconds:       ptr.Int32(CassandraReadinessPeriod),
 			},
 		})
 

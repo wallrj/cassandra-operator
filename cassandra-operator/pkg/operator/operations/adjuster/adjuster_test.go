@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"encoding/json"
 	"fmt"
@@ -48,18 +48,18 @@ var _ = Describe("cluster events", func() {
 
 	BeforeEach(func() {
 		livenessProbe := &v1alpha1.Probe{
-			FailureThreshold:    int32(3),
-			InitialDelaySeconds: int32(30),
-			PeriodSeconds:       int32(30),
-			SuccessThreshold:    int32(1),
-			TimeoutSeconds:      int32(5),
+			FailureThreshold:    ptr.Int32(3),
+			InitialDelaySeconds: ptr.Int32(30),
+			PeriodSeconds:       ptr.Int32(30),
+			SuccessThreshold:    ptr.Int32(1),
+			TimeoutSeconds:      ptr.Int32(5),
 		}
 		readinessProbe := &v1alpha1.Probe{
-			FailureThreshold:    int32(3),
-			InitialDelaySeconds: int32(30),
-			PeriodSeconds:       int32(15),
-			SuccessThreshold:    int32(1),
-			TimeoutSeconds:      int32(5),
+			FailureThreshold:    ptr.Int32(3),
+			InitialDelaySeconds: ptr.Int32(30),
+			PeriodSeconds:       ptr.Int32(15),
+			SuccessThreshold:    ptr.Int32(1),
+			TimeoutSeconds:      ptr.Int32(5),
 		}
 		oldCluster = &v1alpha1.Cassandra{
 			Spec: v1alpha1.CassandraSpec{
@@ -130,10 +130,10 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should produce a change with updated timeout when liveness probe specification has changed", func() {
-			newCluster.Spec.Pod.LivenessProbe.FailureThreshold = 5
-			newCluster.Spec.Pod.LivenessProbe.InitialDelaySeconds = 99
-			newCluster.Spec.Pod.LivenessProbe.PeriodSeconds = 20
-			newCluster.Spec.Pod.LivenessProbe.TimeoutSeconds = 10
+			newCluster.Spec.Pod.LivenessProbe.FailureThreshold = ptr.Int32(5)
+			newCluster.Spec.Pod.LivenessProbe.InitialDelaySeconds = ptr.Int32(99)
+			newCluster.Spec.Pod.LivenessProbe.PeriodSeconds = ptr.Int32(20)
+			newCluster.Spec.Pod.LivenessProbe.TimeoutSeconds = ptr.Int32(10)
 			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -150,11 +150,11 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should produce a change with updated timeout when readiness probe specification has changed", func() {
-			newCluster.Spec.Pod.ReadinessProbe.FailureThreshold = 27
-			newCluster.Spec.Pod.ReadinessProbe.InitialDelaySeconds = 55
-			newCluster.Spec.Pod.ReadinessProbe.PeriodSeconds = 77
-			newCluster.Spec.Pod.ReadinessProbe.SuccessThreshold = 80
-			newCluster.Spec.Pod.ReadinessProbe.TimeoutSeconds = 4
+			newCluster.Spec.Pod.ReadinessProbe.FailureThreshold = ptr.Int32(27)
+			newCluster.Spec.Pod.ReadinessProbe.InitialDelaySeconds = ptr.Int32(55)
+			newCluster.Spec.Pod.ReadinessProbe.PeriodSeconds = ptr.Int32(77)
+			newCluster.Spec.Pod.ReadinessProbe.SuccessThreshold = ptr.Int32(80)
+			newCluster.Spec.Pod.ReadinessProbe.TimeoutSeconds = ptr.Int32(4)
 			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())

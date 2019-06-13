@@ -104,82 +104,82 @@ var _ = Describe("cluster construction", func() {
 		It("should set the default liveness probe values if it is not configured for the cluster", func() {
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(int32(3)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(int32(30)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(int32(30)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(int32(1)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(int32(5)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(ptr.Int32(3)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(30)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(ptr.Int32(30)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
 		})
 
 		It("should set the default readiness probe values if it is not configured for the cluster", func() {
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(int32(3)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(int32(30)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(int32(15)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(int32(1)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(int32(5)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(ptr.Int32(3)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(30)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(ptr.Int32(15)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
 		})
 
 		It("should set the default liveness probe values if the liveness probe is present but has unspecified values", func() {
 			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{}
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(int32(3)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(int32(30)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(int32(30)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(int32(1)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(int32(5)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(ptr.Int32(3)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(30)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(ptr.Int32(30)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
 		})
 
 		It("should set the default readiness probe values if the readiness probe is present but has unspecified values", func() {
 			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{}
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(int32(3)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(int32(30)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(int32(15)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(int32(1)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(int32(5)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(ptr.Int32(3)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(30)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(ptr.Int32(15)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
 		})
 
 		It("should use the specified liveness probe values if they are given", func() {
 			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				SuccessThreshold:    1,
-				PeriodSeconds:       2,
-				InitialDelaySeconds: 3,
-				FailureThreshold:    4,
-				TimeoutSeconds:      5,
+				SuccessThreshold:    ptr.Int32(1),
+				PeriodSeconds:       ptr.Int32(2),
+				InitialDelaySeconds: ptr.Int32(3),
+				FailureThreshold:    ptr.Int32(4),
+				TimeoutSeconds:      ptr.Int32(5),
 			}
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(int32(1)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(int32(2)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(int32(3)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(int32(4)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(int32(5)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(ptr.Int32(2)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(3)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(ptr.Int32(4)))
+			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
 		})
 
 		It("should use the specified readiness probe values if they are given", func() {
 			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				SuccessThreshold:    1,
-				PeriodSeconds:       2,
-				InitialDelaySeconds: 3,
-				FailureThreshold:    4,
-				TimeoutSeconds:      5,
+				SuccessThreshold:    ptr.Int32(1),
+				PeriodSeconds:       ptr.Int32(2),
+				InitialDelaySeconds: ptr.Int32(3),
+				FailureThreshold:    ptr.Int32(4),
+				TimeoutSeconds:      ptr.Int32(5),
 			}
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(int32(1)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(int32(2)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(int32(3)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(int32(4)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(int32(5)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(ptr.Int32(2)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(3)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(ptr.Int32(4)))
+			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
 		})
 
 		It("should reject a liveness probe which does not have a success threshold of 1", func() {
 			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				SuccessThreshold: 3,
+				SuccessThreshold: ptr.Int32(3),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid success threshold for liveness probe, must be set to 1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -187,7 +187,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a liveness probe which has a negative success threshold", func() {
 			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				SuccessThreshold: -1,
+				SuccessThreshold: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid success threshold for liveness probe, must be set to 1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -195,7 +195,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a liveness probe which has a failure threshold less than 1", func() {
 			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				FailureThreshold: -1,
+				FailureThreshold: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid failure threshold for liveness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -203,7 +203,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a liveness probe which has an inital delay seconds less than 1", func() {
 			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				InitialDelaySeconds: -1,
+				InitialDelaySeconds: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid initial delay for liveness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -211,7 +211,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a liveness probe which has a period seconds less than 1", func() {
 			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				PeriodSeconds: -1,
+				PeriodSeconds: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid period seconds for liveness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -219,7 +219,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a liveness probe which has a timeout seconds less than 1", func() {
 			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				TimeoutSeconds: -1,
+				TimeoutSeconds: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid timeout seconds for liveness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -227,7 +227,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a readiness probe which has a negative success threshold", func() {
 			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				SuccessThreshold: -1,
+				SuccessThreshold: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid success threshold for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -235,7 +235,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a readiness probe which has a failure threshold less than 1", func() {
 			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				FailureThreshold: -1,
+				FailureThreshold: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid failure threshold for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -243,7 +243,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a readiness probe which has an inital delay seconds less than 1", func() {
 			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				InitialDelaySeconds: -1,
+				InitialDelaySeconds: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid initial delay for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -251,7 +251,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a readiness probe which has a period seconds less than 1", func() {
 			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				PeriodSeconds: -1,
+				PeriodSeconds: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid period seconds for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
@@ -259,7 +259,7 @@ var _ = Describe("cluster construction", func() {
 
 		It("should reject a readiness probe which has a timeout seconds less than 1", func() {
 			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				TimeoutSeconds: -1,
+				TimeoutSeconds: ptr.Int32(-1),
 			}
 			_, err := ACluster(clusterDef)
 			Expect(err).To(MatchError("invalid timeout seconds for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))

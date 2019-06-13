@@ -17,6 +17,7 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 )
 
 const (
@@ -45,19 +46,19 @@ const (
 )
 
 var defaultLivenessProbe = v1alpha1.Probe{
-	FailureThreshold:    int32(3),
-	InitialDelaySeconds: int32(30),
-	PeriodSeconds:       int32(30),
-	SuccessThreshold:    int32(1),
-	TimeoutSeconds:      int32(5),
+	FailureThreshold:    ptr.Int32(3),
+	InitialDelaySeconds: ptr.Int32(30),
+	PeriodSeconds:       ptr.Int32(30),
+	SuccessThreshold:    ptr.Int32(1),
+	TimeoutSeconds:      ptr.Int32(5),
 }
 
 var defaultReadinessProbe = v1alpha1.Probe{
-	FailureThreshold:    int32(3),
-	InitialDelaySeconds: int32(30),
-	PeriodSeconds:       int32(15),
-	SuccessThreshold:    int32(1),
-	TimeoutSeconds:      int32(5),
+	FailureThreshold:    ptr.Int32(3),
+	InitialDelaySeconds: ptr.Int32(30),
+	PeriodSeconds:       ptr.Int32(15),
+	SuccessThreshold:    ptr.Int32(1),
+	TimeoutSeconds:      ptr.Int32(5),
 }
 
 var (
@@ -225,7 +226,7 @@ func validateSnapshot(clusterDefinition *v1alpha1.Cassandra) error {
 }
 
 func validateLivenessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	if probe.SuccessThreshold != 1 {
+	if probe.SuccessThreshold == nil || *probe.SuccessThreshold != 1 {
 		return fmt.Errorf("invalid success threshold for liveness probe, must be set to 1 for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 	return validateProbe("liveness", probe, clusterDefinition)
@@ -236,42 +237,42 @@ func validateReadinessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.C
 }
 
 func validateProbe(name string, probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	if probe.FailureThreshold < 1 {
-		return fmt.Errorf("invalid failure threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.FailureThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.FailureThreshold == nil || *probe.FailureThreshold < 1 {
+		return fmt.Errorf("invalid failure threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.FailureThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
-	if probe.InitialDelaySeconds < 1 {
-		return fmt.Errorf("invalid initial delay for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.InitialDelaySeconds, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.InitialDelaySeconds == nil || *probe.InitialDelaySeconds < 1 {
+		return fmt.Errorf("invalid initial delay for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.InitialDelaySeconds, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
-	if probe.PeriodSeconds < 1 {
-		return fmt.Errorf("invalid period seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.PeriodSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.PeriodSeconds == nil || *probe.PeriodSeconds < 1 {
+		return fmt.Errorf("invalid period seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.PeriodSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
-	if probe.SuccessThreshold < 1 {
-		return fmt.Errorf("invalid success threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.SuccessThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.SuccessThreshold == nil || *probe.SuccessThreshold < 1 {
+		return fmt.Errorf("invalid success threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.SuccessThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
-	if probe.TimeoutSeconds < 1 {
-		return fmt.Errorf("invalid timeout seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.TimeoutSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.TimeoutSeconds == nil || *probe.TimeoutSeconds < 1 {
+		return fmt.Errorf("invalid timeout seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.TimeoutSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 	return nil
 }
 
 func mergeProbeDefaults(configuredProbe *v1alpha1.Probe, defaultProbe *v1alpha1.Probe) {
-	if configuredProbe.TimeoutSeconds == 0 {
+	if configuredProbe.TimeoutSeconds == nil {
 		configuredProbe.TimeoutSeconds = defaultProbe.TimeoutSeconds
 	}
 
-	if configuredProbe.SuccessThreshold == 0 {
+	if configuredProbe.SuccessThreshold == nil {
 		configuredProbe.SuccessThreshold = defaultProbe.SuccessThreshold
 	}
 
-	if configuredProbe.FailureThreshold == 0 {
+	if configuredProbe.FailureThreshold == nil {
 		configuredProbe.FailureThreshold = defaultProbe.FailureThreshold
 	}
 
-	if configuredProbe.InitialDelaySeconds == 0 {
+	if configuredProbe.InitialDelaySeconds == nil {
 		configuredProbe.InitialDelaySeconds = defaultProbe.InitialDelaySeconds
 	}
 
-	if configuredProbe.PeriodSeconds == 0 {
+	if configuredProbe.PeriodSeconds == nil {
 		configuredProbe.PeriodSeconds = defaultProbe.PeriodSeconds
 	}
 }
@@ -714,11 +715,11 @@ func createProbe(probe *v1alpha1.Probe, command ...string) *v1.Probe {
 				Command: command,
 			},
 		},
-		InitialDelaySeconds: probe.InitialDelaySeconds,
-		PeriodSeconds:       probe.PeriodSeconds,
-		TimeoutSeconds:      probe.TimeoutSeconds,
-		FailureThreshold:    probe.FailureThreshold,
-		SuccessThreshold:    probe.SuccessThreshold,
+		InitialDelaySeconds: *probe.InitialDelaySeconds,
+		PeriodSeconds:       *probe.PeriodSeconds,
+		TimeoutSeconds:      *probe.TimeoutSeconds,
+		FailureThreshold:    *probe.FailureThreshold,
+		SuccessThreshold:    *probe.SuccessThreshold,
 	}
 }
 
@@ -730,11 +731,11 @@ func createHTTPProbe(probe *v1alpha1.Probe, path string, port int) *v1.Probe {
 				Path: path,
 			},
 		},
-		InitialDelaySeconds: probe.InitialDelaySeconds,
-		PeriodSeconds:       probe.PeriodSeconds,
-		TimeoutSeconds:      probe.TimeoutSeconds,
-		FailureThreshold:    probe.FailureThreshold,
-		SuccessThreshold:    probe.SuccessThreshold,
+		InitialDelaySeconds: *probe.InitialDelaySeconds,
+		PeriodSeconds:       *probe.PeriodSeconds,
+		TimeoutSeconds:      *probe.TimeoutSeconds,
+		FailureThreshold:    *probe.FailureThreshold,
+		SuccessThreshold:    *probe.SuccessThreshold,
 	}
 }
 

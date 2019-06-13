@@ -57,15 +57,15 @@ type CassandraSpec struct {
 
 type Probe struct {
 	// +optional
-	FailureThreshold int32 `json:"failureThreshold"`
+	FailureThreshold *int32 `json:"failureThreshold,omitempty"`
 	// +optional
-	InitialDelaySeconds int32 `json:"initialDelaySeconds"`
+	InitialDelaySeconds *int32 `json:"initialDelaySeconds,omitempty"`
 	// +optional
-	PeriodSeconds int32 `json:"periodSeconds"`
+	PeriodSeconds *int32 `json:"periodSeconds,omitempty"`
 	// +optional
-	SuccessThreshold int32 `json:"successThreshold"`
+	SuccessThreshold *int32 `json:"successThreshold,omitempty"`
 	// +optional
-	TimeoutSeconds int32 `json:"timeoutSeconds"`
+	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
 type Pod struct {
