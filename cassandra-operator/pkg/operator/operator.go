@@ -117,7 +117,7 @@ func registerConfigMapInformer(o *Operator, ns string) cache.Controller {
 }
 
 func (o *Operator) configMapAdded(obj interface{}) {
-	cm := obj.(*v1.ConfigMap)
+	cm := o.safeGetConfigMap(obj)
 
 	if cluster.LooksLikeACassandraConfigMap(cm) {
 		clusterID := fmt.Sprintf("%s.%s", cm.Namespace, cm.Name)
@@ -126,7 +126,7 @@ func (o *Operator) configMapAdded(obj interface{}) {
 }
 
 func (o *Operator) configMapDeleted(obj interface{}) {
-	cm := obj.(*v1.ConfigMap)
+	cm := o.safeGetConfigMap(obj)
 
 	if cluster.ConfigMapBelongsToAManagedCluster(o.clusters, cm) {
 		clusterID := fmt.Sprintf("%s.%s", cm.Namespace, cm.Name)
@@ -135,8 +135,8 @@ func (o *Operator) configMapDeleted(obj interface{}) {
 }
 
 func (o *Operator) configMapUpdated(old interface{}, new interface{}) {
-	oldConfigMap := old.(*v1.ConfigMap)
-	newConfigMap := new.(*v1.ConfigMap)
+	oldConfigMap := o.safeGetConfigMap(old)
+	newConfigMap := o.safeGetConfigMap(new)
 
 	if reflect.DeepEqual(oldConfigMap.Data, newConfigMap.Data) {
 		log.Debugf("update event received for config map %s.%s but no changes detected", newConfigMap.Namespace, newConfigMap.Name)
@@ -149,8 +149,14 @@ func (o *Operator) configMapUpdated(old interface{}, new interface{}) {
 	}
 }
 
+// DeepCopy the object we get back from the informer to avoid modified the "cached" object
+func (o *Operator) safeGetConfigMap(obj interface{}) *v1.ConfigMap {
+	cm := obj.(*v1.ConfigMap)
+	return cm.DeepCopy()
+}
+
 func (o *Operator) clusterAdded(obj interface{}) {
-	clusterDefinition := obj.(*v1alpha1.Cassandra)
+	clusterDefinition := o.safeGetCassandra(obj)
 	o.adjustUseEmptyDir(clusterDefinition)
 
 	clusterID := fmt.Sprintf("%s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
@@ -158,7 +164,7 @@ func (o *Operator) clusterAdded(obj interface{}) {
 }
 
 func (o *Operator) clusterDeleted(obj interface{}) {
-	clusterDefinition := obj.(*v1alpha1.Cassandra)
+	clusterDefinition := o.safeGetCassandra(obj)
 	o.adjustUseEmptyDir(clusterDefinition)
 
 	clusterID := fmt.Sprintf("%s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
@@ -166,8 +172,8 @@ func (o *Operator) clusterDeleted(obj interface{}) {
 }
 
 func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
-	oldCluster := old.(*v1alpha1.Cassandra)
-	newCluster := new.(*v1alpha1.Cassandra)
+	oldCluster := o.safeGetCassandra(old)
+	newCluster := o.safeGetCassandra(new)
 	log.Debug(spew.Sprintf("Cluster update detected for %s.%s, old: %+v \nnew: %+v", oldCluster.Namespace, oldCluster.Name, oldCluster.Spec, newCluster.Spec))
 
 	o.adjustUseEmptyDir(oldCluster)
@@ -184,6 +190,12 @@ func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
 		Key:  clusterID,
 		Data: operations.ClusterUpdate{OldCluster: oldCluster, NewCluster: newCluster},
 	})
+}
+
+// DeepCopy the object we get back from the informer to avoid modified the "cached" object
+func (o *Operator) safeGetCassandra(obj interface{}) *v1alpha1.Cassandra {
+	cassandra := obj.(*v1alpha1.Cassandra)
+	return cassandra.DeepCopy()
 }
 
 func (o *Operator) adjustUseEmptyDir(cluster *v1alpha1.Cassandra) {
