@@ -10,5 +10,5 @@ cd "${REPO_ROOT}"
 crd_path="${REPO_ROOT}/kubernetes-resources/cassandra-operator-crd.yml"
 
 output="$(mktemp -d)"
-controller-gen crd:trivialVersions=true paths=./pkg/apis/... output:crd:dir="${output}"
-go run "${REPO_ROOT}/hack/munge-crd.go" "${output}"/core.sky.uk_cassandras.yaml > "${crd_path}"
+controller-gen paths=./pkg/apis/... output:crd:dir="${output}"
+mv "${output}"/core.sky.uk_cassandras.yaml  "${crd_path}"
