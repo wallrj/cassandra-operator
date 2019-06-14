@@ -477,7 +477,6 @@ spec:
                       format: int32
                       type: integer
                   required:
-                  - enabled
                   - cleanupSchedule
                   type: object
                 schedule:
