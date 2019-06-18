@@ -1,0 +1,48 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: cassandra-operator
+  name: cassandra-webhook
+  namespace: system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cassandra-operator
+      deployment: cassandra-webhook
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: cassandra-operator
+        deployment: cassandra-webhook
+    spec:
+      containers:
+        image: $WEBHOOK_IMAGE
+        imagePullPolicy: IfNotPresent
+        name: cassandra-webhook
+        resources:
+          limits:
+            memory: 50Mi
+          requests:
+            cpu: "0"
+            memory: 50Mi
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cassandra-webhook
+  namespace: system
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    app: cassandra-webhook
+  type: ClusterIP

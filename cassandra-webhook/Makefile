@@ -86,6 +86,10 @@ docker-image: go-build common-docker-build
 
 push-image: docker-image common-docker-push
 
+deploy:
+	@echo "== deploy"
+	IMAGE=$(IMAGE_TO_DEPLOY) CONTEXT=$(KUBE_CONTEXT) NAMESPACE=$(NAMESPACE) $(projectDir)/deploy.sh
+
 validate-licences:
 	@echo "== validate licences"
 	set -e ;\
