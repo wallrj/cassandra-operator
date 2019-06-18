@@ -16,9 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
@@ -29,7 +26,6 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
-	cassandrawebhook "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/webhook"
 )
 
 // The Operator itself.
@@ -87,26 +83,6 @@ func (o *Operator) Run() {
 	} else {
 		log.Infof("Operator listening for changes in namespace %s", ns)
 	}
-
-	mgr, err := manager.New(config.GetConfigOrDie(), manager.Options{})
-	if err != nil {
-		log.WithError(err).Fatal("failed to set up controller-runtime manager")
-	}
-
-	// Setup webhooks
-	log.Info("setting up webhook server")
-	hookServer := mgr.GetWebhookServer()
-	hookServer.Port = 8443
-	log.Info("registering webhooks to the webhook server")
-	// hookServer.Register("/mutate-v1alpha1-cassandra", &webhook.Admission{Handler: &podAnnotator{}})
-	hookServer.Register("/validate-v1alpha1-cassandra", &webhook.Admission{Handler: &cassandrawebhook.CassandraValidator{}})
-
-	go func() {
-		err := mgr.Start(o.stopCh)
-		if err != nil {
-			log.WithError(err).Fatal("controller-runtime manager start failure")
-		}
-	}()
 
 	cassandraInformer := registerCassandraInformer(o, ns)
 	configMapInformer := registerConfigMapInformer(o, ns)
