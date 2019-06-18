@@ -2,18 +2,19 @@ package main
 
 import (
 	"fmt"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator"
 )
 
 var (
