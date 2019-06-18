@@ -61,7 +61,6 @@ var _ = Describe("cluster construction", func() {
 			clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = nil
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Snapshot.RetentionPolicy.Enabled).To(Not(BeNil()))
 			Expect(*cluster.definition.Spec.Snapshot.RetentionPolicy.Enabled).To(BeTrue())
 		})
 		It("should not err if Cassandra.Spec.Snapshot is undefined", func() {
