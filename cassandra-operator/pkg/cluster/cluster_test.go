@@ -56,25 +56,6 @@ var _ = Describe("cluster construction", func() {
 		}
 	})
 
-	Context("config defaulting", func() {
-		It("should default Cassandra.Spec.Snapshot.RetentionPolicy.Enabled to true", func() {
-			clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = nil
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(*cluster.definition.Spec.Snapshot.RetentionPolicy.Enabled).To(BeTrue())
-		})
-		It("should not err if Cassandra.Spec.Snapshot is undefined", func() {
-			clusterDef.Spec.Snapshot = nil
-			_, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-		})
-		It("should not err if Cassandra.Spec.Snapshot.RetentionPolicy is undefined", func() {
-			clusterDef.Spec.Snapshot.RetentionPolicy = nil
-			_, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
 	Context("config validation", func() {
 		It("should reject a configuration with a rack with zero replicas", func() {
 			clusterDef.Spec.Racks = []v1alpha1.Rack{{Name: "a"}}

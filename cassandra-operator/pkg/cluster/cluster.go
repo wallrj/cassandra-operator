@@ -98,15 +98,6 @@ func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
 	return cluster
 }
 
-func setDefaultSnapshotRetentionPolicy(clusterDefinition *v1alpha1.Cassandra) {
-	switch {
-	case clusterDefinition.Spec.Snapshot == nil:
-	case clusterDefinition.Spec.Snapshot.RetentionPolicy == nil:
-	case clusterDefinition.Spec.Snapshot.RetentionPolicy.Enabled == nil:
-		clusterDefinition.Spec.Snapshot.RetentionPolicy.Enabled = ptr.Bool(true)
-	}
-}
-
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	if err := validateRacks(clusterDefinition); err != nil {
@@ -120,8 +111,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	if err := validateSnapshot(clusterDefinition); err != nil {
 		return err
 	}
-
-	setDefaultSnapshotRetentionPolicy(clusterDefinition)
 
 	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
 		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()

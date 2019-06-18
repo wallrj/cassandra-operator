@@ -8,6 +8,7 @@ import (
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 )
 
 func NewControllerRef(c *v1alpha1.Cassandra) metav1.OwnerReference {
@@ -87,4 +88,17 @@ func SnapshotCleanupPropertiesUpdated(snapshot1 *v1alpha1.Snapshot, snapshot2 *v
 		(snapshot1.RetentionPolicy.CleanupSchedule != snapshot2.RetentionPolicy.CleanupSchedule ||
 			!reflect.DeepEqual(snapshot1.RetentionPolicy.CleanupTimeoutSeconds, snapshot2.RetentionPolicy.CleanupTimeoutSeconds) ||
 			!reflect.DeepEqual(snapshot1.RetentionPolicy.RetentionPeriodDays, snapshot2.RetentionPolicy.RetentionPeriodDays))
+}
+
+func SetDefaultsForCassandra(clusterDefinition *v1alpha1.Cassandra) {
+	setDefaultsForSnapshot(clusterDefinition.Spec.Snapshot)
+}
+
+func setDefaultsForSnapshot(snapshot *v1alpha1.Snapshot) {
+	switch {
+	case snapshot == nil:
+	case snapshot.RetentionPolicy == nil:
+	case snapshot.RetentionPolicy.Enabled == nil:
+		snapshot.RetentionPolicy.Enabled = ptr.Bool(true)
+	}
 }

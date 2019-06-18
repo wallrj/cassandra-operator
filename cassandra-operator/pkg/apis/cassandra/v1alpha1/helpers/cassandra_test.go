@@ -17,6 +17,32 @@ func TestHelpers(t *testing.T) {
 }
 
 var _ = Describe("Cassandra Helpers", func() {
+	var clusterDef *v1alpha1.Cassandra
+	BeforeEach(func() {
+		clusterDef = &v1alpha1.Cassandra{
+			Spec: v1alpha1.CassandraSpec{
+				Snapshot: &v1alpha1.Snapshot{
+					RetentionPolicy: &v1alpha1.RetentionPolicy{},
+				},
+			},
+		}
+	})
+
+	Context("SetDefaultsForCassandra", func() {
+		It("should default Cassandra.Spec.Snapshot.RetentionPolicy.Enabled to true", func() {
+			clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = nil
+			SetDefaultsForCassandra(clusterDef)
+			Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.Enabled).To(BeTrue())
+		})
+		It("should not err if Cassandra.Spec.Snapshot is undefined", func() {
+			clusterDef.Spec.Snapshot = nil
+			SetDefaultsForCassandra(clusterDef)
+		})
+		It("should not err if Cassandra.Spec.Snapshot.RetentionPolicy is undefined", func() {
+			clusterDef.Spec.Snapshot.RetentionPolicy = nil
+			SetDefaultsForCassandra(clusterDef)
+		})
+	})
 
 	Context("Snapshot Retention", func() {
 		var snapshot *v1alpha1.Snapshot
