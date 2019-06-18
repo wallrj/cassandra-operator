@@ -30,6 +30,13 @@ var _ = Describe("Cassandra Helpers", func() {
 			Expect(HasRetentionPolicyEnabled(snapshot)).To(BeFalse())
 		})
 
+		It("should be found disabled when RetentionPolicy.Enabled is nil", func() {
+			snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{
+				Enabled: nil,
+			}
+			Expect(HasRetentionPolicyEnabled(snapshot)).To(BeFalse())
+		})
+
 		It("should be found disabled when retention policy is not enabled", func() {
 			snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{
 				Enabled:         ptr.Bool(false),

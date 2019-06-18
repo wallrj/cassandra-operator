@@ -69,7 +69,9 @@ func GetDatacenter(c *v1alpha1.Cassandra) string {
 
 // HasRetentionPolicyEnabled returns true when a retention policy exists and is enabled
 func HasRetentionPolicyEnabled(snapshot *v1alpha1.Snapshot) bool {
-	return snapshot.RetentionPolicy != nil && *snapshot.RetentionPolicy.Enabled
+	return snapshot.RetentionPolicy != nil &&
+		snapshot.RetentionPolicy.Enabled != nil &&
+		*snapshot.RetentionPolicy.Enabled
 }
 
 // SnapshotPropertiesUpdated returns false when snapshot1 and snapshot2 have the same properties disregarding retention policy
