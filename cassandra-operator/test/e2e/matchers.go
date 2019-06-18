@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"fmt"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math"
 	"reflect"
 	"strings"
@@ -126,7 +127,7 @@ type EventExpectation struct {
 	Type                 string
 	Reason               string
 	Message              string
-	LastTimestampCloseTo time.Time
+	LastTimestampCloseTo *time.Time
 }
 
 type haveEvent struct {
@@ -139,19 +140,23 @@ func (matcher *haveEvent) Match(actual interface{}) (success bool, err error) {
 		if event.Type == matcher.expected.Type &&
 			event.Reason == string(matcher.expected.Reason) &&
 			strings.Contains(event.Message, matcher.expected.Message) &&
-			math.Abs(event.LastTimestamp.Sub(matcher.expected.LastTimestampCloseTo).Seconds()) < 30 {
+			(matcher.expected.LastTimestampCloseTo == nil || matcher.lastTimestampIsCloseTo(event.LastTimestamp)) {
 			matchFound = true
 		}
 	}
 	return matchFound, nil
 }
 
+func (matcher *haveEvent) lastTimestampIsCloseTo(eventTimestamp v1.Time) bool {
+	return math.Abs(eventTimestamp.Sub(*matcher.expected.LastTimestampCloseTo).Seconds()) < 30
+}
+
 func (matcher *haveEvent) FailureMessage(actual interface{}) (message string) {
-	return fmt.Sprintf("Expected event %v. Actual event: %v", matcher.expected, actual)
+	return fmt.Sprintf("Expected event %+v. Actual event: %+v", matcher.expected, actual)
 }
 
 func (matcher *haveEvent) NegatedFailureMessage(actual interface{}) (message string) {
-	return fmt.Sprintf("Expected event %v. Actual event: %v", matcher.expected, actual)
+	return fmt.Sprintf("Expected event %+v. Actual event: %+v", matcher.expected, actual)
 }
 
 //

@@ -203,7 +203,7 @@ var _ = Context("Allowable cluster modifications", func() {
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterUpdateEvent,
 				Message:              fmt.Sprintf("Custom config updated for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: modificationTime,
+				LastTimestampCloseTo: &modificationTime,
 			}))
 
 			By("applying the config changes to each pod")
@@ -240,7 +240,7 @@ var _ = Context("Allowable cluster modifications", func() {
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterUpdateEvent,
 				Message:              fmt.Sprintf("Custom config created for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: modificationTime,
+				LastTimestampCloseTo: &modificationTime,
 			}))
 
 			By("applying the config changes to each pod")
@@ -276,7 +276,7 @@ var _ = Context("Allowable cluster modifications", func() {
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterUpdateEvent,
 				Message:              fmt.Sprintf("Custom config deleted for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: modificationTime,
+				LastTimestampCloseTo: &modificationTime,
 			}))
 
 			By("applying the config changes to each pod")

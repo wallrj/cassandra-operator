@@ -68,7 +68,7 @@ func (r *Receiver) Receive(event *dispatcher.Event) {
 	logger := log.WithFields(
 		log.Fields{
 			"type": event.Kind,
-			"key": event.Key,
+			"key":  event.Key,
 		},
 	)
 	logger.Debugf("Event received")

@@ -2,6 +2,7 @@ package creation
 
 import (
 	"fmt"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"path/filepath"
 	"testing"
 	"time"
@@ -14,12 +15,15 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
+
+	coreV1 "k8s.io/api/core/v1"
 )
 
 var (
-	multipleRacksCluster *TestCluster
-	emptyDirCluster      *TestCluster
-	testStartTime        time.Time
+	multipleRacksCluster          *TestCluster
+	emptyDirCluster               *TestCluster
+	testStartTime                 time.Time
+	multipleRacksClusterReadyTime time.Time
 )
 
 func TestCreation(t *testing.T) {
@@ -84,6 +88,7 @@ var _ = Context("When a cluster with a given name doesn't already exist", func()
 		testStartTime = time.Now()
 		Eventually(PodReadyForCluster(Namespace, multipleRacksCluster.Name), 3*NodeStartDuration, CheckInterval).
 			Should(Equal(3), fmt.Sprintf("For cluster %s", multipleRacksCluster.Name))
+		multipleRacksClusterReadyTime = time.Now()
 		Eventually(PodReadyForCluster(Namespace, emptyDirCluster.Name), NodeStartDuration, CheckInterval).
 			Should(Equal(1), fmt.Sprintf("For cluster %s", emptyDirCluster.Name))
 	})
@@ -190,5 +195,33 @@ var _ = Context("When a cluster with a given name doesn't already exist", func()
 		Expect(PodsForCluster(Namespace, emptyDirCluster.Name)()).Should(Each(
 			Not(HaveAnnotation("clusterConfigHash")),
 		))
+	})
+
+	It("should generate events informing of cluster creation", func() {
+		By("registering an event while each stateful set is being created")
+		Expect(CassandraEventsFor(Namespace, multipleRacksCluster.Name)()).Should(HaveEvent(EventExpectation{
+			Type:    coreV1.EventTypeNormal,
+			Reason:  cluster.WaitingForStatefulSetChange,
+			Message: fmt.Sprintf("Waiting for stateful set %s.%s-%s to be ready", Namespace, multipleRacksCluster.Name, multipleRacksCluster.Racks[0].Name),
+		}))
+		Expect(CassandraEventsFor(Namespace, multipleRacksCluster.Name)()).Should(HaveEvent(EventExpectation{
+			Type:    coreV1.EventTypeNormal,
+			Reason:  cluster.WaitingForStatefulSetChange,
+			Message: fmt.Sprintf("Waiting for stateful set %s.%s-%s to be ready", Namespace, multipleRacksCluster.Name, multipleRacksCluster.Racks[1].Name),
+		}))
+
+		By("registering an event when each stateful set creation is complete")
+		Expect(CassandraEventsFor(Namespace, multipleRacksCluster.Name)()).Should(HaveEvent(EventExpectation{
+			Type:    coreV1.EventTypeNormal,
+			Reason:  cluster.StatefulSetChangeComplete,
+			Message: fmt.Sprintf("Stateful set %s.%s-%s is ready", Namespace, multipleRacksCluster.Name, multipleRacksCluster.Racks[0].Name),
+		}))
+		// give long enough to ensure event is propagated
+		Eventually(CassandraEventsFor(Namespace, multipleRacksCluster.Name), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
+			Type:                 coreV1.EventTypeNormal,
+			Reason:               cluster.StatefulSetChangeComplete,
+			Message:              fmt.Sprintf("Stateful set %s.%s-%s is ready", Namespace, multipleRacksCluster.Name, multipleRacksCluster.Racks[1].Name),
+			LastTimestampCloseTo: &multipleRacksClusterReadyTime, // cluster's ready when its last stateful set is
+		}))
 	})
 })

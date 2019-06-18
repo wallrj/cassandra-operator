@@ -15,6 +15,8 @@ const (
 	ClusterUpdateEvent = "ClusterUpdate"
 	// WaitingForStatefulSetChange is an event created when waiting for a stateful set change to complete
 	WaitingForStatefulSetChange = "WaitingForStatefulSetChange"
+	// StatefulSetChangeComplete is an event created when a stateful set change iscomplete
+	StatefulSetChangeComplete = "StatefulSetChangeComplete"
 	// ClusterSnapshotCreationScheduleEvent is an event triggered on creation of a scheduled snapshot
 	ClusterSnapshotCreationScheduleEvent = "ClusterSnapshotCreationScheduleEvent"
 	// ClusterSnapshotCreationUnscheduleEvent is an event triggered on removal of a scheduled snapshot
