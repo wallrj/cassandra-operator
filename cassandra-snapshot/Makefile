@@ -9,6 +9,7 @@ IMAGE_UNDER_TEST ?= $(dockerTestImage)
 NAMESPACE ?= test-cassandra-operator
 GINKGO_NODES ?= 0
 GINKGO_COMPILERS ?= 0
+E2E_TEST ?=
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 k8ResourcesDir := $(projectDir)/../cassandra-operator/kubernetes-resources
@@ -103,7 +104,7 @@ e2e-test: ensure-test-report-dir-exists
         KUBE_CONTEXT=$(KUBE_CONTEXT) \
         NAMESPACE=$(NAMESPACE) \
         USE_MOCK=$(USE_MOCK) \
-        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
+        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/$(E2E_TEST) -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 

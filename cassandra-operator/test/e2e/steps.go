@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
@@ -188,10 +189,13 @@ func AScheduledSnapshotIsChangedForCluster(namespace, clusterName string, snapsh
 func mutateCassandraSpec(namespace, clusterName string, mutator func(*v1alpha1.CassandraSpec)) {
 	cass, err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).Get(clusterName, metaV1.GetOptions{})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	cassBeforeMutation := cass.DeepCopy()
 
 	mutator(&cass.Spec)
-	_, err = CassandraClientset.CoreV1alpha1().Cassandras(namespace).Update(cass)
+	var cassAfterMutation *v1alpha1.Cassandra
+	cassAfterMutation, err = CassandraClientset.CoreV1alpha1().Cassandras(namespace).Update(cass)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	log.Infof(spew.Sprintf("Updated cassandra spec for cluster %s, before: %+v, \nafter: %+v", clusterName, cassBeforeMutation, cassAfterMutation))
 }
 
 func EventuallyClusterIsCreatedWithRacks(namespace string, clusterName string, racks []v1alpha1.Rack) {
