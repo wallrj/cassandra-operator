@@ -40,12 +40,15 @@ func clusterDiagnosis(namespace, clusterName string) string {
 	var diagnosis []string
 	diagnosis = append(diagnosis, fmt.Sprintf("\n==== Cluster %s =====", clusterName))
 	diagnosis = append(diagnosis, fmt.Sprintf("%v", clusterPodsWide(namespace, clusterName)))
+	diagnosis = append(diagnosis, fmt.Sprintf("\n==== Cassandra definition ====="))
+	diagnosis = append(diagnosis, fmt.Sprintf("%v", cassandraDefinition(namespace, clusterName)))
+	diagnosis = append(diagnosis, fmt.Sprintf("\n==== Describing statefulsets ====="))
+	diagnosis = append(diagnosis, fmt.Sprintf("%v", KubectlOutputAsString(namespace, "describe", "statefulset", "-l", fmt.Sprintf("sky.uk/cassandra-operator=%s", clusterName))))
 
 	pods, err := KubeClientset.CoreV1().Pods(namespace).List(metaV1.ListOptions{LabelSelector: fmt.Sprintf("sky.uk/cassandra-operator=%s", clusterName)})
 	if err != nil {
 		return fmt.Sprintf("error while retrieving the pods list for cluster %s.%s: %v", namespace, clusterName, err)
 	}
-
 	for _, pod := range pods.Items {
 		diagnosis = append(diagnosis, fmt.Sprintf("\n==== Describing pod %s =====", pod.Name))
 		diagnosis = append(diagnosis, fmt.Sprintf("%v", podDescription(namespace, &pod)))
@@ -54,6 +57,10 @@ func clusterDiagnosis(namespace, clusterName string) string {
 		diagnosis = append(diagnosis, "\n\n")
 	}
 	return strings.Join(diagnosis, "\n")
+}
+
+func cassandraDefinition(namespace, clusterName string) string {
+	return KubectlOutputAsString(namespace, "get", "cassandra", clusterName, "-o", "yaml")
 }
 
 func clusterPodsWide(namespace, clusterName string) string {

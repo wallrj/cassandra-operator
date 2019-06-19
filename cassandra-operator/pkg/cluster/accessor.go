@@ -122,6 +122,7 @@ func (h *Accessor) WaitUntilRackChangeApplied(cluster *Cluster, statefulSet *v1b
 		return fmt.Errorf("error while waiting for stateful set %s.%s creation to complete: %v", statefulSet.Namespace, statefulSet.Name, err)
 	}
 
+	h.recordWaitCompleteEvent(cluster, statefulSet)
 	log.Infof("stateful set %s.%s is ready", statefulSet.Namespace, statefulSet.Name)
 
 	return nil
@@ -214,17 +215,16 @@ func (h *Accessor) statefulSetChangeApplied(cluster *Cluster, appliedStatefulSet
 		updateCompleted := currentStatefulSet.Status.UpdateRevision == currentStatefulSet.Status.CurrentRevision
 		allReplicasReady := currentStatefulSet.Status.ReadyReplicas == currentStatefulSet.Status.Replicas
 
-		done := controllerObservedChange && updateCompleted && allReplicasReady
-		if !done {
-			h.recordWaitEvent(cluster, appliedStatefulSet)
-		}
-
-		return done, nil
+		return controllerObservedChange && updateCompleted && allReplicasReady, nil
 	}
 }
 
 func (h *Accessor) recordWaitEvent(cluster *Cluster, statefulSet *v1beta2.StatefulSet) {
-	h.eventRecorder.Eventf(cluster.definition, v1.EventTypeNormal, WaitingForStatefulSetChange, "waiting for stateful set %s.%s to be ready", statefulSet.Namespace, statefulSet.Name)
+	h.eventRecorder.Eventf(cluster.definition, v1.EventTypeNormal, WaitingForStatefulSetChange, "Waiting for stateful set %s.%s to be ready", statefulSet.Namespace, statefulSet.Name)
+}
+
+func (h *Accessor) recordWaitCompleteEvent(cluster *Cluster, statefulSet *v1beta2.StatefulSet) {
+	h.eventRecorder.Eventf(cluster.definition, v1.EventTypeNormal, StatefulSetChangeComplete, "Stateful set %s.%s is ready", statefulSet.Namespace, statefulSet.Name)
 }
 
 func max(x, y int32) int32 {

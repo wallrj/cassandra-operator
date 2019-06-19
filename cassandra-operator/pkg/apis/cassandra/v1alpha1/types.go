@@ -2,8 +2,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"reflect"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	// required for dep management
@@ -121,11 +119,6 @@ type Snapshot struct {
 	RetentionPolicy *RetentionPolicy `json:"retentionPolicy,omitempty"`
 }
 
-// HasRetentionPolicyEnabled returns true when a retention policy exists and is enabled
-func (s *Snapshot) HasRetentionPolicyEnabled() bool {
-	return s.RetentionPolicy != nil && s.RetentionPolicy.Enabled
-}
-
 // RetentionPolicy defines how long the snapshots should be kept for and how often the cleanup task should run
 type RetentionPolicy struct {
 	Enabled bool `json:"enabled"`
@@ -170,19 +163,4 @@ func (c *Cassandra) RackName(rack *Rack) string {
 // CustomConfigMapName returns the expected config map name for this cluster. This will return a value even if the config map does not exist.
 func (c *Cassandra) CustomConfigMapName() string {
 	return fmt.Sprintf("%s-config", c.Name)
-}
-
-// SnapshotPropertiesUpdated returns false when snapshot1 and snapshot2 have the same properties disregarding retention policy
-func SnapshotPropertiesUpdated(snapshot1 *Snapshot, snapshot2 *Snapshot) bool {
-	return snapshot1.Schedule != snapshot2.Schedule ||
-		*snapshot1.TimeoutSeconds != *snapshot2.TimeoutSeconds ||
-		!reflect.DeepEqual(snapshot1.Keyspaces, snapshot2.Keyspaces)
-}
-
-// SnapshotCleanupPropertiesUpdated returns false snapshot1 and snapshot2 have the same retention policy regardless of whether it is enabled or not
-func SnapshotCleanupPropertiesUpdated(snapshot1 *Snapshot, snapshot2 *Snapshot) bool {
-	return snapshot1.RetentionPolicy != nil && snapshot2.RetentionPolicy != nil &&
-		(snapshot1.RetentionPolicy.CleanupSchedule != snapshot2.RetentionPolicy.CleanupSchedule ||
-			*snapshot1.RetentionPolicy.CleanupTimeoutSeconds != *snapshot2.RetentionPolicy.CleanupTimeoutSeconds ||
-			*snapshot1.RetentionPolicy.RetentionPeriodDays != *snapshot2.RetentionPolicy.RetentionPeriodDays)
 }
