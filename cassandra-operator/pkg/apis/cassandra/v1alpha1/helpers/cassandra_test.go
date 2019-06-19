@@ -39,6 +39,16 @@ var _ = Describe("Cassandra Helpers", func() {
 			SetDefaultsForCassandra(clusterDef)
 			Expect(*clusterDef.Spec.Datacenter).To(Equal("carefully-chosen-datacenter-name"))
 		})
+		It("should default Cassandra.Spec.UseEmptyDir to false", func() {
+			clusterDef.Spec.UseEmptyDir = nil
+			SetDefaultsForCassandra(clusterDef)
+			Expect(*clusterDef.Spec.UseEmptyDir).To(BeFalse())
+		})
+		It("should not overwrite Cassandra.Spec.UseEmptyDir ", func() {
+			clusterDef.Spec.UseEmptyDir = ptr.Bool(true)
+			SetDefaultsForCassandra(clusterDef)
+			Expect(*clusterDef.Spec.UseEmptyDir).To(BeTrue())
+		})
 		It("should default Cassandra.Spec.Snapshot.RetentionPolicy.Enabled to true", func() {
 			clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = nil
 			SetDefaultsForCassandra(clusterDef)

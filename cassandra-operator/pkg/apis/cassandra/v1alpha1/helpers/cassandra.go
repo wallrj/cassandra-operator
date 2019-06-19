@@ -90,15 +90,14 @@ func SnapshotCleanupPropertiesUpdated(snapshot1 *v1alpha1.Snapshot, snapshot2 *v
 			!reflect.DeepEqual(snapshot1.RetentionPolicy.RetentionPeriodDays, snapshot2.RetentionPolicy.RetentionPeriodDays))
 }
 
-func SetDefaultsForCassandra(clusterDefinition *v1alpha1.Cassandra) {
-	setDefaultDatacenter(clusterDefinition)
-	setDefaultsForSnapshot(clusterDefinition.Spec.Snapshot)
-}
-
-func setDefaultDatacenter(c *v1alpha1.Cassandra) {
+func SetDefaultsForCassandra(c *v1alpha1.Cassandra) {
 	if c.Spec.Datacenter == nil {
 		c.Spec.Datacenter = ptr.String(v1alpha1.DefaultDatacenterName)
 	}
+	if c.Spec.UseEmptyDir == nil {
+		c.Spec.UseEmptyDir = ptr.Bool(false)
+	}
+	setDefaultsForSnapshot(c.Spec.Snapshot)
 }
 
 func setDefaultsForSnapshot(snapshot *v1alpha1.Snapshot) {
