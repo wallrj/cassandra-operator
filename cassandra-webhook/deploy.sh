@@ -1,4 +1,9 @@
-#!/bin/bash -e
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+set -o xtrace
 
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 resourcesDir="${scriptDir}/kubernetes-resources"
@@ -30,19 +35,23 @@ function waitForDeployment {
     echo "Deployment is ready"
 }
 
+tmpDir=$(mktemp -d)
+trap '{ CODE=$?; rm -rf ${tmpDir} ; exit ${CODE}; }' EXIT
+
 function deploy() {
     local image=$1
     local context=$2
     local namespace=$3
     local deployment=cassandra-webhook
-    local tmpDir=$(mktemp -d)
-    trap '{ CODE=$?; rm -rf ${tmpDir} ; exit ${CODE}; }' EXIT
 
-    k8Resources="cassandra-webhook-deployment.yml manifests.yaml"
+    # kind load docker-image "${image}"
+    kubectl delete namespace "${namespace}" || true
+    until kubectl create namespace "${namespace}"; do sleep 1; done
+    k8Resources="webhook-deployment.yaml manifests.yaml"
     for k8Resource in ${k8Resources}
     do
         sed -e "s@\$TARGET_NAMESPACE@$namespace@g" \
-            -e "s@\$IMAGE@$image@g" \
+            -e "s@\$WEBHOOK_IMAGE@$image@g" \
             ${resourcesDir}/${k8Resource} > ${tmpDir}/${k8Resource}
         kubectl --context ${context} -n ${namespace} apply -f ${tmpDir}/${k8Resource}
     done

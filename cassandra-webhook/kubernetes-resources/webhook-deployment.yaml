@@ -20,7 +20,7 @@ spec:
         deployment: cassandra-webhook
     spec:
       containers:
-        image: $WEBHOOK_IMAGE
+      - image: $WEBHOOK_IMAGE
         imagePullPolicy: IfNotPresent
         name: cassandra-webhook
         resources:
