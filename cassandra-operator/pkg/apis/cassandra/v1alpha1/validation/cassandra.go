@@ -4,13 +4,20 @@ import (
 	"fmt"
 	"reflect"
 
+	apimachineryvalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 )
 
-func ValidateCassandraClusterUpdate(old, new *v1alpha1.Cassandra) field.ErrorList {
-	allErrs := ValidateCassandraCluster(new)
+func ValidateCassandra(c *v1alpha1.Cassandra) field.ErrorList {
+	allErrs := apimachineryvalidation.ValidateObjectMeta(&c.ObjectMeta, true, apimachineryvalidation.NameIsDNSSubdomain, field.NewPath("metadata"))
+	// allErrs = append(allErrs, ValidateCassandraClusterSpec(&c.Spec, field.NewPath("spec"))...)
+	return allErrs
+}
+
+func ValidateCassandraUpdate(old, new *v1alpha1.Cassandra) field.ErrorList {
+	allErrs := ValidateCassandra(new)
 
 	fldPath := field.NewPath("spec")
 	if !reflect.DeepEqual(new.Spec.Pod.Image, old.Spec.Pod.Image) {
@@ -26,6 +33,5 @@ func ValidateCassandraClusterUpdate(old, new *v1alpha1.Cassandra) field.ErrorLis
 			),
 		)
 	}
-
 	return allErrs
 }

@@ -26,7 +26,7 @@ func (v *CassandraValidator) Handle(ctx context.Context, req admission.Request) 
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	if req.OldObject == nil {
+	if req.OldObject.Size() == 0 {
 		// return admission.Denied("toot toot")
 		return admission.Allowed("")
 	}
@@ -36,7 +36,7 @@ func (v *CassandraValidator) Handle(ctx context.Context, req admission.Request) 
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	err := validation.ValidateCassandraClusterUpdate(oldCass, cass).ToAggregate()
+	err = validation.ValidateCassandraUpdate(oldCass, cass).ToAggregate()
 	if err != nil {
 		return admission.Denied(err.Error())
 	}
