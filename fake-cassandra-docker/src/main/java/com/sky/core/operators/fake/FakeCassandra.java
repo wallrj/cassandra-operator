@@ -182,7 +182,7 @@ class FakeMetricsServer extends NanoHTTPD {
 
     @Override
     public Response serve(final IHTTPSession session) {
-        LOGGER.info("serve: {} {}", session.getMethod(), session.getUri());
+        LOGGER.debug("serve: {} {}", session.getMethod(), session.getUri());
         return newFixedLengthResponse("cassandra_clientrequest_write_latency_count");
     }
 }

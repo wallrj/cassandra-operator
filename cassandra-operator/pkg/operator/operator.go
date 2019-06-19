@@ -1,14 +1,17 @@
 package operator
 
 import (
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
 	"time"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
 
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"reflect"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -21,11 +24,10 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"reflect"
 )
 
 // The Operator itself.
@@ -157,6 +159,7 @@ func (o *Operator) safeGetConfigMap(obj interface{}) *v1.ConfigMap {
 
 func (o *Operator) clusterAdded(obj interface{}) {
 	clusterDefinition := o.safeGetCassandra(obj)
+	v1alpha1helpers.SetDefaultsForCassandra(clusterDefinition)
 	o.adjustUseEmptyDir(clusterDefinition)
 
 	clusterID := fmt.Sprintf("%s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
@@ -165,6 +168,7 @@ func (o *Operator) clusterAdded(obj interface{}) {
 
 func (o *Operator) clusterDeleted(obj interface{}) {
 	clusterDefinition := o.safeGetCassandra(obj)
+	v1alpha1helpers.SetDefaultsForCassandra(clusterDefinition)
 	o.adjustUseEmptyDir(clusterDefinition)
 
 	clusterID := fmt.Sprintf("%s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
@@ -176,7 +180,9 @@ func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
 	newCluster := o.safeGetCassandra(new)
 	log.Debug(spew.Sprintf("Cluster update detected for %s.%s, old: %+v \nnew: %+v", oldCluster.Namespace, oldCluster.Name, oldCluster.Spec, newCluster.Spec))
 
+	v1alpha1helpers.SetDefaultsForCassandra(oldCluster)
 	o.adjustUseEmptyDir(oldCluster)
+	v1alpha1helpers.SetDefaultsForCassandra(newCluster)
 	o.adjustUseEmptyDir(newCluster)
 
 	if reflect.DeepEqual(oldCluster.Spec, newCluster.Spec) {

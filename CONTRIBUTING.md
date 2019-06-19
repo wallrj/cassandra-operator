@@ -61,6 +61,7 @@ Flag | Meaning | Default
 `CASSANDRA_BOOTSTRAPPER_IMAGE` | The fully qualified name for the `cassandra-bootstrapper` docker image | `$(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)`
 `FAKE_CASSANDRA_IMAGE`         | The fully qualified name for the `fake-cassandra-docker` docker image | `$(TEST_REGISTRY)/fake-cassandra:v$(gitRev)`
 `CASSANDRA_SNAPSHOT_IMAGE`     | The fully qualified name for the `cassandra-snapshot` docker image | `$(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)`
+`CASSANDRA_SIDECAR_IMAGE`      | The fully qualified name for the `cassandra-sidecar` docker image | `$(TEST_REGISTRY)/cassandra-sidecar:v$(gitRev)`
 `POD_START_TIMEOUT`            | The max duration allowed for a Cassandra pod to start. The time varies depending on whether a real or fake cassandra image is used and whether PVC or empty dir is used for the cassandra volumes. As a starting point use 120s for fake cassandra otherwise 5m | `120s`
 `DOMAIN`                       | Domain name used to create the test operator ingress host | `localhost`
 `KUBE_CONTEXT`                 | The Kubernetes context where the test operator will be deployed | `dind`
@@ -69,7 +70,7 @@ Flag | Meaning | Default
 `DOCKER_PASSWORD`              | The password for the docker username allowed to push to the release registry | (provided as encrypted variable in `.travis.yml`)
 `GINKGO_COMPILERS`             | Ginkgo `-compilers` value to use when compiling multiple tests suite | `0`, equivalent to not setting the option at all
 `GINKGO_NODES`                 | Ginkgo `-nodes` value to use when running tests suite in parallel | `0`, equivalent to not setting the option at all
-
+`E2E_TEST`                     | Name of the end-to-end test suite to run. Use this to run a specific test suite | ``, equivalent to running all test suites 
 
 ## What to work on
 

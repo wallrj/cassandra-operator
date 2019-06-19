@@ -2,16 +2,18 @@ package snapshot
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	coreV1 "k8s.io/api/core/v1"
+
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e/parallel"
-	coreV1 "k8s.io/api/core/v1"
-	"testing"
-	"time"
 )
 
 var (
@@ -74,7 +76,6 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 					Schedule:  "59 23 * * *",
 					Keyspaces: []string{"keyspace1", "keyspace3"},
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:               true,
 						RetentionPeriodDays:   &retentionPeriod,
 						CleanupSchedule:       "11 22 1 * *",
 						CleanupTimeoutSeconds: &timeout,
@@ -186,7 +187,6 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 					Schedule:  "59 23 * * *",
 					Keyspaces: []string{"keyspace1", "keyspace3"},
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:               true,
 						RetentionPeriodDays:   &retentionPeriod,
 						CleanupSchedule:       "11 22 1 * *",
 						CleanupTimeoutSeconds: &timeout,
@@ -231,7 +231,6 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 					Schedule:  "59 23 * * *",
 					Keyspaces: []string{"keyspace1", "keyspace3"},
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:               true,
 						RetentionPeriodDays:   &retentionPeriod,
 						CleanupSchedule:       "11 22 1 * *",
 						CleanupTimeoutSeconds: &timeout,
@@ -247,7 +246,6 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 				Schedule:  "15 9 * * *",
 				Keyspaces: []string{"k2"},
 				RetentionPolicy: &v1alpha1.RetentionPolicy{
-					Enabled:               true,
 					RetentionPeriodDays:   &retentionPeriod,
 					CleanupSchedule:       "2 5 1 * *",
 					CleanupTimeoutSeconds: &timeout,

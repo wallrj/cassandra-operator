@@ -48,7 +48,7 @@ var _ = Describe("cluster construction", func() {
 					Schedule:  "1 23 * * *",
 					Keyspaces: []string{"k1"},
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:             true,
+						Enabled:             ptr.Bool(true),
 						RetentionPeriodDays: &retentionPeriod,
 					},
 				},
@@ -959,7 +959,7 @@ var _ = Describe("creation of snapshot cleanup job", func() {
 					Schedule:       "1 23 * * *",
 					TimeoutSeconds: &snapshotTimeout,
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:               true,
+						Enabled:               ptr.Bool(true),
 						RetentionPeriodDays:   &retentionPeriod,
 						CleanupSchedule:       "0 9 * * *",
 						CleanupTimeoutSeconds: &cleanupTimeout,
@@ -980,7 +980,9 @@ var _ = Describe("creation of snapshot cleanup job", func() {
 	})
 
 	It("should not create a cleanup job if the retention policy is disabled in the cluster spec", func() {
-		clusterDef.Spec.Snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{Enabled: false}
+		clusterDef.Spec.Snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{
+			Enabled: ptr.Bool(false),
+		}
 		cluster, err := ACluster(clusterDef)
 		Expect(err).NotTo(HaveOccurred())
 
