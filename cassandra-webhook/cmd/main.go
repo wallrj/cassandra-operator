@@ -21,7 +21,7 @@ func main() {
 	hookServer := mgr.GetWebhookServer()
 	hookServer.Port = 8443
 	log.Info("registering webhooks to the webhook server")
-	// hookServer.Register("/mutate-v1alpha1-cassandra", &webhook.Admission{Handler: &podAnnotator{}})
+	hookServer.Register("/mutate-v1alpha1-cassandra", &webhook.Admission{Handler: &cassandrawebhook.CassandraDefaulter{}})
 	hookServer.Register("/validate-v1alpha1-cassandra", &webhook.Admission{Handler: &cassandrawebhook.CassandraValidator{}})
 
 	log.Info("starting manager")

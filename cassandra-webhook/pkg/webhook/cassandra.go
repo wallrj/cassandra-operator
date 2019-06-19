@@ -26,8 +26,8 @@ func (v *CassandraValidator) Handle(ctx context.Context, req admission.Request) 
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	return admission.Denied("toot toot")
-	// return admission.Allowed("")
+	// return admission.Denied("toot toot")
+	return admission.Allowed("")
 }
 
 // CassandraValidator implements inject.Client.
