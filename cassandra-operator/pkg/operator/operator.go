@@ -1,23 +1,18 @@
 package operator
 
 import (
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
 	"time"
 
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
-	"reflect"
 	"syscall"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
-
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
@@ -25,8 +20,12 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
+	"reflect"
 )
 
 // The Operator itself.
