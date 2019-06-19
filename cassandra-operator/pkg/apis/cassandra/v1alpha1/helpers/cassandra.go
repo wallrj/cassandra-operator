@@ -63,7 +63,7 @@ func GetSnapshotImage(c *v1alpha1.Cassandra) string {
 
 func GetDatacenter(c *v1alpha1.Cassandra) string {
 	if c.Spec.Datacenter == nil {
-		return v1alpha1.DefaultDCName
+		return v1alpha1.DefaultDatacenterName
 	}
 	return *c.Spec.Datacenter
 }
@@ -91,7 +91,14 @@ func SnapshotCleanupPropertiesUpdated(snapshot1 *v1alpha1.Snapshot, snapshot2 *v
 }
 
 func SetDefaultsForCassandra(clusterDefinition *v1alpha1.Cassandra) {
+	setDefaultDatacenter(clusterDefinition)
 	setDefaultsForSnapshot(clusterDefinition.Spec.Snapshot)
+}
+
+func setDefaultDatacenter(c *v1alpha1.Cassandra) {
+	if c.Spec.Datacenter == nil {
+		c.Spec.Datacenter = ptr.String(v1alpha1.DefaultDatacenterName)
+	}
 }
 
 func setDefaultsForSnapshot(snapshot *v1alpha1.Snapshot) {

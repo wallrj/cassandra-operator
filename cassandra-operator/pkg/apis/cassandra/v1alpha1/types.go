@@ -13,8 +13,8 @@ const (
 	NodeServiceAccountName     = "cassandra-node"
 	SnapshotServiceAccountName = "cassandra-snapshot"
 
-	// DefaultDCName is the default data center name which each Cassandra pod belongs to
-	DefaultDCName = "dc1"
+	// DefaultDatacenterName is the default data center name which each Cassandra pod belongs to
+	DefaultDatacenterName = "dc1"
 
 	// DefaultCassandraImage is the name of the default Docker image used on Cassandra pods
 	DefaultCassandraImage = "cassandra:3.11"

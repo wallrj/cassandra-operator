@@ -240,7 +240,7 @@ var _ = Describe("cluster events", func() {
 			newCluster.Spec.Datacenter = ptr.String("new-dc")
 			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
-			Expect(err).To(MatchError(fmt.Sprintf("changing dc is forbidden. The dc used will continue to be '%s'", v1alpha1.DefaultDCName)))
+			Expect(err).To(MatchError(fmt.Sprintf("changing dc is forbidden. The dc used will continue to be '%s'", v1alpha1.DefaultDatacenterName)))
 		})
 
 		It("should reject the change with an error message when Image is changed", func() {

@@ -29,6 +29,16 @@ var _ = Describe("Cassandra Helpers", func() {
 	})
 
 	Context("SetDefaultsForCassandra", func() {
+		It("should default Cassandra.Spec.Datacenter to dc1", func() {
+			clusterDef.Spec.Datacenter = nil
+			SetDefaultsForCassandra(clusterDef)
+			Expect(*clusterDef.Spec.Datacenter).To(Equal("dc1"))
+		})
+		It("should not overwrite Cassandra.Spec.Datacenter ", func() {
+			clusterDef.Spec.Datacenter = ptr.String("carefully-chosen-datacenter-name")
+			SetDefaultsForCassandra(clusterDef)
+			Expect(*clusterDef.Spec.Datacenter).To(Equal("carefully-chosen-datacenter-name"))
+		})
 		It("should default Cassandra.Spec.Snapshot.RetentionPolicy.Enabled to true", func() {
 			clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = nil
 			SetDefaultsForCassandra(clusterDef)
