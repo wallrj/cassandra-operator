@@ -11,6 +11,7 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -75,7 +76,7 @@ func startOperator(_ *cobra.Command, _ []string) error {
 	}
 
 	kubernetesConfig := kubernetesConfig()
-	op := operator.New(kubernetesClient(kubernetesConfig), cassandraClient(kubernetesConfig), operatorConfig)
+	op := operator.New(kubernetesClient(kubernetesConfig), cassandraClient(kubernetesConfig), dynamicClient(kubernetesConfig), operatorConfig)
 	op.Run()
 
 	return nil
@@ -110,4 +111,8 @@ func kubernetesClient(config *rest.Config) *kubernetes.Clientset {
 
 func cassandraClient(config *rest.Config) *versioned.Clientset {
 	return versioned.NewForConfigOrDie(config)
+}
+
+func dynamicClient(config *rest.Config) dynamic.Interface {
+	return dynamic.NewForConfigOrDie(config)
 }
