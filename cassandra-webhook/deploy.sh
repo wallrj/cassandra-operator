@@ -44,7 +44,7 @@ function deploy() {
     local namespace=$3
     local deployment=cassandra-webhook
 
-    # kind load docker-image "${image}"
+    kind load docker-image "${image}"
     kubectl delete namespace "${namespace}" || true
     until kubectl create namespace "${namespace}"; do sleep 1; done
 
