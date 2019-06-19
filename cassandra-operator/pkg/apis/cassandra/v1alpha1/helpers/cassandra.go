@@ -97,7 +97,14 @@ func SetDefaultsForCassandra(c *v1alpha1.Cassandra) {
 	if c.Spec.UseEmptyDir == nil {
 		c.Spec.UseEmptyDir = ptr.Bool(false)
 	}
+	setDefaultsForPod(&c.Spec.Pod)
 	setDefaultsForSnapshot(c.Spec.Snapshot)
+}
+
+func setDefaultsForPod(pod *v1alpha1.Pod) {
+	if pod.BootstrapperImage == nil {
+		pod.BootstrapperImage = ptr.String(v1alpha1.DefaultCassandraBootstrapperImage)
+	}
 }
 
 func setDefaultsForSnapshot(snapshot *v1alpha1.Snapshot) {

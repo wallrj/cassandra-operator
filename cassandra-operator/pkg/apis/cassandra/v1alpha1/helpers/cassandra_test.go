@@ -49,6 +49,16 @@ var _ = Describe("Cassandra Helpers", func() {
 			SetDefaultsForCassandra(clusterDef)
 			Expect(*clusterDef.Spec.UseEmptyDir).To(BeTrue())
 		})
+		It("should default Cassandra.Spec.Pod.BootstrapperImage", func() {
+			clusterDef.Spec.Pod.BootstrapperImage = nil
+			SetDefaultsForCassandra(clusterDef)
+			Expect(*clusterDef.Spec.Pod.BootstrapperImage).To(Equal("skyuk/cassandra-bootstrapper:latest"))
+		})
+		It("should not overwrite Cassandra.Spec.Pod.BootstrapperImage ", func() {
+			clusterDef.Spec.Pod.BootstrapperImage = ptr.String("custom-bootstrapper-image")
+			SetDefaultsForCassandra(clusterDef)
+			Expect(*clusterDef.Spec.Pod.BootstrapperImage).To(Equal("custom-bootstrapper-image"))
+		})
 		It("should default Cassandra.Spec.Snapshot.RetentionPolicy.Enabled to true", func() {
 			clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = nil
 			SetDefaultsForCassandra(clusterDef)
