@@ -1,13 +1,14 @@
 package helpers
 
 import (
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 )
 
 func TestHelpers(t *testing.T) {
@@ -16,6 +17,32 @@ func TestHelpers(t *testing.T) {
 }
 
 var _ = Describe("Cassandra Helpers", func() {
+	var clusterDef *v1alpha1.Cassandra
+	BeforeEach(func() {
+		clusterDef = &v1alpha1.Cassandra{
+			Spec: v1alpha1.CassandraSpec{
+				Snapshot: &v1alpha1.Snapshot{
+					RetentionPolicy: &v1alpha1.RetentionPolicy{},
+				},
+			},
+		}
+	})
+
+	Context("SetDefaultsForCassandra", func() {
+		It("should default Cassandra.Spec.Snapshot.RetentionPolicy.Enabled to true", func() {
+			clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = nil
+			SetDefaultsForCassandra(clusterDef)
+			Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.Enabled).To(BeTrue())
+		})
+		It("should not err if Cassandra.Spec.Snapshot is undefined", func() {
+			clusterDef.Spec.Snapshot = nil
+			SetDefaultsForCassandra(clusterDef)
+		})
+		It("should not err if Cassandra.Spec.Snapshot.RetentionPolicy is undefined", func() {
+			clusterDef.Spec.Snapshot.RetentionPolicy = nil
+			SetDefaultsForCassandra(clusterDef)
+		})
+	})
 
 	Context("Snapshot Retention", func() {
 		var snapshot *v1alpha1.Snapshot
@@ -29,9 +56,16 @@ var _ = Describe("Cassandra Helpers", func() {
 			Expect(HasRetentionPolicyEnabled(snapshot)).To(BeFalse())
 		})
 
+		It("should be found disabled when RetentionPolicy.Enabled is nil", func() {
+			snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{
+				Enabled: nil,
+			}
+			Expect(HasRetentionPolicyEnabled(snapshot)).To(BeFalse())
+		})
+
 		It("should be found disabled when retention policy is not enabled", func() {
 			snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{
-				Enabled:         false,
+				Enabled:         ptr.Bool(false),
 				CleanupSchedule: "11 11 * * *",
 			}
 			Expect(HasRetentionPolicyEnabled(snapshot)).To(BeFalse())
@@ -39,7 +73,7 @@ var _ = Describe("Cassandra Helpers", func() {
 
 		It("should be found enabled when retention policy is enabled", func() {
 			snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{
-				Enabled:         true,
+				Enabled:         ptr.Bool(true),
 				CleanupSchedule: "11 11 * * *",
 			}
 			Expect(HasRetentionPolicyEnabled(snapshot)).To(BeTrue())
@@ -129,7 +163,7 @@ var _ = Describe("Cassandra Helpers", func() {
 				TimeoutSeconds: &cleanupTimeout,
 				Keyspaces:      []string{"keyspace1", "keyspace2"},
 				RetentionPolicy: &v1alpha1.RetentionPolicy{
-					Enabled:               true,
+					Enabled:               ptr.Bool(true),
 					CleanupSchedule:       "11 11 * * *",
 					CleanupTimeoutSeconds: ptr.Int32(10),
 					RetentionPeriodDays:   ptr.Int32(7),
@@ -140,7 +174,7 @@ var _ = Describe("Cassandra Helpers", func() {
 				TimeoutSeconds: &cleanupTimeout,
 				Keyspaces:      []string{"keyspace1", "keyspace2"},
 				RetentionPolicy: &v1alpha1.RetentionPolicy{
-					Enabled:               true,
+					Enabled:               ptr.Bool(true),
 					CleanupSchedule:       "11 11 * * *",
 					CleanupTimeoutSeconds: ptr.Int32(10),
 					RetentionPeriodDays:   ptr.Int32(7),
@@ -162,7 +196,7 @@ var _ = Describe("Cassandra Helpers", func() {
 		})
 
 		It("should be found equal even when one is not enabled", func() {
-			snapshot1.RetentionPolicy.Enabled = false
+			snapshot1.RetentionPolicy.Enabled = ptr.Bool(false)
 			Expect(SnapshotCleanupPropertiesUpdated(snapshot1, snapshot2)).To(BeFalse())
 			Expect(SnapshotCleanupPropertiesUpdated(snapshot2, snapshot1)).To(BeFalse())
 		})

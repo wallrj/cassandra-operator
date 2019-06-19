@@ -2,8 +2,8 @@ package v1alpha1
 
 import (
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// required for dep management
 	"k8s.io/apimachinery/pkg/api/resource"
 	_ "k8s.io/code-generator/cmd/client-gen/types"
@@ -121,7 +121,8 @@ type Snapshot struct {
 
 // RetentionPolicy defines how long the snapshots should be kept for and how often the cleanup task should run
 type RetentionPolicy struct {
-	Enabled bool `json:"enabled"`
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 	// +optional
 	RetentionPeriodDays *int32 `json:"retentionPeriodDays,omitempty"`
 	// CleanupSchedule follows the cron format, see https://en.wikipedia.org/wiki/Cron
