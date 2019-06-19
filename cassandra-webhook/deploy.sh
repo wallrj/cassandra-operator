@@ -47,6 +47,8 @@ function deploy() {
     # kind load docker-image "${image}"
     kubectl delete namespace "${namespace}" || true
     until kubectl create namespace "${namespace}"; do sleep 1; done
+
+    kubectl -n "${namespace}" create secret tls --key tls.key --cert tls.crt webhook-tls
     k8Resources="webhook-deployment.yaml manifests.yaml"
     for k8Resource in ${k8Resources}
     do
