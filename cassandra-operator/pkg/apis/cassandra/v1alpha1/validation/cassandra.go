@@ -51,8 +51,7 @@ func validateRacks(clusterDefinition *v1alpha1.Cassandra, fldPath *field.Path) f
 				field.Invalid(
 					fldPath.Child("Replicas"),
 					rack.Replicas,
-					fmt.Sprintf("replicas must be a positive integer. Got value %d for Cassandra cluster definition: %s.%s",
-						rack.Replicas,
+					fmt.Sprintf("replicas must be a positive integer for Cassandra cluster: %s.%s",
 						clusterDefinition.Namespace,
 						clusterDefinition.Name,
 					),
