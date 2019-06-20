@@ -57,12 +57,6 @@ var _ = Describe("cluster construction", func() {
 	})
 
 	Context("config validation", func() {
-		It("should reject a configuration with a rack with zero replicas", func() {
-			clusterDef.Spec.Racks = []v1alpha1.Rack{{Name: "a"}}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid rack replicas value 0 provided for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
 		It("should reject a configuration with no pod memory property", func() {
 			clusterDef.Spec.Pod.Memory = resource.Quantity{}
 			_, err := ACluster(clusterDef)
@@ -265,12 +259,6 @@ var _ = Describe("cluster construction", func() {
 			Expect(err).To(MatchError("invalid timeout seconds for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
 		})
 
-		It("should reject a configuration where no racks are provided", func() {
-			clusterDef.Spec.Racks = []v1alpha1.Rack{}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("no racks specified for cluster: mynamespace.mycluster"))
-		})
-
 		Context("useEmptyDir is true", func() {
 			BeforeEach(func() {
 				clusterDef.Spec.UseEmptyDir = ptr.Bool(true)
@@ -305,18 +293,6 @@ var _ = Describe("cluster construction", func() {
 				clusterDef.Spec.Pod.StorageSize = resource.Quantity{}
 				_, err := ACluster(clusterDef)
 				Expect(err).To(MatchError("no podStorageSize property provided and useEmptyDir false for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should reject a configuration with racks having no storageclass", func() {
-				clusterDef.Spec.Racks = []v1alpha1.Rack{{Name: "a", StorageClass: "", Zone: "a", Replicas: 1}}
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("rack named 'a' with no storage class specified, either set useEmptyDir to true or specify storage class: mynamespace.mycluster"))
-			})
-
-			It("should reject a configuration with racks having no zone", func() {
-				clusterDef.Spec.Racks = []v1alpha1.Rack{{Name: "a", StorageClass: "some-storage-class", Zone: "", Replicas: 1}}
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("rack named 'a' with no zone specified, either set useEmptyDir to true or specify zone: mynamespace.mycluster"))
 			})
 		})
 

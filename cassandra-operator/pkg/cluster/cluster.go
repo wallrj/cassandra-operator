@@ -16,6 +16,7 @@ import (
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/validation"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 )
@@ -100,10 +101,9 @@ func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
 
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
-	if err := validateRacks(clusterDefinition); err != nil {
+	if err := validation.ValidateCassandra(clusterDefinition).ToAggregate(); err != nil {
 		return err
 	}
-
 	if err := validatePodResources(clusterDefinition); err != nil {
 		return err
 	}
@@ -151,23 +151,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 // Definition returns a copy of the definition of the cluster. Any modifications made to this will be ignored.
 func (c *Cluster) Definition() *v1alpha1.Cassandra {
 	return c.definition.DeepCopy()
-}
-
-func validateRacks(clusterDefinition *v1alpha1.Cassandra) error {
-	if len(clusterDefinition.Spec.Racks) == 0 {
-		return fmt.Errorf("no racks specified for cluster: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-
-	for _, rack := range clusterDefinition.Spec.Racks {
-		if rack.Replicas < 1 {
-			return fmt.Errorf("invalid rack replicas value %d provided for Cassandra cluster definition: %s.%s", rack.Replicas, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
-			return fmt.Errorf("rack named '%s' with no storage class specified, either set useEmptyDir to true or specify storage class: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.Zone == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
-			return fmt.Errorf("rack named '%s' with no zone specified, either set useEmptyDir to true or specify zone: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
-		}
-	}
-	return nil
 }
 
 func validatePodResources(clusterDefinition *v1alpha1.Cassandra) error {
