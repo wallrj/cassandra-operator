@@ -57,12 +57,6 @@ var _ = Describe("cluster construction", func() {
 	})
 
 	Context("config validation", func() {
-		It("should reject a configuration with no pod memory property", func() {
-			clusterDef.Spec.Pod.Memory = resource.Quantity{}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("no podMemory property provided for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
 		It("should allow a configuration with no pod CPU property", func() {
 			clusterDef.Spec.Pod.CPU = resource.Quantity{}
 			_, err := ACluster(clusterDef)
@@ -264,35 +258,11 @@ var _ = Describe("cluster construction", func() {
 				clusterDef.Spec.UseEmptyDir = ptr.Bool(true)
 			})
 
-			It("should accept a configuration with no pod storage", func() {
-				clusterDef.Spec.Pod.StorageSize = resource.MustParse("0")
-				_, err := ACluster(clusterDef)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("should reject a configuration where podStorageSize is present", func() {
-				clusterDef.Spec.Pod.StorageSize = resource.MustParse("10Gi")
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("podStorageSize property provided when useEmptyDir is true for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
 			It("should respect the useEmptyDir flag if the operator is configured to allow emptyDir and podStorageSize is not set", func() {
 				clusterDef.Spec.Pod.StorageSize = resource.Quantity{}
 				cluster, err := ACluster(clusterDef)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(v1alpha1helpers.UseEmptyDir(cluster.definition)).To(BeTrue())
-			})
-		})
-
-		Context("useEmptyDir is false", func() {
-			BeforeEach(func() {
-				clusterDef.Spec.UseEmptyDir = ptr.Bool(false)
-			})
-
-			It("should reject a configuration with no pod storage size property", func() {
-				clusterDef.Spec.Pod.StorageSize = resource.Quantity{}
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("no podStorageSize property provided and useEmptyDir false for Cassandra cluster definition: mynamespace.mycluster"))
 			})
 		})
 

@@ -7,6 +7,7 @@ import (
 	"github.com/kr/pretty"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
@@ -35,6 +36,7 @@ var _ = Describe("validation functions", func() {
 					Namespace: "ns1",
 				},
 				Spec: v1alpha1.CassandraSpec{
+					UseEmptyDir: ptr.Bool(false),
 					Racks: []v1alpha1.Rack{
 						{
 							Name:         "rack1",
@@ -42,6 +44,11 @@ var _ = Describe("validation functions", func() {
 							StorageClass: "fast",
 							Replicas:     1,
 						},
+					},
+					Pod: v1alpha1.Pod{
+						CPU:         resource.MustParse("0"),
+						Memory:      resource.MustParse("1Gi"),
+						StorageSize: resource.MustParse("100Gi"),
 					},
 				},
 			}
@@ -53,9 +60,7 @@ var _ = Describe("validation functions", func() {
 				err = validation.ValidateCassandra(cass).ToAggregate()
 				Expect(err).ToNot(HaveOccurred())
 			})
-			It("succeeds with a fully populated Cassandra object", func() {
-
-			})
+			It("succeeds with a fully populated Cassandra object", func() {})
 		})
 
 		Context("failure cases", func() {
@@ -92,6 +97,28 @@ var _ = Describe("validation functions", func() {
 						})
 						It("fails if Rack.Zone is empty", func() {
 							cass.Spec.Racks[0].Zone = ""
+						})
+					})
+				})
+
+				Context("Pod", func() {
+					It("fails if Memory is zero", func() {
+						cass.Spec.Pod.Memory.Set(0)
+					})
+					Context("UseEmptyDir=false", func() {
+						BeforeEach(func() {
+							cass.Spec.UseEmptyDir = ptr.Bool(false)
+						})
+						It("fails if StorageSize is zero", func() {
+							cass.Spec.Pod.StorageSize.Set(0)
+						})
+					})
+					Context("UseEmptyDir=true", func() {
+						BeforeEach(func() {
+							cass.Spec.UseEmptyDir = ptr.Bool(true)
+						})
+						It("fails if StorageSize is not zero", func() {
+							cass.Spec.Pod.StorageSize.Set(1)
 						})
 					})
 				})

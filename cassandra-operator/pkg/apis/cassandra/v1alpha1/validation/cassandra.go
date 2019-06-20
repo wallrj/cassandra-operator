@@ -23,7 +23,10 @@ func ValidateCassandra(c *v1alpha1.Cassandra) field.ErrorList {
 }
 
 func validateCassandraSpec(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
-	return validateRacks(c, fldPath.Child("Racks"))
+	var allErrs field.ErrorList
+	allErrs = append(allErrs, validateRacks(c, fldPath.Child("Racks"))...)
+	allErrs = append(allErrs, validatePodResources(c, fldPath.Child("Pod"))...)
+	return allErrs
 }
 
 func validateRacks(clusterDefinition *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
@@ -84,6 +87,53 @@ func validateRacks(clusterDefinition *v1alpha1.Cassandra, fldPath *field.Path) f
 				),
 			)
 		}
+	}
+	return allErrs
+}
+
+func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	if c.Spec.Pod.Memory.IsZero() {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("Memory"),
+				c.Spec.Pod.Memory.String(),
+				fmt.Sprintf(
+					"must be > 0 in Cassandra cluster %s.%s",
+					c.Namespace,
+					c.Name,
+				),
+			),
+		)
+	}
+	if !v1alpha1helpers.UseEmptyDir(c) && c.Spec.Pod.StorageSize.IsZero() {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("StorageSize"),
+				c.Spec.Pod.StorageSize.String(),
+				fmt.Sprintf(
+					"must be > 0 when useEmptyDir is false for Cassandra cluster %s.%s",
+					c.Namespace,
+					c.Name,
+				),
+			),
+		)
+	}
+	if v1alpha1helpers.UseEmptyDir(c) && !c.Spec.Pod.StorageSize.IsZero() {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("StorageSize"),
+				c.Spec.Pod.StorageSize.String(),
+				fmt.Sprintf(
+					"must be 0 when useEmptyDir is true for Cassandra cluster %s.%s",
+					c.Namespace,
+					c.Name,
+				),
+			),
+		)
 	}
 	return allErrs
 }

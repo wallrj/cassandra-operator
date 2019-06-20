@@ -104,9 +104,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	if err := validation.ValidateCassandra(clusterDefinition).ToAggregate(); err != nil {
 		return err
 	}
-	if err := validatePodResources(clusterDefinition); err != nil {
-		return err
-	}
 
 	if err := validateSnapshot(clusterDefinition); err != nil {
 		return err
@@ -151,21 +148,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 // Definition returns a copy of the definition of the cluster. Any modifications made to this will be ignored.
 func (c *Cluster) Definition() *v1alpha1.Cassandra {
 	return c.definition.DeepCopy()
-}
-
-func validatePodResources(clusterDefinition *v1alpha1.Cassandra) error {
-	if clusterDefinition.Spec.Pod.Memory.IsZero() {
-		return fmt.Errorf("no podMemory property provided for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-
-	if v1alpha1helpers.UseEmptyDir(clusterDefinition) && !clusterDefinition.Spec.Pod.StorageSize.IsZero() {
-		return fmt.Errorf("podStorageSize property provided when useEmptyDir is true for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-
-	if !v1alpha1helpers.UseEmptyDir(clusterDefinition) && clusterDefinition.Spec.Pod.StorageSize.IsZero() {
-		return fmt.Errorf("no podStorageSize property provided and useEmptyDir false for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	return nil
 }
 
 func validateSnapshot(clusterDefinition *v1alpha1.Cassandra) error {
