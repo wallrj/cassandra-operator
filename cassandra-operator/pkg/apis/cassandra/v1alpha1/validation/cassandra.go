@@ -7,6 +7,7 @@ import (
 	apimachineryvalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/robfig/cron"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 )
@@ -26,27 +27,27 @@ func validateCassandraSpec(c *v1alpha1.Cassandra, fldPath *field.Path) field.Err
 	var allErrs field.ErrorList
 	allErrs = append(allErrs, validateRacks(c, fldPath.Child("Racks"))...)
 	allErrs = append(allErrs, validatePodResources(c, fldPath.Child("Pod"))...)
+	allErrs = append(allErrs, validateSnapshot(c, fldPath.Child("Snapshot"))...)
 	return allErrs
 }
 
-func validateRacks(clusterDefinition *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
+func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	if len(clusterDefinition.Spec.Racks) == 0 {
+	if len(c.Spec.Racks) == 0 {
 		allErrs = append(
 			allErrs,
 			field.Required(
 				fldPath,
 				fmt.Sprintf(
-					"no racks specified for cluster: %s.%s",
-					clusterDefinition.Namespace,
-					clusterDefinition.Name,
+					"must not be empty in Cassandra cluster %s",
+					c.QualifiedName(),
 				),
 			),
 		)
 		return allErrs
 	}
 
-	for i, rack := range clusterDefinition.Spec.Racks {
+	for i, rack := range c.Spec.Racks {
 		fldPath = fldPath.Child(fmt.Sprintf("%d:%s", i, rack.Name))
 		if rack.Replicas < 1 {
 			allErrs = append(
@@ -54,35 +55,32 @@ func validateRacks(clusterDefinition *v1alpha1.Cassandra, fldPath *field.Path) f
 				field.Invalid(
 					fldPath.Child("Replicas"),
 					rack.Replicas,
-					fmt.Sprintf("replicas must be a positive integer for Cassandra cluster: %s.%s",
-						clusterDefinition.Namespace,
-						clusterDefinition.Name,
+					fmt.Sprintf("must be > 0 in Cassandra cluster %s",
+						c.QualifiedName(),
 					),
 				),
 			)
 		}
-		if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
+		if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(c) {
 			allErrs = append(
 				allErrs,
 				field.Required(
 					fldPath.Child("StorageClass"),
 					fmt.Sprintf(
-						"either set useEmptyDir to true or specify storage class in Cassandra cluster %s.%s",
-						clusterDefinition.Namespace,
-						clusterDefinition.Name,
+						"must not be empty if useEmptyDir is true in Cassandra cluster %s",
+						c.QualifiedName(),
 					),
 				),
 			)
 		}
-		if rack.Zone == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
+		if rack.Zone == "" && !v1alpha1helpers.UseEmptyDir(c) {
 			allErrs = append(
 				allErrs,
 				field.Required(
-					fldPath.Child("StorageClass"),
+					fldPath.Child("Zone"),
 					fmt.Sprintf(
-						"either set useEmptyDir to true or specify zone in Cassandra cluster %s.%s",
-						clusterDefinition.Namespace,
-						clusterDefinition.Name,
+						"must not be empty if useEmptyDir is true in Cassandra cluster %s",
+						c.QualifiedName(),
 					),
 				),
 			)
@@ -100,9 +98,8 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 				fldPath.Child("Memory"),
 				c.Spec.Pod.Memory.String(),
 				fmt.Sprintf(
-					"must be > 0 in Cassandra cluster %s.%s",
-					c.Namespace,
-					c.Name,
+					"must be > 0 in Cassandra cluster %s",
+					c.QualifiedName(),
 				),
 			),
 		)
@@ -114,9 +111,8 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 				fldPath.Child("StorageSize"),
 				c.Spec.Pod.StorageSize.String(),
 				fmt.Sprintf(
-					"must be > 0 when useEmptyDir is false for Cassandra cluster %s.%s",
-					c.Namespace,
-					c.Name,
+					"must be > 0 when useEmptyDir is false for Cassandra cluster %s",
+					c.QualifiedName(),
 				),
 			),
 		)
@@ -128,9 +124,86 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 				fldPath.Child("StorageSize"),
 				c.Spec.Pod.StorageSize.String(),
 				fmt.Sprintf(
-					"must be 0 when useEmptyDir is true for Cassandra cluster %s.%s",
-					c.Namespace,
-					c.Name,
+					"must be 0 when useEmptyDir is true for Cassandra cluster %s",
+					c.QualifiedName(),
+				),
+			),
+		)
+	}
+	return allErrs
+}
+
+func validateSnapshot(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	if c.Spec.Snapshot == nil {
+		return allErrs
+	}
+	if _, err := cron.Parse(c.Spec.Snapshot.Schedule); err != nil {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("Schedule"),
+				c.Spec.Snapshot.Schedule,
+				fmt.Sprintf(
+					"is not a valid cron expression in Cassandra cluster %s (%s)",
+					c.QualifiedName(),
+					err,
+				),
+			),
+		)
+	}
+	if c.Spec.Snapshot.TimeoutSeconds != nil && *c.Spec.Snapshot.TimeoutSeconds < 0 {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("TimeoutSeconds"),
+				*c.Spec.Snapshot.TimeoutSeconds,
+				fmt.Sprintf("must be a positive number in Cassandra cluster %s", c.QualifiedName()),
+			),
+		)
+	}
+	allErrs = append(
+		allErrs,
+		validateSnapshotRetentionPolicy(c, fldPath.Child("RetentionPolicy"))...,
+	)
+	return allErrs
+}
+
+func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+	if c.Spec.Snapshot.RetentionPolicy == nil {
+		return allErrs
+	}
+	if c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays != nil && *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays < 0 {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("RetentionPeriodDays"),
+				*c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays,
+				fmt.Sprintf("must be a positive number in Cassandra cluster %s", c.QualifiedName()),
+			),
+		)
+	}
+	if c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds != nil && *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds < 0 {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("CleanupTimeoutSeconds"),
+				*c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds,
+				fmt.Sprintf("must be a positive number in Cassandra cluster %s", c.QualifiedName()),
+			),
+		)
+	}
+	if _, err := cron.Parse(c.Spec.Snapshot.RetentionPolicy.CleanupSchedule); err != nil {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("CleanupSchedule"),
+				c.Spec.Snapshot.RetentionPolicy.CleanupSchedule,
+				fmt.Sprintf(
+					"is not a valid cron expression in Cassandra cluster %s (%s)",
+					c.QualifiedName(),
+					err,
 				),
 			),
 		)

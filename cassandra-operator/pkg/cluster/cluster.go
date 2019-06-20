@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robfig/cron"
 	appsv1 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
@@ -105,10 +104,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 		return err
 	}
 
-	if err := validateSnapshot(clusterDefinition); err != nil {
-		return err
-	}
-
 	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
 		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()
 	} else {
@@ -148,46 +143,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 // Definition returns a copy of the definition of the cluster. Any modifications made to this will be ignored.
 func (c *Cluster) Definition() *v1alpha1.Cassandra {
 	return c.definition.DeepCopy()
-}
-
-func validateSnapshot(clusterDefinition *v1alpha1.Cassandra) error {
-	if clusterDefinition.Spec.Snapshot == nil {
-		return nil
-	}
-
-	if clusterDefinition.Spec.Snapshot.Schedule == "" {
-		return fmt.Errorf("no snapshot schedule property provided for Cassandra cluster definition: %s", clusterDefinition.QualifiedName())
-	}
-
-	if _, err := cron.Parse(clusterDefinition.Spec.Snapshot.Schedule); err != nil {
-		return fmt.Errorf("invalid snapshot schedule, must be a cron expression but got '%s' for Cassandra cluster definition: %s.%s", clusterDefinition.Spec.Snapshot.Schedule, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-
-	timeoutSeconds := clusterDefinition.Spec.Snapshot.TimeoutSeconds
-	if timeoutSeconds != nil && *timeoutSeconds < 0 {
-		return fmt.Errorf("invalid snapshot timeoutSeconds value %d, must be non-negative for Cassandra cluster definition: %s", *timeoutSeconds, clusterDefinition.QualifiedName())
-	}
-
-	retentionPolicy := clusterDefinition.Spec.Snapshot.RetentionPolicy
-	if retentionPolicy != nil {
-		retentionPeriodDays := retentionPolicy.RetentionPeriodDays
-		if retentionPeriodDays != nil && *retentionPeriodDays < 0 {
-			return fmt.Errorf("invalid snapshot retention policy retentionPeriodDays value %d, must be non-negative for Cassandra cluster definition: %s", *retentionPeriodDays, clusterDefinition.QualifiedName())
-		}
-
-		cleanupTimeoutSeconds := retentionPolicy.CleanupTimeoutSeconds
-		if cleanupTimeoutSeconds != nil && *cleanupTimeoutSeconds < 0 {
-			return fmt.Errorf("invalid snapshot retention policy cleanupTimeoutSeconds value %d, must be non-negative for Cassandra cluster definition: %s", *cleanupTimeoutSeconds, clusterDefinition.QualifiedName())
-		}
-
-		if retentionPolicy.CleanupSchedule != "" {
-			if _, err := cron.Parse(retentionPolicy.CleanupSchedule); err != nil {
-				return fmt.Errorf("invalid snapshot cleanup schedule, must be a cron expression but got '%s' for Cassandra cluster definition: %s", retentionPolicy.CleanupSchedule, clusterDefinition.QualifiedName())
-			}
-		}
-	}
-
-	return nil
 }
 
 func validateLivenessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {

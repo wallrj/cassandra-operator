@@ -50,6 +50,15 @@ var _ = Describe("validation functions", func() {
 						Memory:      resource.MustParse("1Gi"),
 						StorageSize: resource.MustParse("100Gi"),
 					},
+					Snapshot: &v1alpha1.Snapshot{
+						Schedule:       "1 23 * * *",
+						TimeoutSeconds: ptr.Int32(1),
+						RetentionPolicy: &v1alpha1.RetentionPolicy{
+							RetentionPeriodDays:   ptr.Int32(1),
+							CleanupTimeoutSeconds: ptr.Int32(1),
+							CleanupSchedule:       "1 23 * * *",
+						},
+					},
 				},
 			}
 		})
@@ -61,6 +70,21 @@ var _ = Describe("validation functions", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("succeeds with a fully populated Cassandra object", func() {})
+			It("succeeds without a Snapshot", func() {
+				cass.Spec.Snapshot = nil
+			})
+			It("succeeds without a Snapshot.TimeoutSeconds", func() {
+				cass.Spec.Snapshot.TimeoutSeconds = nil
+			})
+			It("succeeds without a Snapshot.RetentionPolicy", func() {
+				cass.Spec.Snapshot.RetentionPolicy = nil
+			})
+			It("succeeds without a Snapshot.RetentionPolicy.RetentionPeriodDays", func() {
+				cass.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays = nil
+			})
+			It("succeeds without a Snapshot.RetentionPolicy.CleanupTimeoutSeconds", func() {
+				cass.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds = nil
+			})
 		})
 
 		Context("failure cases", func() {
@@ -119,6 +143,31 @@ var _ = Describe("validation functions", func() {
 						})
 						It("fails if StorageSize is not zero", func() {
 							cass.Spec.Pod.StorageSize.Set(1)
+						})
+					})
+				})
+				Context("Snapshot", func() {
+					It("fails if Schedule is empty", func() {
+						cass.Spec.Snapshot.Schedule = ""
+					})
+					It("fails if Schedule is not valid cron syntax", func() {
+						cass.Spec.Snapshot.Schedule = "x y z"
+					})
+					It("fails if TimeoutSeconds is < 0", func() {
+						cass.Spec.Snapshot.TimeoutSeconds = ptr.Int32(-1)
+					})
+					Context("RetentionPolicy", func() {
+						It("fails if RetentionPeriodDays is < 0", func() {
+							cass.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays = ptr.Int32(-1)
+						})
+						It("fails if CleanupTimeoutSeconds is < 0", func() {
+							cass.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds = ptr.Int32(-1)
+						})
+						It("fails if CleanupSchedule is empty", func() {
+							cass.Spec.Snapshot.RetentionPolicy.CleanupSchedule = ""
+						})
+						It("fails if CleanupSchedule is not valid cron syntax", func() {
+							cass.Spec.Snapshot.RetentionPolicy.CleanupSchedule = "x y z"
 						})
 					})
 				})
