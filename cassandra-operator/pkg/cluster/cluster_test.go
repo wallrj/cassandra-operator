@@ -50,6 +50,7 @@ var _ = Describe("cluster construction", func() {
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
 						Enabled:             ptr.Bool(true),
 						RetentionPeriodDays: &retentionPeriod,
+						CleanupSchedule:     "0 9 * * *",
 					},
 				},
 			},
@@ -267,48 +268,6 @@ var _ = Describe("cluster construction", func() {
 		})
 
 		Context("snapshot config", func() {
-			It("should be rejected when schedule is not provided", func() {
-				clusterDef.Spec.Snapshot.Schedule = ""
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("no snapshot schedule property provided for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when schedule is not a cron expression", func() {
-				clusterDef.Spec.Snapshot.Schedule = "1 2 3 x"
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot schedule, must be a cron expression but got '1 2 3 x' for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when cleanup schedule is not a cron expression", func() {
-				clusterDef.Spec.Snapshot.RetentionPolicy.CleanupSchedule = "1 x y z"
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot cleanup schedule, must be a cron expression but got '1 x y z' for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when snapshot timeout value is negative", func() {
-				timeoutSeconds := int32(-1)
-				clusterDef.Spec.Snapshot.TimeoutSeconds = &timeoutSeconds
-
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot timeoutSeconds value -1, must be non-negative for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when retention policy's retention period value is negative", func() {
-				retentionPeriodDays := int32(-1)
-				clusterDef.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays = &retentionPeriodDays
-
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot retention policy retentionPeriodDays value -1, must be non-negative for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when retention policy's timeout value is negative", func() {
-				cleanupTimeoutSeconds := int32(-1)
-				clusterDef.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds = &cleanupTimeoutSeconds
-
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot retention policy cleanupTimeoutSeconds value -1, must be non-negative for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
 			It("should use the latest version of the cassandra snapshot image if one is not supplied for the cluster", func() {
 				cluster, err := ACluster(clusterDef)
 				Expect(err).ToNot(HaveOccurred())
@@ -926,9 +885,7 @@ var _ = Describe("creation of snapshot cleanup job", func() {
 	})
 
 	It("should not create a cleanup job if the retention policy is disabled in the cluster spec", func() {
-		clusterDef.Spec.Snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{
-			Enabled: ptr.Bool(false),
-		}
+		clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = ptr.Bool(false)
 		cluster, err := ACluster(clusterDef)
 		Expect(err).NotTo(HaveOccurred())
 
