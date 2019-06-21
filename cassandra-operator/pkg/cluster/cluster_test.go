@@ -50,6 +50,7 @@ var _ = Describe("cluster construction", func() {
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
 						Enabled:             ptr.Bool(true),
 						RetentionPeriodDays: &retentionPeriod,
+						CleanupSchedule:     "0 9 * * *",
 					},
 				},
 			},
@@ -57,24 +58,6 @@ var _ = Describe("cluster construction", func() {
 	})
 
 	Context("config validation", func() {
-		It("should reject a configuration with a rack with zero replicas", func() {
-			clusterDef.Spec.Racks = []v1alpha1.Rack{{Name: "a"}}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid rack replicas value 0 provided for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a configuration with no pod memory property", func() {
-			clusterDef.Spec.Pod.Memory = resource.Quantity{}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("no podMemory property provided for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should allow a configuration with no pod CPU property", func() {
-			clusterDef.Spec.Pod.CPU = resource.Quantity{}
-			_, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		It("should use the 3.11 version of the apache cassandra image if one is not supplied for the cluster", func() {
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
@@ -177,115 +160,9 @@ var _ = Describe("cluster construction", func() {
 			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
 		})
 
-		It("should reject a liveness probe which does not have a success threshold of 1", func() {
-			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				SuccessThreshold: ptr.Int32(3),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid success threshold for liveness probe, must be set to 1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a liveness probe which has a negative success threshold", func() {
-			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				SuccessThreshold: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid success threshold for liveness probe, must be set to 1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a liveness probe which has a failure threshold less than 1", func() {
-			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				FailureThreshold: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid failure threshold for liveness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a liveness probe which has an inital delay seconds less than 1", func() {
-			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				InitialDelaySeconds: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid initial delay for liveness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a liveness probe which has a period seconds less than 1", func() {
-			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				PeriodSeconds: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid period seconds for liveness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a liveness probe which has a timeout seconds less than 1", func() {
-			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				TimeoutSeconds: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid timeout seconds for liveness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a readiness probe which has a negative success threshold", func() {
-			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				SuccessThreshold: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid success threshold for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a readiness probe which has a failure threshold less than 1", func() {
-			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				FailureThreshold: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid failure threshold for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a readiness probe which has an inital delay seconds less than 1", func() {
-			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				InitialDelaySeconds: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid initial delay for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a readiness probe which has a period seconds less than 1", func() {
-			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				PeriodSeconds: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid period seconds for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a readiness probe which has a timeout seconds less than 1", func() {
-			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				TimeoutSeconds: ptr.Int32(-1),
-			}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("invalid timeout seconds for readiness probe, must be 1 or greater, got -1 for Cassandra cluster definition: mynamespace.mycluster"))
-		})
-
-		It("should reject a configuration where no racks are provided", func() {
-			clusterDef.Spec.Racks = []v1alpha1.Rack{}
-			_, err := ACluster(clusterDef)
-			Expect(err).To(MatchError("no racks specified for cluster: mynamespace.mycluster"))
-		})
-
 		Context("useEmptyDir is true", func() {
 			BeforeEach(func() {
 				clusterDef.Spec.UseEmptyDir = ptr.Bool(true)
-			})
-
-			It("should accept a configuration with no pod storage", func() {
-				clusterDef.Spec.Pod.StorageSize = resource.MustParse("0")
-				_, err := ACluster(clusterDef)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("should reject a configuration where podStorageSize is present", func() {
-				clusterDef.Spec.Pod.StorageSize = resource.MustParse("10Gi")
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("podStorageSize property provided when useEmptyDir is true for Cassandra cluster definition: mynamespace.mycluster"))
 			})
 
 			It("should respect the useEmptyDir flag if the operator is configured to allow emptyDir and podStorageSize is not set", func() {
@@ -296,73 +173,7 @@ var _ = Describe("cluster construction", func() {
 			})
 		})
 
-		Context("useEmptyDir is false", func() {
-			BeforeEach(func() {
-				clusterDef.Spec.UseEmptyDir = ptr.Bool(false)
-			})
-
-			It("should reject a configuration with no pod storage size property", func() {
-				clusterDef.Spec.Pod.StorageSize = resource.Quantity{}
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("no podStorageSize property provided and useEmptyDir false for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should reject a configuration with racks having no storageclass", func() {
-				clusterDef.Spec.Racks = []v1alpha1.Rack{{Name: "a", StorageClass: "", Zone: "a", Replicas: 1}}
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("rack named 'a' with no storage class specified, either set useEmptyDir to true or specify storage class: mynamespace.mycluster"))
-			})
-
-			It("should reject a configuration with racks having no zone", func() {
-				clusterDef.Spec.Racks = []v1alpha1.Rack{{Name: "a", StorageClass: "some-storage-class", Zone: "", Replicas: 1}}
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("rack named 'a' with no zone specified, either set useEmptyDir to true or specify zone: mynamespace.mycluster"))
-			})
-		})
-
 		Context("snapshot config", func() {
-			It("should be rejected when schedule is not provided", func() {
-				clusterDef.Spec.Snapshot.Schedule = ""
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("no snapshot schedule property provided for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when schedule is not a cron expression", func() {
-				clusterDef.Spec.Snapshot.Schedule = "1 2 3 x"
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot schedule, must be a cron expression but got '1 2 3 x' for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when cleanup schedule is not a cron expression", func() {
-				clusterDef.Spec.Snapshot.RetentionPolicy.CleanupSchedule = "1 x y z"
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot cleanup schedule, must be a cron expression but got '1 x y z' for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when snapshot timeout value is negative", func() {
-				timeoutSeconds := int32(-1)
-				clusterDef.Spec.Snapshot.TimeoutSeconds = &timeoutSeconds
-
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot timeoutSeconds value -1, must be non-negative for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when retention policy's retention period value is negative", func() {
-				retentionPeriodDays := int32(-1)
-				clusterDef.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays = &retentionPeriodDays
-
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot retention policy retentionPeriodDays value -1, must be non-negative for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
-			It("should be rejected when retention policy's timeout value is negative", func() {
-				cleanupTimeoutSeconds := int32(-1)
-				clusterDef.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds = &cleanupTimeoutSeconds
-
-				_, err := ACluster(clusterDef)
-				Expect(err).To(MatchError("invalid snapshot retention policy cleanupTimeoutSeconds value -1, must be non-negative for Cassandra cluster definition: mynamespace.mycluster"))
-			})
-
 			It("should use the latest version of the cassandra snapshot image if one is not supplied for the cluster", func() {
 				cluster, err := ACluster(clusterDef)
 				Expect(err).ToNot(HaveOccurred())
@@ -980,9 +791,7 @@ var _ = Describe("creation of snapshot cleanup job", func() {
 	})
 
 	It("should not create a cleanup job if the retention policy is disabled in the cluster spec", func() {
-		clusterDef.Spec.Snapshot.RetentionPolicy = &v1alpha1.RetentionPolicy{
-			Enabled: ptr.Bool(false),
-		}
+		clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = ptr.Bool(false)
 		cluster, err := ACluster(clusterDef)
 		Expect(err).NotTo(HaveOccurred())
 

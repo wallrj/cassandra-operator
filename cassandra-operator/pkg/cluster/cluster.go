@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robfig/cron"
 	appsv1 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/validation"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 )
@@ -100,27 +100,11 @@ func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
 
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
-	if err := validateRacks(clusterDefinition); err != nil {
-		return err
-	}
-
-	if err := validatePodResources(clusterDefinition); err != nil {
-		return err
-	}
-
-	if err := validateSnapshot(clusterDefinition); err != nil {
-		return err
-	}
-
 	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
 		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()
 	} else {
 		livenessProbe := clusterDefinition.Spec.Pod.LivenessProbe
 		mergeProbeDefaults(livenessProbe, &defaultLivenessProbe)
-		err := validateLivenessProbe(livenessProbe, clusterDefinition)
-		if err != nil {
-			return err
-		}
 	}
 
 	if clusterDefinition.Spec.Pod.ReadinessProbe == nil {
@@ -128,10 +112,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	} else {
 		readinessProbe := clusterDefinition.Spec.Pod.ReadinessProbe
 		mergeProbeDefaults(readinessProbe, &defaultReadinessProbe)
-		err := validateReadinessProbe(readinessProbe, clusterDefinition)
-		if err != nil {
-			return err
-		}
 	}
 
 	cluster.definition = clusterDefinition.DeepCopy()
@@ -145,114 +125,16 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 		snapshotImage := v1alpha1helpers.GetSnapshotImage(cluster.definition)
 		cluster.definition.Spec.Snapshot.Image = &snapshotImage
 	}
+
+	if err := validation.ValidateCassandra(cluster.definition).ToAggregate(); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Definition returns a copy of the definition of the cluster. Any modifications made to this will be ignored.
 func (c *Cluster) Definition() *v1alpha1.Cassandra {
 	return c.definition.DeepCopy()
-}
-
-func validateRacks(clusterDefinition *v1alpha1.Cassandra) error {
-	if len(clusterDefinition.Spec.Racks) == 0 {
-		return fmt.Errorf("no racks specified for cluster: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-
-	for _, rack := range clusterDefinition.Spec.Racks {
-		if rack.Replicas < 1 {
-			return fmt.Errorf("invalid rack replicas value %d provided for Cassandra cluster definition: %s.%s", rack.Replicas, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
-			return fmt.Errorf("rack named '%s' with no storage class specified, either set useEmptyDir to true or specify storage class: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.Zone == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
-			return fmt.Errorf("rack named '%s' with no zone specified, either set useEmptyDir to true or specify zone: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
-		}
-	}
-	return nil
-}
-
-func validatePodResources(clusterDefinition *v1alpha1.Cassandra) error {
-	if clusterDefinition.Spec.Pod.Memory.IsZero() {
-		return fmt.Errorf("no podMemory property provided for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-
-	if v1alpha1helpers.UseEmptyDir(clusterDefinition) && !clusterDefinition.Spec.Pod.StorageSize.IsZero() {
-		return fmt.Errorf("podStorageSize property provided when useEmptyDir is true for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-
-	if !v1alpha1helpers.UseEmptyDir(clusterDefinition) && clusterDefinition.Spec.Pod.StorageSize.IsZero() {
-		return fmt.Errorf("no podStorageSize property provided and useEmptyDir false for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	return nil
-}
-
-func validateSnapshot(clusterDefinition *v1alpha1.Cassandra) error {
-	if clusterDefinition.Spec.Snapshot == nil {
-		return nil
-	}
-
-	if clusterDefinition.Spec.Snapshot.Schedule == "" {
-		return fmt.Errorf("no snapshot schedule property provided for Cassandra cluster definition: %s", clusterDefinition.QualifiedName())
-	}
-
-	if _, err := cron.Parse(clusterDefinition.Spec.Snapshot.Schedule); err != nil {
-		return fmt.Errorf("invalid snapshot schedule, must be a cron expression but got '%s' for Cassandra cluster definition: %s.%s", clusterDefinition.Spec.Snapshot.Schedule, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-
-	timeoutSeconds := clusterDefinition.Spec.Snapshot.TimeoutSeconds
-	if timeoutSeconds != nil && *timeoutSeconds < 0 {
-		return fmt.Errorf("invalid snapshot timeoutSeconds value %d, must be non-negative for Cassandra cluster definition: %s", *timeoutSeconds, clusterDefinition.QualifiedName())
-	}
-
-	retentionPolicy := clusterDefinition.Spec.Snapshot.RetentionPolicy
-	if retentionPolicy != nil {
-		retentionPeriodDays := retentionPolicy.RetentionPeriodDays
-		if retentionPeriodDays != nil && *retentionPeriodDays < 0 {
-			return fmt.Errorf("invalid snapshot retention policy retentionPeriodDays value %d, must be non-negative for Cassandra cluster definition: %s", *retentionPeriodDays, clusterDefinition.QualifiedName())
-		}
-
-		cleanupTimeoutSeconds := retentionPolicy.CleanupTimeoutSeconds
-		if cleanupTimeoutSeconds != nil && *cleanupTimeoutSeconds < 0 {
-			return fmt.Errorf("invalid snapshot retention policy cleanupTimeoutSeconds value %d, must be non-negative for Cassandra cluster definition: %s", *cleanupTimeoutSeconds, clusterDefinition.QualifiedName())
-		}
-
-		if retentionPolicy.CleanupSchedule != "" {
-			if _, err := cron.Parse(retentionPolicy.CleanupSchedule); err != nil {
-				return fmt.Errorf("invalid snapshot cleanup schedule, must be a cron expression but got '%s' for Cassandra cluster definition: %s", retentionPolicy.CleanupSchedule, clusterDefinition.QualifiedName())
-			}
-		}
-	}
-
-	return nil
-}
-
-func validateLivenessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	if probe.SuccessThreshold == nil || *probe.SuccessThreshold != 1 {
-		return fmt.Errorf("invalid success threshold for liveness probe, must be set to 1 for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	return validateProbe("liveness", probe, clusterDefinition)
-}
-
-func validateReadinessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	return validateProbe("readiness", probe, clusterDefinition)
-}
-
-func validateProbe(name string, probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	if probe.FailureThreshold == nil || *probe.FailureThreshold < 1 {
-		return fmt.Errorf("invalid failure threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.FailureThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	if probe.InitialDelaySeconds == nil || *probe.InitialDelaySeconds < 1 {
-		return fmt.Errorf("invalid initial delay for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.InitialDelaySeconds, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	if probe.PeriodSeconds == nil || *probe.PeriodSeconds < 1 {
-		return fmt.Errorf("invalid period seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.PeriodSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	if probe.SuccessThreshold == nil || *probe.SuccessThreshold < 1 {
-		return fmt.Errorf("invalid success threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.SuccessThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	if probe.TimeoutSeconds == nil || *probe.TimeoutSeconds < 1 {
-		return fmt.Errorf("invalid timeout seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.TimeoutSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	return nil
 }
 
 func mergeProbeDefaults(configuredProbe *v1alpha1.Probe, defaultProbe *v1alpha1.Probe) {
