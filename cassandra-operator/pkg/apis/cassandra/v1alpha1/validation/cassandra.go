@@ -193,3 +193,8 @@ func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path)
 	}
 	return allErrs
 }
+
+func ValidateCassandraUpdate(old, new *v1alpha1.Cassandra) field.ErrorList {
+	var allErrs field.ErrorList
+	return allErrs
+}
