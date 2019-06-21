@@ -45,16 +45,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 
 	for i, rack := range c.Spec.Racks {
 		fldPath = fldPath.Child(fmt.Sprintf("%d:%s", i, rack.Name))
-		if rack.Replicas < 1 {
-			allErrs = append(
-				allErrs,
-				field.Invalid(
-					fldPath.Child("Replicas"),
-					rack.Replicas,
-					"must be > 0",
-				),
-			)
-		}
+		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("Replicas"), rack.Replicas, 1)
 		if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(c) {
 			allErrs = append(
 				allErrs,
