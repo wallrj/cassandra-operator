@@ -148,14 +148,14 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 	return allErrs
 }
 
-func validateUnsignedInt(allErrs field.ErrorList, c *v1alpha1.Cassandra, fldPath *field.Path, value int32) field.ErrorList {
-	if value < 0 {
+func validateUnsignedInt(allErrs field.ErrorList, c *v1alpha1.Cassandra, fldPath *field.Path, value int32, min int32) field.ErrorList {
+	if value < min {
 		allErrs = append(
 			allErrs,
 			field.Invalid(
 				fldPath,
 				value,
-				fmt.Sprintf("must be a positive number in Cassandra cluster %s", c.QualifiedName()),
+				fmt.Sprintf("must >= %d in Cassandra cluster %s", min, c.QualifiedName()),
 			),
 		)
 	}
@@ -164,11 +164,11 @@ func validateUnsignedInt(allErrs field.ErrorList, c *v1alpha1.Cassandra, fldPath
 
 func validateProbe(c *v1alpha1.Cassandra, probe *v1alpha1.Probe, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("FailureThreshold"), *probe.FailureThreshold)
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("InitialDelaySeconds"), *probe.InitialDelaySeconds)
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("PeriodSeconds"), *probe.PeriodSeconds)
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("SuccessThreshold"), *probe.SuccessThreshold)
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("TimeoutSeconds"), *probe.TimeoutSeconds)
+	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("FailureThreshold"), *probe.FailureThreshold, 1)
+	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("InitialDelaySeconds"), *probe.InitialDelaySeconds, 0)
+	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("PeriodSeconds"), *probe.PeriodSeconds, 1)
+	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("SuccessThreshold"), *probe.SuccessThreshold, 1)
+	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("TimeoutSeconds"), *probe.TimeoutSeconds, 1)
 	return allErrs
 }
 
@@ -192,7 +192,7 @@ func validateSnapshot(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorLis
 		)
 	}
 	if c.Spec.Snapshot.TimeoutSeconds != nil {
-		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("TimeoutSeconds"), *c.Spec.Snapshot.TimeoutSeconds)
+		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("TimeoutSeconds"), *c.Spec.Snapshot.TimeoutSeconds, 1)
 	}
 	allErrs = append(
 		allErrs,
@@ -207,10 +207,10 @@ func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path)
 		return allErrs
 	}
 	if c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays != nil {
-		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("RetentionPeriodDays"), *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays)
+		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("RetentionPeriodDays"), *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays, 1)
 	}
 	if c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds != nil {
-		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("CleanupTimeoutSeconds"), *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds)
+		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("CleanupTimeoutSeconds"), *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds, 1)
 	}
 	if _, err := cron.Parse(c.Spec.Snapshot.RetentionPolicy.CleanupSchedule); err != nil {
 		allErrs = append(
