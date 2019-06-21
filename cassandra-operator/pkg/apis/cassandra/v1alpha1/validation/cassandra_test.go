@@ -49,6 +49,20 @@ var _ = Describe("validation functions", func() {
 						CPU:         resource.MustParse("0"),
 						Memory:      resource.MustParse("1Gi"),
 						StorageSize: resource.MustParse("100Gi"),
+						LivenessProbe: &v1alpha1.Probe{
+							FailureThreshold:    ptr.Int32(1),
+							InitialDelaySeconds: ptr.Int32(1),
+							PeriodSeconds:       ptr.Int32(1),
+							SuccessThreshold:    ptr.Int32(1),
+							TimeoutSeconds:      ptr.Int32(1),
+						},
+						ReadinessProbe: &v1alpha1.Probe{
+							FailureThreshold:    ptr.Int32(1),
+							InitialDelaySeconds: ptr.Int32(1),
+							PeriodSeconds:       ptr.Int32(1),
+							SuccessThreshold:    ptr.Int32(1),
+							TimeoutSeconds:      ptr.Int32(1),
+						},
 					},
 					Snapshot: &v1alpha1.Snapshot{
 						Schedule:       "1 23 * * *",
@@ -143,6 +157,48 @@ var _ = Describe("validation functions", func() {
 						})
 						It("fails if StorageSize is not zero", func() {
 							cass.Spec.Pod.StorageSize.Set(1)
+						})
+					})
+					Context("LivenessProbe", func() {
+						var probe *v1alpha1.Probe
+						BeforeEach(func() {
+							probe = cass.Spec.Pod.LivenessProbe
+						})
+						It("fails if FailureThreshold < 0", func() {
+							probe.FailureThreshold = ptr.Int32(-1)
+						})
+						It("fails if InitialDelaySeconds < 0", func() {
+							probe.InitialDelaySeconds = ptr.Int32(-1)
+						})
+						It("fails if PeriodSeconds < 0", func() {
+							probe.PeriodSeconds = ptr.Int32(-1)
+						})
+						It("fails if SuccessThreshold < 0", func() {
+							probe.SuccessThreshold = ptr.Int32(-1)
+						})
+						It("fails if TimeoutSeconds < 0", func() {
+							probe.TimeoutSeconds = ptr.Int32(-1)
+						})
+					})
+					Context("ReadinessProbe", func() {
+						var probe *v1alpha1.Probe
+						BeforeEach(func() {
+							probe = cass.Spec.Pod.ReadinessProbe
+						})
+						It("fails if FailureThreshold < 0", func() {
+							probe.FailureThreshold = ptr.Int32(-1)
+						})
+						It("fails if InitialDelaySeconds < 0", func() {
+							probe.InitialDelaySeconds = ptr.Int32(-1)
+						})
+						It("fails if PeriodSeconds < 0", func() {
+							probe.PeriodSeconds = ptr.Int32(-1)
+						})
+						It("fails if SuccessThreshold < 0", func() {
+							probe.SuccessThreshold = ptr.Int32(-1)
+						})
+						It("fails if TimeoutSeconds < 0", func() {
+							probe.TimeoutSeconds = ptr.Int32(-1)
 						})
 					})
 				})
