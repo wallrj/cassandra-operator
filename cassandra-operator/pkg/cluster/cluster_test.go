@@ -58,12 +58,6 @@ var _ = Describe("cluster construction", func() {
 	})
 
 	Context("config validation", func() {
-		It("should allow a configuration with no pod CPU property", func() {
-			clusterDef.Spec.Pod.CPU = resource.Quantity{}
-			_, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		It("should use the 3.11 version of the apache cassandra image if one is not supplied for the cluster", func() {
 			cluster, err := ACluster(clusterDef)
 			Expect(err).ToNot(HaveOccurred())
