@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kr/pretty"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -79,7 +78,6 @@ var _ = Describe("validation functions", func() {
 
 		Context("success cases", func() {
 			AfterEach(func() {
-				By(pretty.Sprintf("validating %# v", *cass))
 				err = validation.ValidateCassandra(cass).ToAggregate()
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -103,7 +101,6 @@ var _ = Describe("validation functions", func() {
 
 		Context("failure cases", func() {
 			AfterEach(func() {
-				By(pretty.Sprintf("validating %# v", *cass))
 				err = validation.ValidateCassandra(cass).ToAggregate()
 				fmt.Fprintf(GinkgoWriter, "INFO: Error message was: %s", err)
 				Expect(err).To(HaveOccurred())
