@@ -164,6 +164,9 @@ var _ = Describe("validation functions", func() {
 						BeforeEach(func() {
 							probe = cass.Spec.Pod.LivenessProbe
 						})
+						It("fails if FailureThreshold < 1", func() {
+							probe.FailureThreshold = ptr.Int32(0)
+						})
 						It("fails if FailureThreshold < 0", func() {
 							probe.FailureThreshold = ptr.Int32(-1)
 						})
@@ -173,11 +176,23 @@ var _ = Describe("validation functions", func() {
 						It("fails if PeriodSeconds < 0", func() {
 							probe.PeriodSeconds = ptr.Int32(-1)
 						})
+						It("fails if PeriodSeconds < 1", func() {
+							probe.PeriodSeconds = ptr.Int32(0)
+						})
 						It("fails if SuccessThreshold < 0", func() {
 							probe.SuccessThreshold = ptr.Int32(-1)
 						})
+						It("fails if SuccessThreshold < 1", func() {
+							probe.SuccessThreshold = ptr.Int32(0)
+						})
+						It("fails if SuccessThreshold > 1 (Must be 1 for liveness)", func() {
+							probe.SuccessThreshold = ptr.Int32(2)
+						})
 						It("fails if TimeoutSeconds < 0", func() {
 							probe.TimeoutSeconds = ptr.Int32(-1)
+						})
+						It("fails if TimeoutSeconds < 1", func() {
+							probe.TimeoutSeconds = ptr.Int32(0)
 						})
 					})
 					Context("ReadinessProbe", func() {
@@ -185,6 +200,9 @@ var _ = Describe("validation functions", func() {
 						BeforeEach(func() {
 							probe = cass.Spec.Pod.ReadinessProbe
 						})
+						It("fails if FailureThreshold < 1", func() {
+							probe.FailureThreshold = ptr.Int32(0)
+						})
 						It("fails if FailureThreshold < 0", func() {
 							probe.FailureThreshold = ptr.Int32(-1)
 						})
@@ -194,11 +212,24 @@ var _ = Describe("validation functions", func() {
 						It("fails if PeriodSeconds < 0", func() {
 							probe.PeriodSeconds = ptr.Int32(-1)
 						})
+						It("fails if PeriodSeconds < 1", func() {
+							probe.PeriodSeconds = ptr.Int32(0)
+						})
 						It("fails if SuccessThreshold < 0", func() {
 							probe.SuccessThreshold = ptr.Int32(-1)
 						})
+						It("fails if SuccessThreshold < 1", func() {
+							probe.SuccessThreshold = ptr.Int32(0)
+						})
+						//
+						// It("fails if SuccessThreshold > 1 (Must be 1 for liveness)", func() {
+						//	probe.SuccessThreshold = ptr.Int32(2)
+						// })
 						It("fails if TimeoutSeconds < 0", func() {
 							probe.TimeoutSeconds = ptr.Int32(-1)
+						})
+						It("fails if TimeoutSeconds < 1", func() {
+							probe.TimeoutSeconds = ptr.Int32(0)
 						})
 					})
 				})
