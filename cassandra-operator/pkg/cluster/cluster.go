@@ -100,10 +100,6 @@ func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
 
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
-	if err := validation.ValidateCassandra(clusterDefinition).ToAggregate(); err != nil {
-		return err
-	}
-
 	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
 		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()
 	} else {
@@ -128,6 +124,10 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	if cluster.definition.Spec.Snapshot != nil {
 		snapshotImage := v1alpha1helpers.GetSnapshotImage(cluster.definition)
 		cluster.definition.Spec.Snapshot.Image = &snapshotImage
+	}
+
+	if err := validation.ValidateCassandra(cluster.definition).ToAggregate(); err != nil {
+		return err
 	}
 	return nil
 }
