@@ -17,7 +17,6 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 )
 
 const (
@@ -44,22 +43,6 @@ const (
 
 	healthServerPort = 8080
 )
-
-var defaultLivenessProbe = v1alpha1.Probe{
-	FailureThreshold:    ptr.Int32(3),
-	InitialDelaySeconds: ptr.Int32(30),
-	PeriodSeconds:       ptr.Int32(30),
-	SuccessThreshold:    ptr.Int32(1),
-	TimeoutSeconds:      ptr.Int32(5),
-}
-
-var defaultReadinessProbe = v1alpha1.Probe{
-	FailureThreshold:    ptr.Int32(3),
-	InitialDelaySeconds: ptr.Int32(30),
-	PeriodSeconds:       ptr.Int32(15),
-	SuccessThreshold:    ptr.Int32(1),
-	TimeoutSeconds:      ptr.Int32(5),
-}
 
 var (
 	maxSidecarMemoryRequest resource.Quantity
@@ -112,39 +95,15 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 		return err
 	}
 
-	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
-		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()
-	} else {
-		livenessProbe := clusterDefinition.Spec.Pod.LivenessProbe
-		mergeProbeDefaults(livenessProbe, &defaultLivenessProbe)
-		err := validateLivenessProbe(livenessProbe, clusterDefinition)
-		if err != nil {
-			return err
-		}
+	if err := validateLivenessProbe(clusterDefinition.Spec.Pod.LivenessProbe, clusterDefinition); err != nil {
+		return err
 	}
 
-	if clusterDefinition.Spec.Pod.ReadinessProbe == nil {
-		clusterDefinition.Spec.Pod.ReadinessProbe = defaultReadinessProbe.DeepCopy()
-	} else {
-		readinessProbe := clusterDefinition.Spec.Pod.ReadinessProbe
-		mergeProbeDefaults(readinessProbe, &defaultReadinessProbe)
-		err := validateReadinessProbe(readinessProbe, clusterDefinition)
-		if err != nil {
-			return err
-		}
+	if err := validateReadinessProbe(clusterDefinition.Spec.Pod.ReadinessProbe, clusterDefinition); err != nil {
+		return err
 	}
 
 	cluster.definition = clusterDefinition.DeepCopy()
-	bootstrapperImage := v1alpha1helpers.GetBootstrapperImage(cluster.definition)
-	cluster.definition.Spec.Pod.BootstrapperImage = &bootstrapperImage
-
-	cassandraImage := v1alpha1helpers.GetCassandraImage(cluster.definition)
-	cluster.definition.Spec.Pod.Image = &cassandraImage
-
-	if cluster.definition.Spec.Snapshot != nil {
-		snapshotImage := v1alpha1helpers.GetSnapshotImage(cluster.definition)
-		cluster.definition.Spec.Snapshot.Image = &snapshotImage
-	}
 	return nil
 }
 
@@ -161,9 +120,9 @@ func validateRacks(clusterDefinition *v1alpha1.Cassandra) error {
 	for _, rack := range clusterDefinition.Spec.Racks {
 		if rack.Replicas < 1 {
 			return fmt.Errorf("invalid rack replicas value %d provided for Cassandra cluster definition: %s.%s", rack.Replicas, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
+		} else if rack.StorageClass == "" && !*clusterDefinition.Spec.UseEmptyDir {
 			return fmt.Errorf("rack named '%s' with no storage class specified, either set useEmptyDir to true or specify storage class: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.Zone == "" && !v1alpha1helpers.UseEmptyDir(clusterDefinition) {
+		} else if rack.Zone == "" && !*clusterDefinition.Spec.UseEmptyDir {
 			return fmt.Errorf("rack named '%s' with no zone specified, either set useEmptyDir to true or specify zone: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
 		}
 	}
@@ -175,11 +134,11 @@ func validatePodResources(clusterDefinition *v1alpha1.Cassandra) error {
 		return fmt.Errorf("no podMemory property provided for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 
-	if v1alpha1helpers.UseEmptyDir(clusterDefinition) && !clusterDefinition.Spec.Pod.StorageSize.IsZero() {
+	if *clusterDefinition.Spec.UseEmptyDir && !clusterDefinition.Spec.Pod.StorageSize.IsZero() {
 		return fmt.Errorf("podStorageSize property provided when useEmptyDir is true for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 
-	if !v1alpha1helpers.UseEmptyDir(clusterDefinition) && clusterDefinition.Spec.Pod.StorageSize.IsZero() {
+	if !*clusterDefinition.Spec.UseEmptyDir && clusterDefinition.Spec.Pod.StorageSize.IsZero() {
 		return fmt.Errorf("no podStorageSize property provided and useEmptyDir false for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 	return nil
@@ -427,7 +386,7 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotJobName(),
-		Image:   v1alpha1helpers.GetSnapshotImage(c.definition),
+		Image:   *c.definition.Spec.Snapshot.Image,
 		Command: backupCommand,
 	}
 }
@@ -464,7 +423,7 @@ func (c *Cluster) CreateSnapshotCleanupContainer(snapshot *v1alpha1.Snapshot) *v
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotCleanupJobName(),
-		Image:   v1alpha1helpers.GetSnapshotImage(c.definition),
+		Image:   *c.definition.Spec.Snapshot.Image,
 		Command: cleanupCommand,
 	}
 }
@@ -514,7 +473,7 @@ func (c *Cluster) objectMetadataWithOwner(name string, extraLabels ...string) me
 func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
 	return v1.Container{
 		Name:  cassandraContainerName,
-		Image: v1alpha1helpers.GetCassandraImage(c.definition),
+		Image: *c.definition.Spec.Pod.Image,
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "internode",
@@ -562,7 +521,7 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 func (c *Cluster) createCassandraSidecarContainer(rack *v1alpha1.Rack) v1.Container {
 	return v1.Container{
 		Name:  cassandraSidecarContainerName,
-		Image: v1alpha1helpers.GetCassandraSidecarImage(c.definition),
+		Image: *c.definition.Spec.Pod.SidecarImage,
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "api",
@@ -610,7 +569,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 		},
 		{
 			Name:  "CLUSTER_DATA_CENTER",
-			Value: v1alpha1helpers.GetDatacenter(c.definition),
+			Value: *c.definition.Spec.Datacenter,
 		},
 		{
 			Name: "NODE_LISTEN_ADDRESS",
@@ -636,7 +595,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 func (c *Cluster) createCassandraDataPersistentVolumeClaimForRack(rack *v1alpha1.Rack) []v1.PersistentVolumeClaim {
 	var persistentVolumeClaim []v1.PersistentVolumeClaim
 
-	if !v1alpha1helpers.UseEmptyDir(c.definition) {
+	if !*c.definition.Spec.UseEmptyDir {
 		persistentVolumeClaim = append(persistentVolumeClaim, v1.PersistentVolumeClaim{
 			ObjectMeta: c.objectMetadata(c.definition.StorageVolumeName(), RackLabel, rack.Name, "app", c.definition.Name),
 			Spec: v1.PersistentVolumeClaimSpec{
@@ -681,7 +640,7 @@ func (c *Cluster) createPodVolumes(customConfigMap *v1.ConfigMap) []v1.Volume {
 		volumes = append(volumes, c.createConfigMapVolume(customConfigMap))
 	}
 
-	if v1alpha1helpers.UseEmptyDir(c.definition) {
+	if *c.definition.Spec.UseEmptyDir {
 		volumes = append(volumes, emptyDir(c.definition.StorageVolumeName()))
 	}
 
@@ -787,7 +746,7 @@ func (c *Cluster) customConfigMapVolumeName() string {
 func (c *Cluster) createInitConfigContainer() v1.Container {
 	return v1.Container{
 		Name:    "init-config",
-		Image:   v1alpha1helpers.GetCassandraImage(c.definition),
+		Image:   *c.definition.Spec.Pod.Image,
 		Command: []string{"sh", "-c", "cp -vr /etc/cassandra/* /configuration"},
 		VolumeMounts: []v1.VolumeMount{
 			{Name: "configuration", MountPath: "/configuration"},
@@ -808,7 +767,7 @@ func (c *Cluster) createCassandraBootstrapperContainer(rack *v1alpha1.Rack, cust
 	return v1.Container{
 		Name:         cassandraBootstrapperContainerName,
 		Env:          c.createEnvironmentVariableDefinition(rack),
-		Image:        v1alpha1helpers.GetBootstrapperImage(c.definition),
+		Image:        *c.definition.Spec.Pod.BootstrapperImage,
 		Resources:    c.createResourceRequirements(),
 		VolumeMounts: mounts,
 	}

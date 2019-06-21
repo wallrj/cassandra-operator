@@ -135,6 +135,7 @@ github.com/shurcooL/sanitized_anchor_name v0.0.0-20170918181015-86672fcb3f95/go.
 github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.3.0 h1:hI/7Q+DtNZ2kINb6qt/lS+IyXnHQe9e90POfeewL/ME=
 github.com/sirupsen/logrus v1.3.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
+github.com/sky-uk/cassandra-operator v0.70.1-alpha.2 h1:6KuKR711k1SJjQr63+7dcd2BHltTIWBsItx4KO9HXYM=
 github.com/sky-uk/licence-compliance-checker v1.1.0 h1:S3l+chcLXeTk7DoHUR+DNYOTP8k3HEMbkiz1871yl1A=
 github.com/sky-uk/licence-compliance-checker v1.1.0/go.mod h1:aV8k9xf/XY+DLnPXQvscJpgHMiB2PTZ4rD2gq1vMK8U=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=

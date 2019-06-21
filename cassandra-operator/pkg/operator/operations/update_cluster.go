@@ -37,6 +37,11 @@ func (o *UpdateClusterOperation) Execute() {
 		return
 	}
 
+	if len(clusterChanges) == 0 {
+		log.Infof("No changes are required to be applied for cluster %s", oldCluster.QualifiedName())
+		return
+	}
+
 	for _, clusterChange := range clusterChanges {
 		switch clusterChange.ChangeType {
 		case adjuster.UpdateRack:

@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -34,6 +35,7 @@ const (
 	rackReplicas                      = "$.spec.replicas"
 	clusterConfigHash                 = "$.spec.template.metadata.annotations.clusterConfigHash"
 	bootstrapperImage                 = "$.spec.template.spec.initContainers[0].image"
+	sidecarImage                      = "$.spec.template.spec.containers[1].image"
 )
 
 func TestCluster(t *testing.T) {
@@ -42,8 +44,7 @@ func TestCluster(t *testing.T) {
 }
 
 var _ = Describe("cluster events", func() {
-	var oldCluster *v1alpha1.Cassandra
-	var newCluster *v1alpha1.Cassandra
+	var oldCluster, newCluster *v1alpha1.Cassandra
 	var adjuster *Adjuster
 
 	BeforeEach(func() {
@@ -75,6 +76,7 @@ var _ = Describe("cluster events", func() {
 				},
 			},
 		}
+		v1alpha1helpers.SetDefaultsForCassandra(oldCluster)
 		newCluster = &v1alpha1.Cassandra{
 			Spec: v1alpha1.CassandraSpec{
 				Datacenter: ptr.String("ADatacenter"),
@@ -89,6 +91,7 @@ var _ = Describe("cluster events", func() {
 				},
 			},
 		}
+		v1alpha1helpers.SetDefaultsForCassandra(newCluster)
 		var err error
 		adjuster, err = New()
 		Expect(err).To(Not(HaveOccurred()))
@@ -176,6 +179,14 @@ var _ = Describe("cluster events", func() {
 			Expect(changes).To(HaveLen(1))
 			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{bootstrapperImage: "someotherimage"}, 0))
 		})
+
+		It("should produce a patch containing the updated image when the sidecar image has been updated", func() {
+			newCluster.Spec.Pod.SidecarImage = ptr.String("anotherImage")
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(1))
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{sidecarImage: "anotherImage"}, 0))
+		})
 	})
 
 	Context("scale-up change is detected", func() {
@@ -219,8 +230,55 @@ var _ = Describe("cluster events", func() {
 		})
 	})
 
-	Context("nothing has changed in the definition", func() {
-		It("should not produce any changes", func() {
+	Context("nothing relevant has changed in the definition", func() {
+		It("should not produce any changes when nothing has changed", func() {
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when a snapshot configuration is added", func() {
+			newCluster.Spec.Snapshot = &v1alpha1.Snapshot{
+				Schedule: "2 * * * *",
+			}
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when a snapshot configuration is modified", func() {
+			oldCluster.Spec.Snapshot = &v1alpha1.Snapshot{
+				Schedule: "2 * * * *",
+			}
+			newCluster.Spec.Snapshot = &v1alpha1.Snapshot{
+				Schedule: "3 * * * *",
+			}
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when a snapshot configuration is removed", func() {
+			oldCluster.Spec.Snapshot = &v1alpha1.Snapshot{
+				Schedule: "2 * * * *",
+			}
+			newCluster.Spec.Snapshot = nil
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when cpu values are the same but expressed with different units", func() {
+			oldCluster.Spec.Pod.CPU = resource.MustParse("1000m")
+			newCluster.Spec.Pod.CPU = resource.MustParse("1")
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when memory values are the same but expressed with different units", func() {
+			oldCluster.Spec.Pod.Memory = resource.MustParse("1Gi")
+			newCluster.Spec.Pod.Memory = resource.MustParse("1024Mi")
 			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(0))
@@ -232,15 +290,14 @@ var _ = Describe("cluster events", func() {
 			newCluster.Spec.Datacenter = ptr.String("other-dc")
 			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
-			Expect(err).To(MatchError("changing dc is forbidden. The dc used will continue to be 'ADatacenter'"))
+			Expect(err).To(MatchError("changing datacenter is forbidden. The datacenter used will continue to be 'ADatacenter'"))
 		})
 
 		It("should report that the default DC name will continue to be used when no DC was previously provided", func() {
-			oldCluster.Spec.Datacenter = nil
 			newCluster.Spec.Datacenter = ptr.String("new-dc")
 			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
-			Expect(err).To(MatchError(fmt.Sprintf("changing dc is forbidden. The dc used will continue to be '%s'", v1alpha1.DefaultDCName)))
+			Expect(err).To(MatchError(fmt.Sprintf("changing datacenter is forbidden. The datacenter used will continue to be '%s'", *oldCluster.Spec.Datacenter)))
 		})
 
 		It("should reject the change with an error message when Image is changed", func() {
@@ -251,12 +308,11 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should report that the default image will continue to be used if an image was not previously specified", func() {
-			oldCluster.Spec.Pod.Image = nil
 			newCluster.Spec.Pod.Image = ptr.String("other-image")
 
 			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
-			Expect(err).To(MatchError(fmt.Sprintf("changing image is forbidden. The image used will continue to be '%s'", v1alpha1.DefaultCassandraImage)))
+			Expect(err).To(MatchError(fmt.Sprintf("changing image is forbidden. The image used will continue to be '%s'", *oldCluster.Spec.Pod.Image)))
 		})
 
 		It("should reject the change with an error message when UseEmptyDir is changed", func() {

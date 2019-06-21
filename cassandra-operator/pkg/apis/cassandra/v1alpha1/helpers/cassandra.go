@@ -19,55 +19,6 @@ func NewControllerRef(c *v1alpha1.Cassandra) metav1.OwnerReference {
 	})
 }
 
-// UseEmptyDir returns a dereferenced value for Spec.UseEmptyDir
-func UseEmptyDir(c *v1alpha1.Cassandra) bool {
-	if c.Spec.UseEmptyDir != nil {
-		return *c.Spec.UseEmptyDir
-	}
-	return false
-}
-
-// GetImage returns the image for a cluster
-func GetCassandraImage(c *v1alpha1.Cassandra) string {
-	if c.Spec.Pod.Image != nil {
-		return *c.Spec.Pod.Image
-	}
-	return v1alpha1.DefaultCassandraImage
-}
-
-// GetBootstrapperImage returns the bootstrapper image for a cluster
-func GetBootstrapperImage(c *v1alpha1.Cassandra) string {
-	if c.Spec.Pod.BootstrapperImage != nil {
-		return *c.Spec.Pod.BootstrapperImage
-	}
-	return v1alpha1.DefaultCassandraBootstrapperImage
-}
-
-// GetCassandraSidecarImage returns the sidecar image for a cluster
-func GetCassandraSidecarImage(c *v1alpha1.Cassandra) string {
-	if c.Spec.Pod.SidecarImage != nil {
-		return *c.Spec.Pod.SidecarImage
-	}
-	return v1alpha1.DefaultCassandraSidecarImage
-}
-
-// GetSnapshotImage returns the snapshot image for a cluster
-func GetSnapshotImage(c *v1alpha1.Cassandra) string {
-	if c.Spec.Snapshot != nil {
-		if c.Spec.Snapshot.Image != nil {
-			return *c.Spec.Snapshot.Image
-		}
-	}
-	return v1alpha1.DefaultCassandraSnapshotImage
-}
-
-func GetDatacenter(c *v1alpha1.Cassandra) string {
-	if c.Spec.Datacenter == nil {
-		return v1alpha1.DefaultDCName
-	}
-	return *c.Spec.Datacenter
-}
-
 // HasRetentionPolicyEnabled returns true when a retention policy exists and is enabled
 func HasRetentionPolicyEnabled(snapshot *v1alpha1.Snapshot) bool {
 	return snapshot.RetentionPolicy != nil &&
@@ -91,7 +42,23 @@ func SnapshotCleanupPropertiesUpdated(snapshot1 *v1alpha1.Snapshot, snapshot2 *v
 }
 
 func SetDefaultsForCassandra(clusterDefinition *v1alpha1.Cassandra) {
+	setDefaultsForDatacenter(clusterDefinition)
+	setDefaultsForUseEmptyDir(clusterDefinition)
 	setDefaultsForSnapshot(clusterDefinition.Spec.Snapshot)
+	setDefaultsForImages(clusterDefinition)
+	setDefaultsForProbes(clusterDefinition)
+}
+
+func setDefaultsForDatacenter(clusterDefinition *v1alpha1.Cassandra) {
+	if clusterDefinition.Spec.Datacenter == nil {
+		clusterDefinition.Spec.Datacenter = ptr.String(v1alpha1.DefaultDatacenterName)
+	}
+}
+
+func setDefaultsForUseEmptyDir(clusterDefinition *v1alpha1.Cassandra) {
+	if clusterDefinition.Spec.UseEmptyDir == nil {
+		clusterDefinition.Spec.UseEmptyDir = ptr.Bool(false)
+	}
 }
 
 func setDefaultsForSnapshot(snapshot *v1alpha1.Snapshot) {
@@ -100,5 +67,80 @@ func setDefaultsForSnapshot(snapshot *v1alpha1.Snapshot) {
 	case snapshot.RetentionPolicy == nil:
 	case snapshot.RetentionPolicy.Enabled == nil:
 		snapshot.RetentionPolicy.Enabled = ptr.Bool(true)
+	}
+}
+
+func setDefaultsForImages(clusterDefinition *v1alpha1.Cassandra) {
+	if clusterDefinition.Spec.Pod.BootstrapperImage == nil {
+		clusterDefinition.Spec.Pod.BootstrapperImage = ptr.String(v1alpha1.DefaultCassandraBootstrapperImage)
+	}
+	if clusterDefinition.Spec.Pod.Image == nil {
+		clusterDefinition.Spec.Pod.Image = ptr.String(v1alpha1.DefaultCassandraImage)
+	}
+	if clusterDefinition.Spec.Pod.SidecarImage == nil {
+		clusterDefinition.Spec.Pod.SidecarImage = ptr.String(v1alpha1.DefaultCassandraSidecarImage)
+	}
+	if clusterDefinition.Spec.Snapshot != nil && clusterDefinition.Spec.Snapshot.Image == nil {
+		clusterDefinition.Spec.Snapshot.Image = ptr.String(v1alpha1.DefaultCassandraSnapshotImage)
+	}
+}
+
+func setDefaultsForProbes(clusterDefinition *v1alpha1.Cassandra) {
+	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
+		defaultProbe := defaultLivenessProbe()
+		clusterDefinition.Spec.Pod.LivenessProbe = &defaultProbe
+	} else {
+		livenessProbe := clusterDefinition.Spec.Pod.LivenessProbe
+		mergeProbeDefaults(livenessProbe, defaultLivenessProbe())
+	}
+
+	if clusterDefinition.Spec.Pod.ReadinessProbe == nil {
+		defaultProbe := defaultReadinessProbe()
+		clusterDefinition.Spec.Pod.ReadinessProbe = &defaultProbe
+	} else {
+		readinessProbe := clusterDefinition.Spec.Pod.ReadinessProbe
+		mergeProbeDefaults(readinessProbe, defaultReadinessProbe())
+	}
+}
+
+func mergeProbeDefaults(configuredProbe *v1alpha1.Probe, defaultProbe v1alpha1.Probe) {
+	if configuredProbe.TimeoutSeconds == nil {
+		configuredProbe.TimeoutSeconds = defaultProbe.TimeoutSeconds
+	}
+
+	if configuredProbe.SuccessThreshold == nil {
+		configuredProbe.SuccessThreshold = defaultProbe.SuccessThreshold
+	}
+
+	if configuredProbe.FailureThreshold == nil {
+		configuredProbe.FailureThreshold = defaultProbe.FailureThreshold
+	}
+
+	if configuredProbe.InitialDelaySeconds == nil {
+		configuredProbe.InitialDelaySeconds = defaultProbe.InitialDelaySeconds
+	}
+
+	if configuredProbe.PeriodSeconds == nil {
+		configuredProbe.PeriodSeconds = defaultProbe.PeriodSeconds
+	}
+}
+
+func defaultReadinessProbe() v1alpha1.Probe {
+	return v1alpha1.Probe{
+		FailureThreshold:    ptr.Int32(3),
+		InitialDelaySeconds: ptr.Int32(30),
+		PeriodSeconds:       ptr.Int32(15),
+		SuccessThreshold:    ptr.Int32(1),
+		TimeoutSeconds:      ptr.Int32(5),
+	}
+}
+
+func defaultLivenessProbe() v1alpha1.Probe {
+	return v1alpha1.Probe{
+		FailureThreshold:    ptr.Int32(3),
+		InitialDelaySeconds: ptr.Int32(30),
+		PeriodSeconds:       ptr.Int32(30),
+		SuccessThreshold:    ptr.Int32(1),
+		TimeoutSeconds:      ptr.Int32(5),
 	}
 }
