@@ -109,10 +109,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	} else {
 		livenessProbe := clusterDefinition.Spec.Pod.LivenessProbe
 		mergeProbeDefaults(livenessProbe, &defaultLivenessProbe)
-		err := validateLivenessProbe(livenessProbe, clusterDefinition)
-		if err != nil {
-			return err
-		}
 	}
 
 	if clusterDefinition.Spec.Pod.ReadinessProbe == nil {
@@ -120,10 +116,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	} else {
 		readinessProbe := clusterDefinition.Spec.Pod.ReadinessProbe
 		mergeProbeDefaults(readinessProbe, &defaultReadinessProbe)
-		err := validateReadinessProbe(readinessProbe, clusterDefinition)
-		if err != nil {
-			return err
-		}
 	}
 
 	cluster.definition = clusterDefinition.DeepCopy()
@@ -143,36 +135,6 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 // Definition returns a copy of the definition of the cluster. Any modifications made to this will be ignored.
 func (c *Cluster) Definition() *v1alpha1.Cassandra {
 	return c.definition.DeepCopy()
-}
-
-func validateLivenessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	if probe.SuccessThreshold == nil || *probe.SuccessThreshold != 1 {
-		return fmt.Errorf("invalid success threshold for liveness probe, must be set to 1 for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	return validateProbe("liveness", probe, clusterDefinition)
-}
-
-func validateReadinessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	return validateProbe("readiness", probe, clusterDefinition)
-}
-
-func validateProbe(name string, probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	if probe.FailureThreshold == nil || *probe.FailureThreshold < 1 {
-		return fmt.Errorf("invalid failure threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.FailureThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	if probe.InitialDelaySeconds == nil || *probe.InitialDelaySeconds < 1 {
-		return fmt.Errorf("invalid initial delay for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.InitialDelaySeconds, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	if probe.PeriodSeconds == nil || *probe.PeriodSeconds < 1 {
-		return fmt.Errorf("invalid period seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.PeriodSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	if probe.SuccessThreshold == nil || *probe.SuccessThreshold < 1 {
-		return fmt.Errorf("invalid success threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.SuccessThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	if probe.TimeoutSeconds == nil || *probe.TimeoutSeconds < 1 {
-		return fmt.Errorf("invalid timeout seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.TimeoutSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
-	}
-	return nil
 }
 
 func mergeProbeDefaults(configuredProbe *v1alpha1.Probe, defaultProbe *v1alpha1.Probe) {
