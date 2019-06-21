@@ -131,6 +131,19 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 		)
 	}
 	allErrs = append(allErrs, validateProbe(c, c.Spec.Pod.LivenessProbe, fldPath.Child("LivenessProbe"))...)
+	if *c.Spec.Pod.LivenessProbe.SuccessThreshold != 1 {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				fldPath.Child("LivenessProbe").Child("SuccessThreshold"),
+				*c.Spec.Pod.LivenessProbe.SuccessThreshold,
+				fmt.Sprintf(
+					"must be 1 in Cassandra cluster %s",
+					c.QualifiedName(),
+				),
+			),
+		)
+	}
 	allErrs = append(allErrs, validateProbe(c, c.Spec.Pod.ReadinessProbe, fldPath.Child("ReadinessProbe"))...)
 	return allErrs
 }
