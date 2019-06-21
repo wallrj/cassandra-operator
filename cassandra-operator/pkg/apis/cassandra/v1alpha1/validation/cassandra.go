@@ -2,7 +2,6 @@ package validation
 
 import (
 	"fmt"
-	"reflect"
 
 	apimachineryvalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -197,26 +196,6 @@ func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path)
 				fmt.Sprintf(
 					"is not a valid cron expression (%s)",
 					err,
-				),
-			),
-		)
-	}
-	return allErrs
-}
-
-func ValidateCassandraUpdate(old, new *v1alpha1.Cassandra) field.ErrorList {
-	allErrs := ValidateCassandra(new)
-
-	fldPath := field.NewPath("spec")
-	if !reflect.DeepEqual(new.Spec.Pod.Image, old.Spec.Pod.Image) {
-		allErrs = append(
-			allErrs,
-			field.Forbidden(
-				fldPath.Child("pod").Child("image"),
-				fmt.Sprintf(
-					"cannot change the image. "+
-						"old version: %s, new version: %s",
-					*old.Spec.Pod.Image, *new.Spec.Pod.Image,
 				),
 			),
 		)
