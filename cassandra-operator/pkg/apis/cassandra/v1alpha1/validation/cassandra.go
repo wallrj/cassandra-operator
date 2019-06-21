@@ -38,10 +38,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 			allErrs,
 			field.Required(
 				fldPath,
-				fmt.Sprintf(
-					"must not be empty in Cassandra cluster %s",
-					c.QualifiedName(),
-				),
+				"must not be empty",
 			),
 		)
 		return allErrs
@@ -55,9 +52,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 				field.Invalid(
 					fldPath.Child("Replicas"),
 					rack.Replicas,
-					fmt.Sprintf("must be > 0 in Cassandra cluster %s",
-						c.QualifiedName(),
-					),
+					"must be > 0",
 				),
 			)
 		}
@@ -66,10 +61,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 				allErrs,
 				field.Required(
 					fldPath.Child("StorageClass"),
-					fmt.Sprintf(
-						"must not be empty if useEmptyDir is true in Cassandra cluster %s",
-						c.QualifiedName(),
-					),
+					"must not be empty if useEmptyDir is true",
 				),
 			)
 		}
@@ -78,10 +70,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 				allErrs,
 				field.Required(
 					fldPath.Child("Zone"),
-					fmt.Sprintf(
-						"must not be empty if useEmptyDir is true in Cassandra cluster %s",
-						c.QualifiedName(),
-					),
+					"must not be empty if useEmptyDir is true",
 				),
 			)
 		}
@@ -97,10 +86,7 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			field.Invalid(
 				fldPath.Child("Memory"),
 				c.Spec.Pod.Memory.String(),
-				fmt.Sprintf(
-					"must be > 0 in Cassandra cluster %s",
-					c.QualifiedName(),
-				),
+				"must be > 0",
 			),
 		)
 	}
@@ -110,10 +96,7 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			field.Invalid(
 				fldPath.Child("StorageSize"),
 				c.Spec.Pod.StorageSize.String(),
-				fmt.Sprintf(
-					"must be > 0 when useEmptyDir is false for Cassandra cluster %s",
-					c.QualifiedName(),
-				),
+				"must be > 0 when useEmptyDir is false",
 			),
 		)
 	}
@@ -123,10 +106,7 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			field.Invalid(
 				fldPath.Child("StorageSize"),
 				c.Spec.Pod.StorageSize.String(),
-				fmt.Sprintf(
-					"must be 0 when useEmptyDir is true for Cassandra cluster %s",
-					c.QualifiedName(),
-				),
+				"must be 0 when useEmptyDir is true",
 			),
 		)
 	}
@@ -137,10 +117,7 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			field.Invalid(
 				fldPath.Child("LivenessProbe").Child("SuccessThreshold"),
 				*c.Spec.Pod.LivenessProbe.SuccessThreshold,
-				fmt.Sprintf(
-					"must be 1 in Cassandra cluster %s",
-					c.QualifiedName(),
-				),
+				"must be 1",
 			),
 		)
 	}
@@ -155,7 +132,7 @@ func validateUnsignedInt(allErrs field.ErrorList, c *v1alpha1.Cassandra, fldPath
 			field.Invalid(
 				fldPath,
 				value,
-				fmt.Sprintf("must >= %d in Cassandra cluster %s", min, c.QualifiedName()),
+				fmt.Sprintf("must be >= %d", min),
 			),
 		)
 	}
@@ -184,8 +161,7 @@ func validateSnapshot(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorLis
 				fldPath.Child("Schedule"),
 				c.Spec.Snapshot.Schedule,
 				fmt.Sprintf(
-					"is not a valid cron expression in Cassandra cluster %s (%s)",
-					c.QualifiedName(),
+					"is not a valid cron expression (%s)",
 					err,
 				),
 			),
@@ -219,8 +195,7 @@ func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path)
 				fldPath.Child("CleanupSchedule"),
 				c.Spec.Snapshot.RetentionPolicy.CleanupSchedule,
 				fmt.Sprintf(
-					"is not a valid cron expression in Cassandra cluster %s (%s)",
-					c.QualifiedName(),
+					"is not a valid cron expression (%s)",
 					err,
 				),
 			),
