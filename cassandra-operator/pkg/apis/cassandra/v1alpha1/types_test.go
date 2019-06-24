@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
@@ -17,196 +18,90 @@ func TestTypes(t *testing.T) {
 }
 
 var _ = Describe("Cassandra Types", func() {
-	Context("Pod spec equality", func() {
-		var pod, otherPod *Pod
+	Context("Pod", func() {
 
-		BeforeEach(func() {
-			pod = &Pod{
-				BootstrapperImage: ptr.String("BootstrapperImage"),
-				SidecarImage: ptr.String("SidecarImage"),
-				Image: ptr.String("Image"),
-				Memory: resource.MustParse("2Gi"),
-				CPU: resource.MustParse("1000m"),
-				StorageSize: resource.MustParse("1Gi"),
-				LivenessProbe: &Probe{
-					SuccessThreshold:    ptr.Int32(1),
-					PeriodSeconds:       ptr.Int32(2),
-					InitialDelaySeconds: ptr.Int32(3),
-					FailureThreshold:    ptr.Int32(4),
-					TimeoutSeconds:      ptr.Int32(5),
-				},
-				ReadinessProbe: &Probe{
-					SuccessThreshold:    ptr.Int32(1),
-					PeriodSeconds:       ptr.Int32(2),
-					InitialDelaySeconds: ptr.Int32(3),
-					FailureThreshold:    ptr.Int32(4),
-					TimeoutSeconds:      ptr.Int32(5),
-				},
-			}
-			otherPod = pod.DeepCopy()
-		})
+		DescribeTable("equality",
+			equalityCheck,
+			Entry("if all fields are equal", func(pod *Pod) {}),
+			Entry("when cpu value is the same but using a different amount", func(pod *Pod) { pod.CPU = resource.MustParse("1") }),
+			Entry("when memory value is the same but using a different amount", func(pod *Pod) { pod.Memory = resource.MustParse("2048Mi") }),
+			Entry("when storage size value is the same but using a different amount", func(pod *Pod) { pod.StorageSize = resource.MustParse("1024Mi") }),
+		)
 
-		Context("equality", func() {
-			It("should be equal if all fields are equal", func() {
-				Expect(podsEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should be equal when cpu value is the same but using a different amount", func() {
-				pod.CPU = resource.MustParse("1")
-				Expect(podsEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should be equal when memory value is the same but using a different amount", func() {
-				pod.Memory = resource.MustParse("2048Mi")
-				Expect(podsEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should be equal when storage size value is the same but using a different amount", func() {
-				pod.StorageSize = resource.MustParse("1024Mi")
-				Expect(podsEqual(pod, otherPod)).To(BeTrue())
-			})
-		})
-
-		Context("inequality", func() {
-
-			It("should not be equal when one pod is an empty struct", func() {
-				Expect(pod.Equal(Pod{})).To(BeFalse())
-				Expect(Pod{}.Equal(*pod)).To(BeFalse())
-			})
-
-			It("should not be equal when one pod has a nil bootstrap image", func() {
-				pod.BootstrapperImage = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when pods have different bootstrap images", func() {
-				pod.BootstrapperImage = ptr.String("another image")
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when one pod has a nil sidecar image", func() {
-				pod.SidecarImage = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when pods have different sidecar images", func() {
-				pod.SidecarImage = ptr.String("another image")
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when one pod has a nil cassandra image", func() {
-				pod.Image = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when pods have different cassandra images", func() {
-				pod.Image = ptr.String("another image")
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when one pod has no storage size", func() {
-				pod.StorageSize = resource.Quantity{}
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when pods have different storage sizes", func() {
-				pod.StorageSize = resource.MustParse("10Gi")
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when one pod has no cpu", func() {
-				pod.CPU = resource.Quantity{}
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when pods have different number of cpu", func() {
-				pod.CPU = resource.MustParse("10")
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when one pod has no memory", func() {
-				pod.Memory = resource.Quantity{}
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when pods have different memory sizes", func() {
-				pod.Memory = resource.MustParse("10")
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when liveness probes have different values", func() {
-				pod.LivenessProbe.SuccessThreshold = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.LivenessProbe.TimeoutSeconds = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.LivenessProbe.FailureThreshold = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.LivenessProbe.InitialDelaySeconds = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.LivenessProbe.PeriodSeconds = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when one liveness probe  has nil values", func() {
-				pod.LivenessProbe.SuccessThreshold = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.LivenessProbe.TimeoutSeconds = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.LivenessProbe.FailureThreshold = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.LivenessProbe.InitialDelaySeconds = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.LivenessProbe.PeriodSeconds = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when readiness probes have different values", func() {
-				pod.ReadinessProbe.SuccessThreshold = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.ReadinessProbe.TimeoutSeconds = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.ReadinessProbe.FailureThreshold = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.ReadinessProbe.InitialDelaySeconds = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.ReadinessProbe.PeriodSeconds = ptr.Int32(20)
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-			It("should not be equal when one readiness probe  has nil values", func() {
-				pod.ReadinessProbe.SuccessThreshold = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.ReadinessProbe.TimeoutSeconds = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.ReadinessProbe.FailureThreshold = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.ReadinessProbe.InitialDelaySeconds = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-
-				pod.ReadinessProbe.PeriodSeconds = nil
-				Expect(podsNotEqual(pod, otherPod)).To(BeTrue())
-			})
-
-		})
+		DescribeTable("inequality",
+			inEqualityCheck,
+			Entry("when one pod has a nil bootstrap image", func(pod *Pod) { pod.BootstrapperImage = nil }),
+			Entry("when pods have different bootstrap images", func(pod *Pod) { pod.BootstrapperImage = ptr.String("another image") }),
+			Entry("when one pod has a nil sidecar image", func(pod *Pod) { pod.SidecarImage = nil }),
+			Entry("when pods have different sidecar images", func(pod *Pod) { pod.SidecarImage = ptr.String("another image") }),
+			Entry("when one pod has a nil cassandra image", func(pod *Pod) { pod.Image = nil }),
+			Entry("when pods have different cassandra images", func(pod *Pod) { pod.Image = ptr.String("another image") }),
+			Entry("when one pod has no storage size", func(pod *Pod) { pod.StorageSize = resource.Quantity{} }),
+			Entry("when pods have different storage sizes", func(pod *Pod) { pod.StorageSize = resource.MustParse("10Gi") }),
+			Entry("when one pod has no cpu", func(pod *Pod) { pod.CPU = resource.Quantity{} }),
+			Entry("when pods have different number of cpu", func(pod *Pod) { pod.CPU = resource.MustParse("10") }),
+			Entry("when one pod has no memory", func(pod *Pod) { pod.Memory = resource.Quantity{} }),
+			Entry("when pods have different memory sizes", func(pod *Pod) { pod.Memory = resource.MustParse("10") }),
+			Entry("when liveness probes have different success threshold values", func(pod *Pod) { pod.LivenessProbe.SuccessThreshold = ptr.Int32(20) }),
+			Entry("when liveness probes have different timeout values", func(pod *Pod) { pod.LivenessProbe.TimeoutSeconds = ptr.Int32(20) }),
+			Entry("when liveness probes have different failure threshold values", func(pod *Pod) { pod.LivenessProbe.FailureThreshold = ptr.Int32(20) }),
+			Entry("when liveness probes have different initial delay values", func(pod *Pod) { pod.LivenessProbe.InitialDelaySeconds = ptr.Int32(20) }),
+			Entry("when liveness probes have different period seconds values", func(pod *Pod) { pod.LivenessProbe.PeriodSeconds = ptr.Int32(20) }),
+			Entry("when one liveness probe has a nil success threshold", func(pod *Pod) { pod.LivenessProbe.SuccessThreshold = nil }),
+			Entry("when one liveness probe has a nil timeout", func(pod *Pod) { pod.LivenessProbe.TimeoutSeconds = nil }),
+			Entry("when one liveness probe has a nil failure threshold", func(pod *Pod) { pod.LivenessProbe.FailureThreshold = nil }),
+			Entry("when one liveness probe has a nil delay", func(pod *Pod) { pod.LivenessProbe.InitialDelaySeconds = nil }),
+			Entry("when one liveness probe has a nil period", func(pod *Pod) { pod.LivenessProbe.PeriodSeconds = nil }),
+			Entry("when readiness probes have different timeout values", func(pod *Pod) { pod.ReadinessProbe.TimeoutSeconds = ptr.Int32(20) }),
+			Entry("when readiness probes have different failure threshold values", func(pod *Pod) { pod.ReadinessProbe.FailureThreshold = ptr.Int32(20) }),
+			Entry("when readiness probes have different initial delay values", func(pod *Pod) { pod.ReadinessProbe.InitialDelaySeconds = ptr.Int32(20) }),
+			Entry("when readiness probes have different period seconds values", func(pod *Pod) { pod.ReadinessProbe.PeriodSeconds = ptr.Int32(20) }),
+			Entry("when one readiness probe has a nil success threshold", func(pod *Pod) { pod.ReadinessProbe.SuccessThreshold = nil }),
+			Entry("when one readiness probe has a nil timeout", func(pod *Pod) { pod.ReadinessProbe.TimeoutSeconds = nil }),
+			Entry("when one readiness probe has a nil failure threshold", func(pod *Pod) { pod.ReadinessProbe.FailureThreshold = nil }),
+			Entry("when one readiness probe has a nil delay", func(pod *Pod) { pod.ReadinessProbe.InitialDelaySeconds = nil }),
+			Entry("when one readiness probe has a nil period", func(pod *Pod) { pod.ReadinessProbe.PeriodSeconds = nil }),
+		)
 	})
-
 })
 
+func equalityCheck(applyChange func(pod *Pod)) {
+	comparisonCheck(applyChange, podsEqual)
+}
+
+func inEqualityCheck(applyChange func(pod *Pod)) {
+	comparisonCheck(applyChange, podsNotEqual)
+}
+
+func comparisonCheck(applyChange func(pod *Pod), expectCheck func(pod, otherPod *Pod) bool) {
+	pod1 := &Pod{
+		BootstrapperImage: ptr.String("BootstrapperImage"),
+		SidecarImage:      ptr.String("SidecarImage"),
+		Image:             ptr.String("Image"),
+		Memory:            resource.MustParse("2Gi"),
+		CPU:               resource.MustParse("1000m"),
+		StorageSize:       resource.MustParse("1Gi"),
+		LivenessProbe: &Probe{
+			SuccessThreshold:    ptr.Int32(1),
+			PeriodSeconds:       ptr.Int32(2),
+			InitialDelaySeconds: ptr.Int32(3),
+			FailureThreshold:    ptr.Int32(4),
+			TimeoutSeconds:      ptr.Int32(5),
+		},
+		ReadinessProbe: &Probe{
+			SuccessThreshold:    ptr.Int32(1),
+			PeriodSeconds:       ptr.Int32(2),
+			InitialDelaySeconds: ptr.Int32(3),
+			FailureThreshold:    ptr.Int32(4),
+			TimeoutSeconds:      ptr.Int32(5),
+		},
+	}
+	pod2 := pod1.DeepCopy()
+
+	applyChange(pod1)
+
+	Expect(expectCheck(pod1, pod2)).To(BeTrue())
+}
 
 func podsEqual(pod, otherPod *Pod) bool {
 	return pod.Equal(*otherPod) && otherPod.Equal(*pod)
