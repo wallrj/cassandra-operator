@@ -36,7 +36,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 			allErrs,
 			field.Required(
 				fldPath,
-				"must not be empty",
+				"",
 			),
 		)
 		return allErrs
@@ -51,7 +51,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 				allErrs,
 				field.Required(
 					fldPath.Child("StorageClass"),
-					"must not be empty if useEmptyDir is true",
+					"because spec.useEmptyDir is true",
 				),
 			)
 		}
@@ -60,7 +60,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 				allErrs,
 				field.Required(
 					fldPath.Child("Zone"),
-					"must not be empty if useEmptyDir is true",
+					"because spec.useEmptyDir is true",
 				),
 			)
 		}
@@ -86,7 +86,7 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			field.Invalid(
 				fldPath.Child("StorageSize"),
 				c.Spec.Pod.StorageSize.String(),
-				"must be > 0 when useEmptyDir is false",
+				"must be > 0 when spec.useEmptyDir is false",
 			),
 		)
 	}
