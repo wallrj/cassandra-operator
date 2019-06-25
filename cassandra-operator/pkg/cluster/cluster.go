@@ -15,7 +15,6 @@ import (
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/validation"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 )
 
@@ -83,10 +82,6 @@ func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
 
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
-	if err := validation.ValidateCassandra(clusterDefinition).ToAggregate(); err != nil {
-		return err
-	}
-
 	cluster.definition = clusterDefinition.DeepCopy()
 	return nil
 }
