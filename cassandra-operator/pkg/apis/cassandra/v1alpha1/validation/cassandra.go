@@ -175,7 +175,7 @@ func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path)
 		allErrs = validateUnsignedInt(allErrs, fldPath.Child("RetentionPeriodDays"), *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays, 1)
 	}
 	if c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds != nil {
-		allErrs = validateUnsignedInt(allErrs, fldPath.Child("CleanupTimeoutSeconds"), *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds, 1)
+		allErrs = validateUnsignedInt(allErrs, fldPath.Child("CleanupTimeoutSeconds"), *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds, 0)
 	}
 	if _, err := cron.Parse(c.Spec.Snapshot.RetentionPolicy.CleanupSchedule); err != nil {
 		allErrs = append(

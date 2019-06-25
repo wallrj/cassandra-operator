@@ -68,7 +68,7 @@ var _ = Describe("validation functions", func() {
 						TimeoutSeconds: ptr.Int32(1),
 						RetentionPolicy: &v1alpha1.RetentionPolicy{
 							RetentionPeriodDays:   ptr.Int32(1),
-							CleanupTimeoutSeconds: ptr.Int32(1),
+							CleanupTimeoutSeconds: ptr.Int32(0),
 							CleanupSchedule:       "1 23 * * *",
 						},
 					},
