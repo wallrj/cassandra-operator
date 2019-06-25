@@ -15,12 +15,12 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 )
 
-func TestCassandra(t *testing.T) {
+func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecsWithDefaultAndCustomReporters(t, "Cluster Suite", test.CreateParallelReporters("cluster"))
 }
 
-var _ = Describe("validation functions", func() {
+var _ = Describe("validation", func() {
 	Context("ValidateCassandra", func() {
 		var (
 			cass *v1alpha1.Cassandra
