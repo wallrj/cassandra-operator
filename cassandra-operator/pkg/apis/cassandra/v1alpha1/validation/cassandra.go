@@ -96,22 +96,19 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			field.Invalid(
 				fldPath.Child("StorageSize"),
 				c.Spec.Pod.StorageSize.String(),
-				"must be 0 when useEmptyDir is true",
+				"must be 0 when spec.useEmptyDir is true",
 			),
 		)
 	}
-	allErrs = append(allErrs, validateProbe(c, c.Spec.Pod.LivenessProbe, fldPath.Child("LivenessProbe"))...)
-	if *c.Spec.Pod.LivenessProbe.SuccessThreshold != 1 {
-		allErrs = append(
-			allErrs,
-			field.Invalid(
-				fldPath.Child("LivenessProbe").Child("SuccessThreshold"),
-				*c.Spec.Pod.LivenessProbe.SuccessThreshold,
-				"must be 1",
-			),
-		)
-	}
-	allErrs = append(allErrs, validateProbe(c, c.Spec.Pod.ReadinessProbe, fldPath.Child("ReadinessProbe"))...)
+
+	allErrs = append(
+		allErrs,
+		validateProbe(c.Spec.Pod.LivenessProbe, fldPath.Child("LivenessProbe"), true)...,
+	)
+	allErrs = append(
+		allErrs,
+		validateProbe(c.Spec.Pod.ReadinessProbe, fldPath.Child("ReadinessProbe"), false)...,
+	)
 	return allErrs
 }
 
@@ -129,12 +126,26 @@ func validateUnsignedInt(allErrs field.ErrorList, fldPath *field.Path, value int
 	return allErrs
 }
 
-func validateProbe(c *v1alpha1.Cassandra, probe *v1alpha1.Probe, fldPath *field.Path) field.ErrorList {
+func validateProbe(probe *v1alpha1.Probe, fldPath *field.Path, livenessProbe bool) field.ErrorList {
 	var allErrs field.ErrorList
 	allErrs = validateUnsignedInt(allErrs, fldPath.Child("FailureThreshold"), *probe.FailureThreshold, 1)
 	allErrs = validateUnsignedInt(allErrs, fldPath.Child("InitialDelaySeconds"), *probe.InitialDelaySeconds, 0)
 	allErrs = validateUnsignedInt(allErrs, fldPath.Child("PeriodSeconds"), *probe.PeriodSeconds, 1)
-	allErrs = validateUnsignedInt(allErrs, fldPath.Child("SuccessThreshold"), *probe.SuccessThreshold, 1)
+	if livenessProbe {
+		if *probe.SuccessThreshold != 1 {
+			allErrs = append(
+				allErrs,
+				field.Invalid(
+					fldPath.Child("SuccessThreshold"),
+					*probe.SuccessThreshold,
+					"must be 1",
+				),
+			)
+		}
+	} else {
+		allErrs = validateUnsignedInt(allErrs, fldPath.Child("SuccessThreshold"), *probe.SuccessThreshold, 1)
+	}
+
 	allErrs = validateUnsignedInt(allErrs, fldPath.Child("TimeoutSeconds"), *probe.TimeoutSeconds, 1)
 	return allErrs
 }
