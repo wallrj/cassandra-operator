@@ -254,7 +254,7 @@ func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
 }
 
 func (o *Operator) adjustUseEmptyDir(cluster *v1alpha1.Cassandra) {
-	if v1alpha1helpers.UseEmptyDir(cluster) && !o.config.AllowEmptyDir {
+	if *cluster.Spec.UseEmptyDir && !o.config.AllowEmptyDir {
 		log.Warnf("Cluster %s.%s cannot be configured to use emptyDir, as the operator is configured not to allow the creation of clusters which use emptyDir storage.", cluster.Namespace, cluster.Name)
 		cluster.Spec.UseEmptyDir = ptr.Bool(false)
 	}

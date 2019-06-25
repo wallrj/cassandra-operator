@@ -139,7 +139,7 @@ func (matcher *haveEvent) Match(actual interface{}) (success bool, err error) {
 	for _, event := range actual.([]coreV1.Event) {
 		if event.Type == matcher.expected.Type &&
 			event.Reason == string(matcher.expected.Reason) &&
-			strings.Contains(event.Message, matcher.expected.Message) &&
+			(event.Message == "" || strings.Contains(event.Message, matcher.expected.Message)) &&
 			(matcher.expected.LastTimestampCloseTo == nil || matcher.lastTimestampIsCloseTo(event.LastTimestamp)) {
 			matchFound = true
 		}

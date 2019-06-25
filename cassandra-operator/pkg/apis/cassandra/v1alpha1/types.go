@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	// required for dep management
@@ -13,8 +14,8 @@ const (
 	NodeServiceAccountName     = "cassandra-node"
 	SnapshotServiceAccountName = "cassandra-snapshot"
 
-	// DefaultDCName is the default data center name which each Cassandra pod belongs to
-	DefaultDCName = "dc1"
+	// DefaultDatacenterName is the default data center name which each Cassandra pod belongs to
+	DefaultDatacenterName = "dc1"
 
 	// DefaultCassandraImage is the name of the default Docker image used on Cassandra pods
 	DefaultCassandraImage = "cassandra:3.11"
@@ -164,4 +165,16 @@ func (c *Cassandra) RackName(rack *Rack) string {
 // CustomConfigMapName returns the expected config map name for this cluster. This will return a value even if the config map does not exist.
 func (c *Cassandra) CustomConfigMapName() string {
 	return fmt.Sprintf("%s-config", c.Name)
+}
+
+// Equal checks equality of two Pods. This is useful for testing with cmp.Equal
+func (p Pod) Equal(other Pod) bool {
+	return reflect.DeepEqual(p.BootstrapperImage, other.BootstrapperImage) &&
+		reflect.DeepEqual(p.SidecarImage, other.SidecarImage) &&
+		reflect.DeepEqual(p.Image, other.Image) &&
+		reflect.DeepEqual(p.LivenessProbe, other.LivenessProbe) &&
+		reflect.DeepEqual(p.ReadinessProbe, other.ReadinessProbe) &&
+		p.StorageSize.Cmp(other.StorageSize) == 0 &&
+		p.Memory.Cmp(other.Memory) == 0 &&
+		p.CPU.Cmp(other.CPU) == 0
 }
