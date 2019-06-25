@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"fmt"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"math"
 	"reflect"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"k8s.io/api/apps/v1beta2"
 	batch "k8s.io/api/batch/v1beta1"
 	coreV1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -148,7 +148,7 @@ func (matcher *haveEvent) Match(actual interface{}) (success bool, err error) {
 }
 
 func (matcher *haveEvent) lastTimestampIsCloseTo(eventTimestamp v1.Time) bool {
-	return math.Abs(eventTimestamp.Sub(*matcher.expected.LastTimestampCloseTo).Seconds()) < 30
+	return math.Abs(eventTimestamp.Sub(*matcher.expected.LastTimestampCloseTo).Seconds()) < 45
 }
 
 func (matcher *haveEvent) FailureMessage(actual interface{}) (message string) {
