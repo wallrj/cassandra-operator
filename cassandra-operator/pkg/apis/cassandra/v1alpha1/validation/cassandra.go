@@ -8,7 +8,6 @@ import (
 
 	"github.com/robfig/cron"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 )
 
 func ValidateCassandra(c *v1alpha1.Cassandra) field.ErrorList {
@@ -43,10 +42,11 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 		return allErrs
 	}
 
+	useEmptyDir := *c.Spec.UseEmptyDir
 	for i, rack := range c.Spec.Racks {
 		fldPath = fldPath.Child(fmt.Sprintf("%d:%s", i, rack.Name))
 		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("Replicas"), rack.Replicas, 1)
-		if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(c) {
+		if rack.StorageClass == "" && !useEmptyDir {
 			allErrs = append(
 				allErrs,
 				field.Required(
@@ -55,7 +55,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 				),
 			)
 		}
-		if rack.Zone == "" && !v1alpha1helpers.UseEmptyDir(c) {
+		if rack.Zone == "" && !useEmptyDir {
 			allErrs = append(
 				allErrs,
 				field.Required(
@@ -80,7 +80,7 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			),
 		)
 	}
-	if !v1alpha1helpers.UseEmptyDir(c) && c.Spec.Pod.StorageSize.IsZero() {
+	if !*c.Spec.UseEmptyDir && c.Spec.Pod.StorageSize.IsZero() {
 		allErrs = append(
 			allErrs,
 			field.Invalid(
@@ -90,7 +90,7 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			),
 		)
 	}
-	if v1alpha1helpers.UseEmptyDir(c) && !c.Spec.Pod.StorageSize.IsZero() {
+	if *c.Spec.UseEmptyDir && !c.Spec.Pod.StorageSize.IsZero() {
 		allErrs = append(
 			allErrs,
 			field.Invalid(
