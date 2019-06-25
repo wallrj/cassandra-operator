@@ -24,11 +24,9 @@ var _ = Describe("validation", func() {
 	Context("ValidateCassandra", func() {
 		var (
 			cass *v1alpha1.Cassandra
-			err  error
 		)
 
 		BeforeEach(func() {
-			err = nil
 			cass = &v1alpha1.Cassandra{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "cluster1",
@@ -78,7 +76,7 @@ var _ = Describe("validation", func() {
 
 		Context("success cases", func() {
 			AfterEach(func() {
-				err = validation.ValidateCassandra(cass).ToAggregate()
+				err := validation.ValidateCassandra(cass).ToAggregate()
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("succeeds with a fully populated Cassandra object", func() {})
@@ -101,8 +99,8 @@ var _ = Describe("validation", func() {
 
 		Context("failure cases", func() {
 			AfterEach(func() {
-				err = validation.ValidateCassandra(cass).ToAggregate()
-				fmt.Fprintf(GinkgoWriter, "INFO: Error message was: %s", err)
+				err := validation.ValidateCassandra(cass).ToAggregate()
+				fmt.Fprintf(GinkgoWriter, "INFO: Error message was: %q", err)
 				Expect(err).To(HaveOccurred())
 			})
 
