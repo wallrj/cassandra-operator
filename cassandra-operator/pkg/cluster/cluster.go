@@ -96,28 +96,6 @@ func (c *Cluster) Definition() *v1alpha1.Cassandra {
 	return c.definition.DeepCopy()
 }
 
-func mergeProbeDefaults(configuredProbe *v1alpha1.Probe, defaultProbe *v1alpha1.Probe) {
-	if configuredProbe.TimeoutSeconds == nil {
-		configuredProbe.TimeoutSeconds = defaultProbe.TimeoutSeconds
-	}
-
-	if configuredProbe.SuccessThreshold == nil {
-		configuredProbe.SuccessThreshold = defaultProbe.SuccessThreshold
-	}
-
-	if configuredProbe.FailureThreshold == nil {
-		configuredProbe.FailureThreshold = defaultProbe.FailureThreshold
-	}
-
-	if configuredProbe.InitialDelaySeconds == nil {
-		configuredProbe.InitialDelaySeconds = defaultProbe.InitialDelaySeconds
-	}
-
-	if configuredProbe.PeriodSeconds == nil {
-		configuredProbe.PeriodSeconds = defaultProbe.PeriodSeconds
-	}
-}
-
 // Name is the unqualified name of the cluster
 func (c *Cluster) Name() string {
 	return c.definition.Name
