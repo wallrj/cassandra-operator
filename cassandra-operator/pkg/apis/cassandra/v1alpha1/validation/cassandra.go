@@ -160,18 +160,17 @@ func validateSnapshot(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorLis
 	if c.Spec.Snapshot.TimeoutSeconds != nil {
 		allErrs = validateUnsignedInt(allErrs, fldPath.Child("TimeoutSeconds"), *c.Spec.Snapshot.TimeoutSeconds, 1)
 	}
-	allErrs = append(
-		allErrs,
-		validateSnapshotRetentionPolicy(c, fldPath.Child("RetentionPolicy"))...,
-	)
+	if c.Spec.Snapshot.RetentionPolicy != nil {
+		allErrs = append(
+			allErrs,
+			validateSnapshotRetentionPolicy(c, fldPath.Child("RetentionPolicy"))...,
+		)
+	}
 	return allErrs
 }
 
 func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	if c.Spec.Snapshot.RetentionPolicy == nil {
-		return allErrs
-	}
 	if c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays != nil {
 		allErrs = validateUnsignedInt(allErrs, fldPath.Child("RetentionPeriodDays"), *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays, 1)
 	}
