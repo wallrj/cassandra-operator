@@ -239,6 +239,12 @@ func (o *Operator) clusterDeleted(obj interface{}) {
 	o.eventDispatcher.Dispatch(&dispatcher.Event{Kind: operations.DeleteCluster, Key: clusterID, Data: clusterDefinition})
 }
 
+// clusterUpdated is called when there is an UPDATE operation on a Cassandra API object.
+// NB We only validate the *new* Cassandra object, not the old object.
+// This allows the operator to proceed if an invalid Cassandra API object is eventually corrected.
+// The operator will have ignored the invalid object when it was first added.
+// Webhook validation would ensure that the invalid Cassandra object is never accepted by the API server,
+// but we can't guarantee that a validating webhook has been deployed.
 func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
 	logger := log.WithField("origin", "Operator.clusterUpdated")
 
@@ -263,12 +269,6 @@ func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
 	o.adjustUseEmptyDir(oldCluster)
 	v1alpha1helpers.SetDefaultsForCassandra(newCluster)
 	o.adjustUseEmptyDir(newCluster)
-
-	err = validation.ValidateCassandra(oldCluster).ToAggregate()
-	if err != nil {
-		logger.WithError(err).Error("validation error (old)")
-		return
-	}
 
 	err = validation.ValidateCassandra(newCluster).ToAggregate()
 	if err != nil {
