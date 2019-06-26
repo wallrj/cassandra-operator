@@ -85,7 +85,10 @@ jobs:
             # assumes this stage is only included on the correct branch or tag
             all_branches: true
 
-# See https://docs.travis-ci.com/user/languages/java/#caching
+# Cache dependencies for Java and Golang
+# See:
+# * https://docs.travis-ci.com/user/languages/java/#caching
+# * https://restic.net/blog/2018-09-02/travis-build-cache
 before_cache:
   - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
   - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
@@ -93,3 +96,5 @@ cache:
   directories:
     - $HOME/.gradle/caches/
     - $HOME/.gradle/wrapper/
+    - $HOME/.cache/go-build
+    - $HOME/gopath/pkg/mod
