@@ -10,13 +10,13 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"k8s.io/api/batch/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 )
@@ -30,167 +30,6 @@ func TestCluster(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecsWithDefaultAndCustomReporters(t, "Cluster Suite", test.CreateParallelReporters("cluster"))
 }
-
-var _ = Describe("cluster construction", func() {
-	var clusterDef *v1alpha1.Cassandra
-	BeforeEach(func() {
-		retentionPeriod := int32(7)
-		clusterDef = &v1alpha1.Cassandra{
-			ObjectMeta: metaV1.ObjectMeta{Name: CLUSTER, Namespace: NAMESPACE},
-			Spec: v1alpha1.CassandraSpec{
-				Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
-				Pod: v1alpha1.Pod{
-					Memory:      resource.MustParse("1Gi"),
-					CPU:         resource.MustParse("100m"),
-					StorageSize: resource.MustParse("1Gi"),
-				},
-				Snapshot: &v1alpha1.Snapshot{
-					Schedule:  "1 23 * * *",
-					Keyspaces: []string{"k1"},
-					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:             ptr.Bool(true),
-						RetentionPeriodDays: &retentionPeriod,
-						CleanupSchedule:     "0 9 * * *",
-					},
-				},
-			},
-		}
-	})
-
-	Context("config validation", func() {
-		It("should use the 3.11 version of the apache cassandra image if one is not supplied for the cluster", func() {
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(*cluster.definition.Spec.Pod.Image).To(Equal("cassandra:3.11"))
-		})
-
-		It("should use the specified version of the cassandra image if one is given", func() {
-			clusterDef.Spec.Pod.Image = ptr.String("somerepo/someimage:v1.0")
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(*cluster.definition.Spec.Pod.Image).To(Equal("somerepo/someimage:v1.0"))
-		})
-
-		It("should use the latest version of the cassandra bootstrapper image if one is not supplied for the cluster", func() {
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(*cluster.definition.Spec.Pod.BootstrapperImage).To(Equal("skyuk/cassandra-bootstrapper:latest"))
-		})
-
-		It("should use the specified version of the cassandra bootstrapper image if one is given", func() {
-			clusterDef.Spec.Pod.BootstrapperImage = ptr.String("somerepo/some-bootstrapper-image:v1.0")
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(*cluster.definition.Spec.Pod.BootstrapperImage).To(Equal("somerepo/some-bootstrapper-image:v1.0"))
-		})
-
-		It("should set the default liveness probe values if it is not configured for the cluster", func() {
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(ptr.Int32(3)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(30)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(ptr.Int32(30)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
-		})
-
-		It("should set the default readiness probe values if it is not configured for the cluster", func() {
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(ptr.Int32(3)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(30)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(ptr.Int32(15)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
-		})
-
-		It("should set the default liveness probe values if the liveness probe is present but has unspecified values", func() {
-			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{}
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(ptr.Int32(3)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(30)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(ptr.Int32(30)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
-		})
-
-		It("should set the default readiness probe values if the readiness probe is present but has unspecified values", func() {
-			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{}
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(ptr.Int32(3)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(30)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(ptr.Int32(15)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
-		})
-
-		It("should use the specified liveness probe values if they are given", func() {
-			clusterDef.Spec.Pod.LivenessProbe = &v1alpha1.Probe{
-				SuccessThreshold:    ptr.Int32(1),
-				PeriodSeconds:       ptr.Int32(2),
-				InitialDelaySeconds: ptr.Int32(3),
-				FailureThreshold:    ptr.Int32(4),
-				TimeoutSeconds:      ptr.Int32(5),
-			}
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.PeriodSeconds).To(Equal(ptr.Int32(2)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(3)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.FailureThreshold).To(Equal(ptr.Int32(4)))
-			Expect(cluster.definition.Spec.Pod.LivenessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
-		})
-
-		It("should use the specified readiness probe values if they are given", func() {
-			clusterDef.Spec.Pod.ReadinessProbe = &v1alpha1.Probe{
-				SuccessThreshold:    ptr.Int32(1),
-				PeriodSeconds:       ptr.Int32(2),
-				InitialDelaySeconds: ptr.Int32(3),
-				FailureThreshold:    ptr.Int32(4),
-				TimeoutSeconds:      ptr.Int32(5),
-			}
-			cluster, err := ACluster(clusterDef)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.SuccessThreshold).To(Equal(ptr.Int32(1)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.PeriodSeconds).To(Equal(ptr.Int32(2)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.InitialDelaySeconds).To(Equal(ptr.Int32(3)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.FailureThreshold).To(Equal(ptr.Int32(4)))
-			Expect(cluster.definition.Spec.Pod.ReadinessProbe.TimeoutSeconds).To(Equal(ptr.Int32(5)))
-		})
-
-		Context("useEmptyDir is true", func() {
-			BeforeEach(func() {
-				clusterDef.Spec.UseEmptyDir = ptr.Bool(true)
-			})
-
-			It("should respect the useEmptyDir flag if the operator is configured to allow emptyDir and podStorageSize is not set", func() {
-				clusterDef.Spec.Pod.StorageSize = resource.Quantity{}
-				cluster, err := ACluster(clusterDef)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(v1alpha1helpers.UseEmptyDir(cluster.definition)).To(BeTrue())
-			})
-		})
-
-		Context("snapshot config", func() {
-			It("should use the latest version of the cassandra snapshot image if one is not supplied for the cluster", func() {
-				cluster, err := ACluster(clusterDef)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(*cluster.definition.Spec.Snapshot.Image).To(Equal("skyuk/cassandra-snapshot:latest"))
-			})
-
-			It("should use the specified version of the cassandra snapshot image if one is given", func() {
-				img := "somerepo/some-snapshot-image:v1.0"
-				clusterDef.Spec.Snapshot.Image = &img
-				cluster, err := ACluster(clusterDef)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(*cluster.definition.Spec.Snapshot.Image).To(Equal("somerepo/some-snapshot-image:v1.0"))
-			})
-
-		})
-	})
-})
 
 var _ = Describe("identification of custom config maps", func() {
 	It("should look like a custom configmap when it ending with the correct suffix", func() {
@@ -243,11 +82,23 @@ var _ = Describe("creation of stateful sets", func() {
 			Spec: v1alpha1.CassandraSpec{
 				Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
 				Pod: v1alpha1.Pod{
-					Memory:         resource.MustParse("1Gi"),
-					CPU:            resource.MustParse("100m"),
-					StorageSize:    resource.MustParse("1Gi"),
-					ReadinessProbe: defaultReadinessProbe.DeepCopy(),
-					LivenessProbe:  defaultLivenessProbe.DeepCopy(),
+					Memory:      resource.MustParse("1Gi"),
+					CPU:         resource.MustParse("100m"),
+					StorageSize: resource.MustParse("1Gi"),
+					ReadinessProbe: &v1alpha1.Probe{
+						FailureThreshold:    ptr.Int32(3),
+						InitialDelaySeconds: ptr.Int32(30),
+						PeriodSeconds:       ptr.Int32(30),
+						SuccessThreshold:    ptr.Int32(1),
+						TimeoutSeconds:      ptr.Int32(5),
+					},
+					LivenessProbe: &v1alpha1.Probe{
+						FailureThreshold:    ptr.Int32(3),
+						InitialDelaySeconds: ptr.Int32(30),
+						PeriodSeconds:       ptr.Int32(15),
+						SuccessThreshold:    ptr.Int32(1),
+						TimeoutSeconds:      ptr.Int32(5),
+					},
 				},
 			},
 		}
@@ -889,6 +740,7 @@ var _ = Describe("creation of snapshot cleanup job", func() {
 })
 
 func ACluster(clusterDef *v1alpha1.Cassandra) (*Cluster, error) {
+	v1alpha1helpers.SetDefaultsForCassandra(clusterDef)
 	return New(clusterDef)
 }
 

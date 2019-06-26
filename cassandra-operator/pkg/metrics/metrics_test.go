@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -390,19 +391,19 @@ func (jh *jolokiaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func aCluster(clusterName, namespace string) *cluster.Cluster {
-	theCluster, err := cluster.New(
-		&v1alpha1.Cassandra{
-			ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: namespace},
-			Spec: v1alpha1.CassandraSpec{
-				Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
-				Pod: v1alpha1.Pod{
-					Memory:      resource.MustParse("1Gi"),
-					CPU:         resource.MustParse("100m"),
-					StorageSize: resource.MustParse("1Gi"),
-				},
+	clusterDef := v1alpha1.Cassandra{
+		ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: namespace},
+		Spec: v1alpha1.CassandraSpec{
+			Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
+			Pod: v1alpha1.Pod{
+				Memory:      resource.MustParse("1Gi"),
+				CPU:         resource.MustParse("100m"),
+				StorageSize: resource.MustParse("1Gi"),
 			},
 		},
-	)
+	}
+	v1alpha1helpers.SetDefaultsForCassandra(&clusterDef)
+	theCluster, err := cluster.New(&clusterDef)
 	Expect(err).ToNot(HaveOccurred())
 	return theCluster
 }

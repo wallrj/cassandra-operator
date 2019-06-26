@@ -9,11 +9,13 @@ require (
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gofrs/flock v0.7.1 // indirect
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
+	github.com/google/go-cmp v0.2.0
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
+	github.com/pkg/errors v0.8.0
 	github.com/prometheus/client_golang v0.9.1
 	github.com/prometheus/common v0.1.0
 	github.com/prometheus/procfs v0.0.0-20190104112138-b1a0a9a36d74 // indirect

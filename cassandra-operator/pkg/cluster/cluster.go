@@ -15,9 +15,7 @@ import (
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/validation"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 )
 
 const (
@@ -44,22 +42,6 @@ const (
 
 	healthServerPort = 8080
 )
-
-var defaultLivenessProbe = v1alpha1.Probe{
-	FailureThreshold:    ptr.Int32(3),
-	InitialDelaySeconds: ptr.Int32(30),
-	PeriodSeconds:       ptr.Int32(30),
-	SuccessThreshold:    ptr.Int32(1),
-	TimeoutSeconds:      ptr.Int32(5),
-}
-
-var defaultReadinessProbe = v1alpha1.Probe{
-	FailureThreshold:    ptr.Int32(3),
-	InitialDelaySeconds: ptr.Int32(30),
-	PeriodSeconds:       ptr.Int32(15),
-	SuccessThreshold:    ptr.Int32(1),
-	TimeoutSeconds:      ptr.Int32(5),
-}
 
 var (
 	maxSidecarMemoryRequest resource.Quantity
@@ -100,63 +82,13 @@ func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
 
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
-	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
-		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()
-	} else {
-		livenessProbe := clusterDefinition.Spec.Pod.LivenessProbe
-		mergeProbeDefaults(livenessProbe, &defaultLivenessProbe)
-	}
-
-	if clusterDefinition.Spec.Pod.ReadinessProbe == nil {
-		clusterDefinition.Spec.Pod.ReadinessProbe = defaultReadinessProbe.DeepCopy()
-	} else {
-		readinessProbe := clusterDefinition.Spec.Pod.ReadinessProbe
-		mergeProbeDefaults(readinessProbe, &defaultReadinessProbe)
-	}
-
 	cluster.definition = clusterDefinition.DeepCopy()
-	bootstrapperImage := v1alpha1helpers.GetBootstrapperImage(cluster.definition)
-	cluster.definition.Spec.Pod.BootstrapperImage = &bootstrapperImage
-
-	cassandraImage := v1alpha1helpers.GetCassandraImage(cluster.definition)
-	cluster.definition.Spec.Pod.Image = &cassandraImage
-
-	if cluster.definition.Spec.Snapshot != nil {
-		snapshotImage := v1alpha1helpers.GetSnapshotImage(cluster.definition)
-		cluster.definition.Spec.Snapshot.Image = &snapshotImage
-	}
-
-	if err := validation.ValidateCassandra(cluster.definition).ToAggregate(); err != nil {
-		return err
-	}
 	return nil
 }
 
 // Definition returns a copy of the definition of the cluster. Any modifications made to this will be ignored.
 func (c *Cluster) Definition() *v1alpha1.Cassandra {
 	return c.definition.DeepCopy()
-}
-
-func mergeProbeDefaults(configuredProbe *v1alpha1.Probe, defaultProbe *v1alpha1.Probe) {
-	if configuredProbe.TimeoutSeconds == nil {
-		configuredProbe.TimeoutSeconds = defaultProbe.TimeoutSeconds
-	}
-
-	if configuredProbe.SuccessThreshold == nil {
-		configuredProbe.SuccessThreshold = defaultProbe.SuccessThreshold
-	}
-
-	if configuredProbe.FailureThreshold == nil {
-		configuredProbe.FailureThreshold = defaultProbe.FailureThreshold
-	}
-
-	if configuredProbe.InitialDelaySeconds == nil {
-		configuredProbe.InitialDelaySeconds = defaultProbe.InitialDelaySeconds
-	}
-
-	if configuredProbe.PeriodSeconds == nil {
-		configuredProbe.PeriodSeconds = defaultProbe.PeriodSeconds
-	}
 }
 
 // Name is the unqualified name of the cluster
@@ -309,7 +241,7 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotJobName(),
-		Image:   v1alpha1helpers.GetSnapshotImage(c.definition),
+		Image:   *c.definition.Spec.Snapshot.Image,
 		Command: backupCommand,
 	}
 }
@@ -346,7 +278,7 @@ func (c *Cluster) CreateSnapshotCleanupContainer(snapshot *v1alpha1.Snapshot) *v
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotCleanupJobName(),
-		Image:   v1alpha1helpers.GetSnapshotImage(c.definition),
+		Image:   *c.definition.Spec.Snapshot.Image,
 		Command: cleanupCommand,
 	}
 }
@@ -396,7 +328,7 @@ func (c *Cluster) objectMetadataWithOwner(name string, extraLabels ...string) me
 func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
 	return v1.Container{
 		Name:  cassandraContainerName,
-		Image: v1alpha1helpers.GetCassandraImage(c.definition),
+		Image: *c.definition.Spec.Pod.Image,
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "internode",
@@ -444,7 +376,7 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 func (c *Cluster) createCassandraSidecarContainer(rack *v1alpha1.Rack) v1.Container {
 	return v1.Container{
 		Name:  cassandraSidecarContainerName,
-		Image: v1alpha1helpers.GetCassandraSidecarImage(c.definition),
+		Image: *c.definition.Spec.Pod.SidecarImage,
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "api",
@@ -492,7 +424,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 		},
 		{
 			Name:  "CLUSTER_DATA_CENTER",
-			Value: v1alpha1helpers.GetDatacenter(c.definition),
+			Value: *c.definition.Spec.Datacenter,
 		},
 		{
 			Name: "NODE_LISTEN_ADDRESS",
@@ -518,7 +450,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 func (c *Cluster) createCassandraDataPersistentVolumeClaimForRack(rack *v1alpha1.Rack) []v1.PersistentVolumeClaim {
 	var persistentVolumeClaim []v1.PersistentVolumeClaim
 
-	if !v1alpha1helpers.UseEmptyDir(c.definition) {
+	if !*c.definition.Spec.UseEmptyDir {
 		persistentVolumeClaim = append(persistentVolumeClaim, v1.PersistentVolumeClaim{
 			ObjectMeta: c.objectMetadata(c.definition.StorageVolumeName(), RackLabel, rack.Name, "app", c.definition.Name),
 			Spec: v1.PersistentVolumeClaimSpec{
@@ -563,7 +495,7 @@ func (c *Cluster) createPodVolumes(customConfigMap *v1.ConfigMap) []v1.Volume {
 		volumes = append(volumes, c.createConfigMapVolume(customConfigMap))
 	}
 
-	if v1alpha1helpers.UseEmptyDir(c.definition) {
+	if *c.definition.Spec.UseEmptyDir {
 		volumes = append(volumes, emptyDir(c.definition.StorageVolumeName()))
 	}
 
@@ -669,7 +601,7 @@ func (c *Cluster) customConfigMapVolumeName() string {
 func (c *Cluster) createInitConfigContainer() v1.Container {
 	return v1.Container{
 		Name:    "init-config",
-		Image:   v1alpha1helpers.GetCassandraImage(c.definition),
+		Image:   *c.definition.Spec.Pod.Image,
 		Command: []string{"sh", "-c", "cp -vr /etc/cassandra/* /configuration"},
 		VolumeMounts: []v1.VolumeMount{
 			{Name: "configuration", MountPath: "/configuration"},
@@ -690,7 +622,7 @@ func (c *Cluster) createCassandraBootstrapperContainer(rack *v1alpha1.Rack, cust
 	return v1.Container{
 		Name:         cassandraBootstrapperContainerName,
 		Env:          c.createEnvironmentVariableDefinition(rack),
-		Image:        v1alpha1helpers.GetBootstrapperImage(c.definition),
+		Image:        *c.definition.Spec.Pod.BootstrapperImage,
 		Resources:    c.createResourceRequirements(),
 		VolumeMounts: mounts,
 	}

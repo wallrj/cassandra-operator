@@ -4,20 +4,17 @@ import (
 	"fmt"
 
 	"github.com/robfig/cron"
-	apimachineryvalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 )
 
+// ValidateCassandra checks that all required fields are supplied and that they have valid values
+// NB ObjectMeta is not validated here;
+// apiVersion, kind and metadata, are all validated by the API server implicitly.
+// See https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/#specifying-a-structural-schema
 func ValidateCassandra(c *v1alpha1.Cassandra) field.ErrorList {
-	allErrs := apimachineryvalidation.ValidateObjectMeta(
-		&c.ObjectMeta,
-		true,
-		apimachineryvalidation.NameIsDNSSubdomain,
-		field.NewPath("metadata"),
-	)
+	var allErrs field.ErrorList
 	allErrs = append(allErrs, validateCassandraSpec(c, field.NewPath("spec"))...)
 	return allErrs
 }
@@ -37,30 +34,31 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 			allErrs,
 			field.Required(
 				fldPath,
-				"must not be empty",
+				"",
 			),
 		)
 		return allErrs
 	}
 
-	for i, rack := range c.Spec.Racks {
-		fldPath = fldPath.Child(fmt.Sprintf("%d:%s", i, rack.Name))
-		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("Replicas"), rack.Replicas, 1)
-		if rack.StorageClass == "" && !v1alpha1helpers.UseEmptyDir(c) {
+	useEmptyDir := *c.Spec.UseEmptyDir
+	for _, rack := range c.Spec.Racks {
+		fldPath = fldPath.Child(rack.Name)
+		allErrs = validateUnsignedInt(allErrs, fldPath.Child("Replicas"), rack.Replicas, 1)
+		if rack.StorageClass == "" && !useEmptyDir {
 			allErrs = append(
 				allErrs,
 				field.Required(
 					fldPath.Child("StorageClass"),
-					"must not be empty if useEmptyDir is true",
+					"because spec.useEmptyDir is true",
 				),
 			)
 		}
-		if rack.Zone == "" && !v1alpha1helpers.UseEmptyDir(c) {
+		if rack.Zone == "" && !useEmptyDir {
 			allErrs = append(
 				allErrs,
 				field.Required(
 					fldPath.Child("Zone"),
-					"must not be empty if useEmptyDir is true",
+					"because spec.useEmptyDir is true",
 				),
 			)
 		}
@@ -80,42 +78,39 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 			),
 		)
 	}
-	if !v1alpha1helpers.UseEmptyDir(c) && c.Spec.Pod.StorageSize.IsZero() {
+	if !*c.Spec.UseEmptyDir && c.Spec.Pod.StorageSize.IsZero() {
 		allErrs = append(
 			allErrs,
 			field.Invalid(
 				fldPath.Child("StorageSize"),
 				c.Spec.Pod.StorageSize.String(),
-				"must be > 0 when useEmptyDir is false",
+				"must be > 0 when spec.useEmptyDir is false",
 			),
 		)
 	}
-	if v1alpha1helpers.UseEmptyDir(c) && !c.Spec.Pod.StorageSize.IsZero() {
+	if *c.Spec.UseEmptyDir && !c.Spec.Pod.StorageSize.IsZero() {
 		allErrs = append(
 			allErrs,
 			field.Invalid(
 				fldPath.Child("StorageSize"),
 				c.Spec.Pod.StorageSize.String(),
-				"must be 0 when useEmptyDir is true",
+				"must be 0 when spec.useEmptyDir is true",
 			),
 		)
 	}
-	allErrs = append(allErrs, validateProbe(c, c.Spec.Pod.LivenessProbe, fldPath.Child("LivenessProbe"))...)
-	if *c.Spec.Pod.LivenessProbe.SuccessThreshold != 1 {
-		allErrs = append(
-			allErrs,
-			field.Invalid(
-				fldPath.Child("LivenessProbe").Child("SuccessThreshold"),
-				*c.Spec.Pod.LivenessProbe.SuccessThreshold,
-				"must be 1",
-			),
-		)
-	}
-	allErrs = append(allErrs, validateProbe(c, c.Spec.Pod.ReadinessProbe, fldPath.Child("ReadinessProbe"))...)
+
+	allErrs = append(
+		allErrs,
+		validateProbe(c.Spec.Pod.LivenessProbe, fldPath.Child("LivenessProbe"), true)...,
+	)
+	allErrs = append(
+		allErrs,
+		validateProbe(c.Spec.Pod.ReadinessProbe, fldPath.Child("ReadinessProbe"), false)...,
+	)
 	return allErrs
 }
 
-func validateUnsignedInt(allErrs field.ErrorList, c *v1alpha1.Cassandra, fldPath *field.Path, value int32, min int32) field.ErrorList {
+func validateUnsignedInt(allErrs field.ErrorList, fldPath *field.Path, value int32, min int32) field.ErrorList {
 	if value < min {
 		allErrs = append(
 			allErrs,
@@ -129,13 +124,27 @@ func validateUnsignedInt(allErrs field.ErrorList, c *v1alpha1.Cassandra, fldPath
 	return allErrs
 }
 
-func validateProbe(c *v1alpha1.Cassandra, probe *v1alpha1.Probe, fldPath *field.Path) field.ErrorList {
+func validateProbe(probe *v1alpha1.Probe, fldPath *field.Path, livenessProbe bool) field.ErrorList {
 	var allErrs field.ErrorList
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("FailureThreshold"), *probe.FailureThreshold, 1)
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("InitialDelaySeconds"), *probe.InitialDelaySeconds, 0)
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("PeriodSeconds"), *probe.PeriodSeconds, 1)
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("SuccessThreshold"), *probe.SuccessThreshold, 1)
-	allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("TimeoutSeconds"), *probe.TimeoutSeconds, 1)
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("FailureThreshold"), *probe.FailureThreshold, 1)
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("InitialDelaySeconds"), *probe.InitialDelaySeconds, 0)
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("PeriodSeconds"), *probe.PeriodSeconds, 1)
+	if livenessProbe {
+		if *probe.SuccessThreshold != 1 {
+			allErrs = append(
+				allErrs,
+				field.Invalid(
+					fldPath.Child("SuccessThreshold"),
+					*probe.SuccessThreshold,
+					"must be 1",
+				),
+			)
+		}
+	} else {
+		allErrs = validateUnsignedInt(allErrs, fldPath.Child("SuccessThreshold"), *probe.SuccessThreshold, 1)
+	}
+
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("TimeoutSeconds"), *probe.TimeoutSeconds, 1)
 	return allErrs
 }
 
@@ -157,27 +166,20 @@ func validateSnapshot(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorLis
 			),
 		)
 	}
-	if c.Spec.Snapshot.TimeoutSeconds != nil {
-		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("TimeoutSeconds"), *c.Spec.Snapshot.TimeoutSeconds, 1)
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("TimeoutSeconds"), *c.Spec.Snapshot.TimeoutSeconds, 1)
+	if c.Spec.Snapshot.RetentionPolicy != nil {
+		allErrs = append(
+			allErrs,
+			validateSnapshotRetentionPolicy(c, fldPath.Child("RetentionPolicy"))...,
+		)
 	}
-	allErrs = append(
-		allErrs,
-		validateSnapshotRetentionPolicy(c, fldPath.Child("RetentionPolicy"))...,
-	)
 	return allErrs
 }
 
 func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	if c.Spec.Snapshot.RetentionPolicy == nil {
-		return allErrs
-	}
-	if c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays != nil {
-		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("RetentionPeriodDays"), *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays, 1)
-	}
-	if c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds != nil {
-		allErrs = validateUnsignedInt(allErrs, c, fldPath.Child("CleanupTimeoutSeconds"), *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds, 1)
-	}
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("RetentionPeriodDays"), *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays, 0)
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("CleanupTimeoutSeconds"), *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds, 0)
 	if _, err := cron.Parse(c.Spec.Snapshot.RetentionPolicy.CleanupSchedule); err != nil {
 		allErrs = append(
 			allErrs,

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,247 +16,359 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 )
 
-func TestCassandra(t *testing.T) {
+func TestValidation(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecsWithDefaultAndCustomReporters(t, "Cluster Suite", test.CreateParallelReporters("cluster"))
 }
 
-var _ = Describe("validation functions", func() {
+func validCassandra() *v1alpha1.Cassandra {
+	return &v1alpha1.Cassandra{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "cluster1",
+			Namespace: "ns1",
+		},
+		Spec: v1alpha1.CassandraSpec{
+			UseEmptyDir: ptr.Bool(false),
+			Racks: []v1alpha1.Rack{
+				{
+					Name:         "rack1",
+					Zone:         "zone1",
+					StorageClass: "fast",
+					Replicas:     1,
+				},
+			},
+			Pod: v1alpha1.Pod{
+				CPU:         resource.MustParse("0"),
+				Memory:      resource.MustParse("1Gi"),
+				StorageSize: resource.MustParse("100Gi"),
+				LivenessProbe: &v1alpha1.Probe{
+					FailureThreshold:    ptr.Int32(1),
+					InitialDelaySeconds: ptr.Int32(1),
+					PeriodSeconds:       ptr.Int32(1),
+					SuccessThreshold:    ptr.Int32(1),
+					TimeoutSeconds:      ptr.Int32(1),
+				},
+				ReadinessProbe: &v1alpha1.Probe{
+					FailureThreshold:    ptr.Int32(1),
+					InitialDelaySeconds: ptr.Int32(1),
+					PeriodSeconds:       ptr.Int32(1),
+					SuccessThreshold:    ptr.Int32(1),
+					TimeoutSeconds:      ptr.Int32(1),
+				},
+			},
+			Snapshot: &v1alpha1.Snapshot{
+				Schedule:       "1 23 * * *",
+				TimeoutSeconds: ptr.Int32(1),
+				RetentionPolicy: &v1alpha1.RetentionPolicy{
+					RetentionPeriodDays:   ptr.Int32(1),
+					CleanupTimeoutSeconds: ptr.Int32(0),
+					CleanupSchedule:       "1 23 * * *",
+				},
+			},
+		},
+	}
+}
+
+var _ = Describe("validation", func() {
 	Context("ValidateCassandra", func() {
-		var (
-			cass *v1alpha1.Cassandra
-			err  error
+		DescribeTable(
+			"success cases",
+			func(mutate func(*v1alpha1.Cassandra)) {
+				c := validCassandra()
+				mutate(c)
+				err := validation.ValidateCassandra(c).ToAggregate()
+				Expect(err).ToNot(HaveOccurred())
+			},
+			Entry(
+				"A fully populated Cassandra cluster",
+				func(c *v1alpha1.Cassandra) {},
+			),
+			Entry(
+				"Snapshot is not required",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot = nil
+				},
+			),
+			Entry(
+				"Snapshot.RetentionPolicy is not required",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot.RetentionPolicy = nil
+				},
+			),
 		)
 
-		BeforeEach(func() {
-			err = nil
-			cass = &v1alpha1.Cassandra{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cluster1",
-					Namespace: "ns1",
-				},
-				Spec: v1alpha1.CassandraSpec{
-					UseEmptyDir: ptr.Bool(false),
-					Racks: []v1alpha1.Rack{
-						{
-							Name:         "rack1",
-							Zone:         "zone1",
-							StorageClass: "fast",
-							Replicas:     1,
-						},
-					},
-					Pod: v1alpha1.Pod{
-						CPU:         resource.MustParse("0"),
-						Memory:      resource.MustParse("1Gi"),
-						StorageSize: resource.MustParse("100Gi"),
-						LivenessProbe: &v1alpha1.Probe{
-							FailureThreshold:    ptr.Int32(1),
-							InitialDelaySeconds: ptr.Int32(1),
-							PeriodSeconds:       ptr.Int32(1),
-							SuccessThreshold:    ptr.Int32(1),
-							TimeoutSeconds:      ptr.Int32(1),
-						},
-						ReadinessProbe: &v1alpha1.Probe{
-							FailureThreshold:    ptr.Int32(1),
-							InitialDelaySeconds: ptr.Int32(1),
-							PeriodSeconds:       ptr.Int32(1),
-							SuccessThreshold:    ptr.Int32(1),
-							TimeoutSeconds:      ptr.Int32(1),
-						},
-					},
-					Snapshot: &v1alpha1.Snapshot{
-						Schedule:       "1 23 * * *",
-						TimeoutSeconds: ptr.Int32(1),
-						RetentionPolicy: &v1alpha1.RetentionPolicy{
-							RetentionPeriodDays:   ptr.Int32(1),
-							CleanupTimeoutSeconds: ptr.Int32(1),
-							CleanupSchedule:       "1 23 * * *",
-						},
-					},
-				},
-			}
-		})
-
-		Context("success cases", func() {
-			AfterEach(func() {
-				err = validation.ValidateCassandra(cass).ToAggregate()
-				Expect(err).ToNot(HaveOccurred())
-			})
-			It("succeeds with a fully populated Cassandra object", func() {})
-			It("succeeds without a Snapshot", func() {
-				cass.Spec.Snapshot = nil
-			})
-			It("succeeds without a Snapshot.TimeoutSeconds", func() {
-				cass.Spec.Snapshot.TimeoutSeconds = nil
-			})
-			It("succeeds without a Snapshot.RetentionPolicy", func() {
-				cass.Spec.Snapshot.RetentionPolicy = nil
-			})
-			It("succeeds without a Snapshot.RetentionPolicy.RetentionPeriodDays", func() {
-				cass.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays = nil
-			})
-			It("succeeds without a Snapshot.RetentionPolicy.CleanupTimeoutSeconds", func() {
-				cass.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds = nil
-			})
-		})
-
-		Context("failure cases", func() {
-			AfterEach(func() {
-				err = validation.ValidateCassandra(cass).ToAggregate()
-				fmt.Fprintf(GinkgoWriter, "INFO: Error message was: %s", err)
+		DescribeTable(
+			"failure cases",
+			func(expectedMessage string, mutate func(*v1alpha1.Cassandra)) {
+				c := validCassandra()
+				mutate(c)
+				err := validation.ValidateCassandra(c).ToAggregate()
 				Expect(err).To(HaveOccurred())
-			})
+				fmt.Fprintf(GinkgoWriter, "INFO: Error message was: %q\n", err)
+				Expect(err.Error()).To(Equal(expectedMessage))
+			},
+			Entry(
+				"Spec.Racks is required",
+				"spec.Racks: Required value",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Racks = nil
+				},
+			),
+			Entry(
+				"Rack.Replicas must be positive",
+				"spec.Racks.rack1.Replicas: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Racks[0].Replicas = -1
+				},
+			),
+			Entry(
+				"Rack.Replicas must be >= 1",
+				"spec.Racks.rack1.Replicas: Invalid value: 0: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Racks[0].Replicas = 0
+				},
+			),
+			Entry(
+				"Rack.StorageClass must not be empty when UseEmptyDir=false",
+				"spec.Racks.rack1.StorageClass: Required value: because spec.useEmptyDir is true",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.UseEmptyDir = ptr.Bool(false)
+					c.Spec.Racks[0].StorageClass = ""
+				},
+			),
+			Entry(
+				"Rack.StorageClass must not be empty when UseEmptyDir=false",
+				"spec.Racks.rack1.StorageClass: Required value: because spec.useEmptyDir is true",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.UseEmptyDir = ptr.Bool(false)
+					c.Spec.Racks[0].StorageClass = ""
+				},
+			),
+			Entry(
+				"Rack.Zone must not be empty when UseEmptyDir=false",
+				"spec.Racks.rack1.Zone: Required value: because spec.useEmptyDir is true",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.UseEmptyDir = ptr.Bool(false)
+					c.Spec.Racks[0].Zone = ""
+				},
+			),
+			Entry(
+				"Pod.Memory must be > 0",
+				"spec.Pod.Memory: Invalid value: \"0\": must be > 0",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.Memory.Set(0)
+				},
+			),
+			Entry(
+				"Pod.StorageSize must be > 0 when UseEmptyDir=false",
+				"spec.Pod.StorageSize: Invalid value: \"0\": must be > 0 when spec.useEmptyDir is false",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.UseEmptyDir = ptr.Bool(false)
+					c.Spec.Pod.StorageSize.Set(0)
+				},
+			),
+			Entry(
+				"Pod.StorageSize must be 0 when UseEmptyDir=true",
+				"spec.Pod.StorageSize: Invalid value: \"1\": must be 0 when spec.useEmptyDir is true",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.UseEmptyDir = ptr.Bool(true)
+					c.Spec.Pod.StorageSize.Set(1)
+				},
+			),
 
-			Context("ObjectMeta", func() {
-				It("fails if name is missing", func() {
-					cass.Name = ""
-				})
-				It("fails if namespace is missing", func() {
-					cass.Namespace = ""
-				})
-			})
+			Entry(
+				"LivenessProbe.FailureThreshold must be positive",
+				"spec.Pod.LivenessProbe.FailureThreshold: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.FailureThreshold = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"LivenessProbe.FailureThreshold must be >= 1",
+				"spec.Pod.LivenessProbe.FailureThreshold: Invalid value: 0: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.FailureThreshold = ptr.Int32(0)
+				},
+			),
+			Entry(
+				"LivenessProbe.InitialDelaySeconds must be positive",
+				"spec.Pod.LivenessProbe.InitialDelaySeconds: Invalid value: -1: must be >= 0",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.InitialDelaySeconds = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"LivenessProbe.PeriodSeconds must be positive",
+				"spec.Pod.LivenessProbe.PeriodSeconds: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.PeriodSeconds = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"LivenessProbe.PeriodSeconds must be >= 1",
+				"spec.Pod.LivenessProbe.PeriodSeconds: Invalid value: 0: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.PeriodSeconds = ptr.Int32(0)
+				},
+			),
+			Entry(
+				"LivenessProbe.SuccessThreshold must be positive",
+				"spec.Pod.LivenessProbe.SuccessThreshold: Invalid value: -1: must be 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.SuccessThreshold = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"LivenessProbe.SuccessThreshold must be 1 (<1)",
+				"spec.Pod.LivenessProbe.SuccessThreshold: Invalid value: 0: must be 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.SuccessThreshold = ptr.Int32(0)
+				},
+			),
+			Entry(
+				"LivenessProbe.SuccessThreshold must be 1 (>1)",
+				"spec.Pod.LivenessProbe.SuccessThreshold: Invalid value: 2: must be 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.SuccessThreshold = ptr.Int32(2)
+				},
+			),
+			Entry(
+				"LivenessProbe.TimeoutSeconds must be positive",
+				"spec.Pod.LivenessProbe.TimeoutSeconds: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.TimeoutSeconds = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"LivenessProbe.TimeoutSeconds must be >= 1",
+				"spec.Pod.LivenessProbe.TimeoutSeconds: Invalid value: 0: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.LivenessProbe.TimeoutSeconds = ptr.Int32(0)
+				},
+			),
 
-			Context("Spec", func() {
-				Context("Racks", func() {
-					It("fails if racks is empty", func() {
-						cass.Spec.Racks = nil
-					})
-					It("fails if Rack.Replicas is < 1", func() {
-						cass.Spec.Racks[0].Replicas = 0
-					})
-					Context("UseEmptyDir=false", func() {
-						BeforeEach(func() {
-							cass.Spec.UseEmptyDir = ptr.Bool(false)
-						})
-						It("fails if Rack.StorageClass is empty", func() {
-							cass.Spec.Racks[0].StorageClass = ""
-						})
-						It("fails if Rack.Zone is empty", func() {
-							cass.Spec.Racks[0].Zone = ""
-						})
-					})
-				})
+			Entry(
+				"ReadinessProbe.FailureThreshold must be positive",
+				"spec.Pod.ReadinessProbe.FailureThreshold: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.FailureThreshold = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"ReadinessProbe.FailureThreshold must be >= 1",
+				"spec.Pod.ReadinessProbe.FailureThreshold: Invalid value: 0: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.FailureThreshold = ptr.Int32(0)
+				},
+			),
+			Entry(
+				"ReadinessProbe.InitialDelaySeconds must be positive",
+				"spec.Pod.ReadinessProbe.InitialDelaySeconds: Invalid value: -1: must be >= 0",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.InitialDelaySeconds = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"ReadinessProbe.PeriodSeconds must be positive",
+				"spec.Pod.ReadinessProbe.PeriodSeconds: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.PeriodSeconds = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"ReadinessProbe.PeriodSeconds must be >= 1",
+				"spec.Pod.ReadinessProbe.PeriodSeconds: Invalid value: 0: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.PeriodSeconds = ptr.Int32(0)
+				},
+			),
+			Entry(
+				"ReadinessProbe.SuccessThreshold must be positive",
+				"spec.Pod.ReadinessProbe.SuccessThreshold: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.SuccessThreshold = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"ReadinessProbe.SuccessThreshold must be >= 1",
+				"spec.Pod.ReadinessProbe.SuccessThreshold: Invalid value: 0: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.SuccessThreshold = ptr.Int32(0)
+				},
+			),
+			// Entry(
+			//	"ReadinessProbe.SuccessThreshold must be 1 (>1)",
+			//	"spec.Pod.ReadinessProbe.SuccessThreshold: Invalid value: 2: must be 1",
+			//	func(c *v1alpha1.Cassandra) {
+			//		c.Spec.Pod.ReadinessProbe.SuccessThreshold = ptr.Int32(2)
+			//	},
+			// ),
+			Entry(
+				"ReadinessProbe.TimeoutSeconds must be positive",
+				"spec.Pod.ReadinessProbe.TimeoutSeconds: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.TimeoutSeconds = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"ReadinessProbe.TimeoutSeconds must be >= 1",
+				"spec.Pod.ReadinessProbe.TimeoutSeconds: Invalid value: 0: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Pod.ReadinessProbe.TimeoutSeconds = ptr.Int32(0)
+				},
+			),
 
-				Context("Pod", func() {
-					It("fails if Memory is zero", func() {
-						cass.Spec.Pod.Memory.Set(0)
-					})
-					Context("UseEmptyDir=false", func() {
-						BeforeEach(func() {
-							cass.Spec.UseEmptyDir = ptr.Bool(false)
-						})
-						It("fails if StorageSize is zero", func() {
-							cass.Spec.Pod.StorageSize.Set(0)
-						})
-					})
-					Context("UseEmptyDir=true", func() {
-						BeforeEach(func() {
-							cass.Spec.UseEmptyDir = ptr.Bool(true)
-						})
-						It("fails if StorageSize is not zero", func() {
-							cass.Spec.Pod.StorageSize.Set(1)
-						})
-					})
-					Context("LivenessProbe", func() {
-						var probe *v1alpha1.Probe
-						BeforeEach(func() {
-							probe = cass.Spec.Pod.LivenessProbe
-						})
-						It("fails if FailureThreshold < 1", func() {
-							probe.FailureThreshold = ptr.Int32(0)
-						})
-						It("fails if FailureThreshold < 0", func() {
-							probe.FailureThreshold = ptr.Int32(-1)
-						})
-						It("fails if InitialDelaySeconds < 0", func() {
-							probe.InitialDelaySeconds = ptr.Int32(-1)
-						})
-						It("fails if PeriodSeconds < 0", func() {
-							probe.PeriodSeconds = ptr.Int32(-1)
-						})
-						It("fails if PeriodSeconds < 1", func() {
-							probe.PeriodSeconds = ptr.Int32(0)
-						})
-						It("fails if SuccessThreshold < 0", func() {
-							probe.SuccessThreshold = ptr.Int32(-1)
-						})
-						It("fails if SuccessThreshold < 1", func() {
-							probe.SuccessThreshold = ptr.Int32(0)
-						})
-						It("fails if SuccessThreshold > 1 (Must be 1 for liveness)", func() {
-							probe.SuccessThreshold = ptr.Int32(2)
-						})
-						It("fails if TimeoutSeconds < 0", func() {
-							probe.TimeoutSeconds = ptr.Int32(-1)
-						})
-						It("fails if TimeoutSeconds < 1", func() {
-							probe.TimeoutSeconds = ptr.Int32(0)
-						})
-					})
-					Context("ReadinessProbe", func() {
-						var probe *v1alpha1.Probe
-						BeforeEach(func() {
-							probe = cass.Spec.Pod.ReadinessProbe
-						})
-						It("fails if FailureThreshold < 1", func() {
-							probe.FailureThreshold = ptr.Int32(0)
-						})
-						It("fails if FailureThreshold < 0", func() {
-							probe.FailureThreshold = ptr.Int32(-1)
-						})
-						It("fails if InitialDelaySeconds < 0", func() {
-							probe.InitialDelaySeconds = ptr.Int32(-1)
-						})
-						It("fails if PeriodSeconds < 0", func() {
-							probe.PeriodSeconds = ptr.Int32(-1)
-						})
-						It("fails if PeriodSeconds < 1", func() {
-							probe.PeriodSeconds = ptr.Int32(0)
-						})
-						It("fails if SuccessThreshold < 0", func() {
-							probe.SuccessThreshold = ptr.Int32(-1)
-						})
-						It("fails if SuccessThreshold < 1", func() {
-							probe.SuccessThreshold = ptr.Int32(0)
-						})
-						//
-						// It("fails if SuccessThreshold > 1 (Must be 1 for liveness)", func() {
-						//	probe.SuccessThreshold = ptr.Int32(2)
-						// })
-						It("fails if TimeoutSeconds < 0", func() {
-							probe.TimeoutSeconds = ptr.Int32(-1)
-						})
-						It("fails if TimeoutSeconds < 1", func() {
-							probe.TimeoutSeconds = ptr.Int32(0)
-						})
-					})
-				})
-				Context("Snapshot", func() {
-					It("fails if Schedule is empty", func() {
-						cass.Spec.Snapshot.Schedule = ""
-					})
-					It("fails if Schedule is not valid cron syntax", func() {
-						cass.Spec.Snapshot.Schedule = "x y z"
-					})
-					It("fails if TimeoutSeconds is < 0", func() {
-						cass.Spec.Snapshot.TimeoutSeconds = ptr.Int32(-1)
-					})
-					Context("RetentionPolicy", func() {
-						It("fails if RetentionPeriodDays is < 0", func() {
-							cass.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays = ptr.Int32(-1)
-						})
-						It("fails if CleanupTimeoutSeconds is < 0", func() {
-							cass.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds = ptr.Int32(-1)
-						})
-						It("fails if CleanupSchedule is empty", func() {
-							cass.Spec.Snapshot.RetentionPolicy.CleanupSchedule = ""
-						})
-						It("fails if CleanupSchedule is not valid cron syntax", func() {
-							cass.Spec.Snapshot.RetentionPolicy.CleanupSchedule = "x y z"
-						})
-					})
-				})
-			})
-		})
+			Entry(
+				"Snapshot.Schedule must not be empty",
+				"spec.Snapshot.Schedule: Invalid value: \"\": is not a valid cron expression (Empty spec string)",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot.Schedule = ""
+				},
+			),
+			Entry(
+				"Snapshot.Schedule must be valid cron syntax",
+				"spec.Snapshot.Schedule: Invalid value: \"x y z\": is not a valid cron expression (Expected 5 to 6 fields, found 3: x y z)",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot.Schedule = "x y z"
+				},
+			),
+			Entry(
+				"Snapshot.TimeoutSeconds must be positive",
+				"spec.Snapshot.TimeoutSeconds: Invalid value: -1: must be >= 1",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot.TimeoutSeconds = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"Snapshot.RetentionPolicy.RetentionPeriodDays must be positive",
+				"spec.Snapshot.RetentionPolicy.RetentionPeriodDays: Invalid value: -1: must be >= 0",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"Snapshot.RetentionPolicy.CleanupTimeoutSeconds must be positive",
+				"spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds: Invalid value: -1: must be >= 0",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds = ptr.Int32(-1)
+				},
+			),
+			Entry(
+				"Snapshot.RetentionPolicy.CleanupSchedule must not be empty",
+				"spec.Snapshot.RetentionPolicy.CleanupSchedule: Invalid value: \"\": is not a valid cron expression (Empty spec string)",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot.RetentionPolicy.CleanupSchedule = ""
+				},
+			),
+			Entry(
+				"Snapshot.RetentionPolicy.CleanupSchedule must be valid cron syntax",
+				"spec.Snapshot.RetentionPolicy.CleanupSchedule: Invalid value: \"x y z\": is not a valid cron expression (Expected 5 to 6 fields, found 3: x y z)",
+				func(c *v1alpha1.Cassandra) {
+					c.Spec.Snapshot.RetentionPolicy.CleanupSchedule = "x y z"
+				},
+			),
+		)
+
 	})
+
 })

@@ -209,6 +209,19 @@ func EventuallyClusterIsCreatedWithRacks(namespace string, clusterName string, r
 }
 
 func CassandraEventsFor(namespace, clusterName string) func() ([]coreV1.Event, error) {
+	allEvents := func(coreV1.Event) bool { return true }
+	return cassandraEventsFilteredFor(namespace, clusterName, allEvents)
+}
+
+func CassandraEventsSince(namespace, clusterName string, sinceTime time.Time) func() ([]coreV1.Event, error) {
+	eventsOnOrAfterTime := func(event coreV1.Event) bool {
+		metaSinceTime := metaV1.NewTime(sinceTime)
+		return event.LastTimestamp.Equal(&metaSinceTime) || event.LastTimestamp.After(sinceTime)
+	}
+	return cassandraEventsFilteredFor(namespace, clusterName, eventsOnOrAfterTime)
+}
+
+func cassandraEventsFilteredFor(namespace, clusterName string, filter func(coreV1.Event) bool) func() ([]coreV1.Event, error) {
 	var cassandraEvents []coreV1.Event
 	return func() ([]coreV1.Event, error) {
 		allEvents, err := KubeClientset.CoreV1().Events(namespace).List(metaV1.ListOptions{})
@@ -217,7 +230,7 @@ func CassandraEventsFor(namespace, clusterName string) func() ([]coreV1.Event, e
 		}
 
 		for _, event := range allEvents.Items {
-			if event.InvolvedObject.Kind == cassandra.Kind && event.InvolvedObject.Name == clusterName {
+			if event.InvolvedObject.Kind == cassandra.Kind && event.InvolvedObject.Name == clusterName && filter(event) {
 				cassandraEvents = append(cassandraEvents, event)
 			}
 		}

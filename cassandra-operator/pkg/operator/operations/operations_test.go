@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,6 +57,7 @@ var _ = Describe("operations to execute based on event", func() {
 				},
 			},
 		}
+		v1alpha1helpers.SetDefaultsForCassandra(oldClusterDef)
 		newClusterDef = oldClusterDef.DeepCopy()
 
 		c, _ := cluster.New(newClusterDef)
