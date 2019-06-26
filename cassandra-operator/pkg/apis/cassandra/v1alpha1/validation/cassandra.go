@@ -3,20 +3,18 @@ package validation
 import (
 	"fmt"
 
-	apimachineryvalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/robfig/cron"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 )
 
+// ValidateCassandra checks that all required fields are supplied and that they have valid values
+// NB ObjectMeta is not validated here;
+// apiVersion, kind and metadata, are all validated by the API server implicitly.
+// See https://kubernetes.io/docs/tasks/access-kubernetes-api/custom-resources/custom-resource-definitions/#specifying-a-structural-schema
 func ValidateCassandra(c *v1alpha1.Cassandra) field.ErrorList {
-	allErrs := apimachineryvalidation.ValidateObjectMeta(
-		&c.ObjectMeta,
-		true,
-		apimachineryvalidation.NameIsDNSSubdomain,
-		field.NewPath("metadata"),
-	)
+	var allErrs field.ErrorList
 	allErrs = append(allErrs, validateCassandraSpec(c, field.NewPath("spec"))...)
 	return allErrs
 }

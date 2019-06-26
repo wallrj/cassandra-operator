@@ -108,20 +108,6 @@ var _ = Describe("validation", func() {
 				Expect(err.Error()).To(Equal(expectedMessage))
 			},
 			Entry(
-				"Name is required",
-				"metadata.name: Required value: name or generateName is required",
-				func(c *v1alpha1.Cassandra) {
-					c.Name = ""
-				},
-			),
-			Entry(
-				"Namespace is required",
-				"metadata.namespace: Required value",
-				func(c *v1alpha1.Cassandra) {
-					c.Namespace = ""
-				},
-			),
-			Entry(
 				"Spec.Racks is required",
 				"spec.Racks: Required value",
 				func(c *v1alpha1.Cassandra) {
