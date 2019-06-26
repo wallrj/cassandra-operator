@@ -85,7 +85,7 @@ jobs:
             # assumes this stage is only included on the correct branch or tag
             all_branches: true
 
-# Cache dependencies for Java and Golang
+# Cache dependencies for Java and Golang.
 # See:
 # * https://docs.travis-ci.com/user/languages/java/#caching
 # * https://restic.net/blog/2018-09-02/travis-build-cache
