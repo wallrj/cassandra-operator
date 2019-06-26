@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	// required for dep management
 	"k8s.io/apimachinery/pkg/api/resource"
 	_ "k8s.io/code-generator/cmd/client-gen/types"
@@ -14,8 +13,21 @@ import (
 const (
 	NodeServiceAccountName     = "cassandra-node"
 	SnapshotServiceAccountName = "cassandra-snapshot"
-	// DefaultDCName is the default data center name which each Cassandra pod belongs to
-	DefaultDCName = "dc1"
+
+	// DefaultDatacenterName is the default data center name which each Cassandra pod belongs to
+	DefaultDatacenterName = "dc1"
+
+	// DefaultCassandraImage is the name of the default Docker image used on Cassandra pods
+	DefaultCassandraImage = "cassandra:3.11"
+
+	// DefaultCassandraBootstrapperImage is the name of the Docker image used to prepare the configuration for the Cassandra node before it can be started
+	DefaultCassandraBootstrapperImage = "skyuk/cassandra-bootstrapper:latest"
+
+	// DefaultCassandraSnapshotImage is the name of the Docker image used to make and cleanup snapshots
+	DefaultCassandraSnapshotImage = "skyuk/cassandra-snapshot:latest"
+
+	// DefaultCassandraSidecarImage is the name of the Docker image used to inform liveness/readiness probes
+	DefaultCassandraSidecarImage = "skyuk/cassandra-sidecar:latest"
 )
 
 // +genclient
@@ -26,8 +38,8 @@ type Cassandra struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   CassandraSpec   `json:"spec"`
-	Status CassandraStatus `json:"status"`
+	Spec   CassandraSpec   `json:"spec,omitempty"`
+	Status CassandraStatus `json:"status,omitempty"`
 }
 
 // CassandraSpec is the specification for the Cassandra resource
@@ -36,37 +48,41 @@ type CassandraSpec struct {
 	Datacenter *string `json:"datacenter,omitempty"`
 	Racks      []Rack  `json:"racks"`
 	// +optional
-	UseEmptyDir bool `json:"useEmptyDir"`
-	Pod         Pod  `json:"pod"`
+	UseEmptyDir *bool `json:"useEmptyDir,omitempty"`
+	Pod         Pod   `json:"pod"`
 	// +optional
 	Snapshot *Snapshot `json:"snapshot,omitempty"`
 }
 
 type Probe struct {
 	// +optional
-	FailureThreshold int32 `json:"failureThreshold"`
+	FailureThreshold *int32 `json:"failureThreshold,omitempty"`
 	// +optional
-	InitialDelaySeconds int32 `json:"initialDelaySeconds"`
+	InitialDelaySeconds *int32 `json:"initialDelaySeconds,omitempty"`
 	// +optional
-	PeriodSeconds int32 `json:"periodSeconds"`
+	PeriodSeconds *int32 `json:"periodSeconds,omitempty"`
 	// +optional
-	SuccessThreshold int32 `json:"successThreshold"`
+	SuccessThreshold *int32 `json:"successThreshold,omitempty"`
 	// +optional
-	TimeoutSeconds int32 `json:"timeoutSeconds"`
+	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
 type Pod struct {
 	// +optional
-	BootstrapperImage string `json:"bootstrapperImage"`
+	BootstrapperImage *string `json:"bootstrapperImage,omitempty"`
+
 	// +optional
-	Image       string            `json:"image"`
+	SidecarImage *string `json:"sidecarImage,omitempty"`
+
+	// +optional
+	Image       *string           `json:"image,omitempty"`
 	StorageSize resource.Quantity `json:"storageSize"`
 	Memory      resource.Quantity `json:"memory"`
 	CPU         resource.Quantity `json:"cpu"`
 	// +optional
-	LivenessProbe *Probe `json:"livenessProbe"`
+	LivenessProbe *Probe `json:"livenessProbe,omitempty"`
 	// +optional
-	ReadinessProbe *Probe `json:"readinessProbe"`
+	ReadinessProbe *Probe `json:"readinessProbe,omitempty"`
 }
 
 // CassandraStatus is the status for the Cassandra resource
@@ -93,25 +109,21 @@ type Rack struct {
 // Snapshot defines the snapshot creation and deletion configuration
 type Snapshot struct {
 	// +optional
-	Image string `json:"image"`
+	Image *string `json:"image,omitempty"`
 	// Schedule follows the cron format, see https://en.wikipedia.org/wiki/Cron
 	Schedule string `json:"schedule"`
 	// +optional
-	Keyspaces []string `json:"keyspaces"`
+	Keyspaces []string `json:"keyspaces,omitempty"`
 	// +optional
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 	// +optional
 	RetentionPolicy *RetentionPolicy `json:"retentionPolicy,omitempty"`
 }
 
-// HasRetentionPolicyEnabled returns true when a retention policy exists and is enabled
-func (s *Snapshot) HasRetentionPolicyEnabled() bool {
-	return s.RetentionPolicy != nil && s.RetentionPolicy.Enabled
-}
-
 // RetentionPolicy defines how long the snapshots should be kept for and how often the cleanup task should run
 type RetentionPolicy struct {
-	Enabled bool `json:"enabled"`
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
 	// +optional
 	RetentionPeriodDays *int32 `json:"retentionPeriodDays,omitempty"`
 	// CleanupSchedule follows the cron format, see https://en.wikipedia.org/wiki/Cron
@@ -155,25 +167,14 @@ func (c *Cassandra) CustomConfigMapName() string {
 	return fmt.Sprintf("%s-config", c.Name)
 }
 
-// TODO: Move this to Cassandra top-level object
-func (c *CassandraSpec) GetDatacenter() string {
-	if c.Datacenter == nil {
-		return DefaultDCName
-	}
-	return *c.Datacenter
-}
-
-// SnapshotPropertiesUpdated returns false when snapshot1 and snapshot2 have the same properties disregarding retention policy
-func SnapshotPropertiesUpdated(snapshot1 *Snapshot, snapshot2 *Snapshot) bool {
-	return snapshot1.Schedule != snapshot2.Schedule ||
-		*snapshot1.TimeoutSeconds != *snapshot2.TimeoutSeconds ||
-		!reflect.DeepEqual(snapshot1.Keyspaces, snapshot2.Keyspaces)
-}
-
-// SnapshotCleanupPropertiesUpdated returns false snapshot1 and snapshot2 have the same retention policy regardless of whether it is enabled or not
-func SnapshotCleanupPropertiesUpdated(snapshot1 *Snapshot, snapshot2 *Snapshot) bool {
-	return snapshot1.RetentionPolicy != nil && snapshot2.RetentionPolicy != nil &&
-		(snapshot1.RetentionPolicy.CleanupSchedule != snapshot2.RetentionPolicy.CleanupSchedule ||
-			*snapshot1.RetentionPolicy.CleanupTimeoutSeconds != *snapshot2.RetentionPolicy.CleanupTimeoutSeconds ||
-			*snapshot1.RetentionPolicy.RetentionPeriodDays != *snapshot2.RetentionPolicy.RetentionPeriodDays)
+// Equal checks equality of two Pods. This is useful for testing with cmp.Equal
+func (p Pod) Equal(other Pod) bool {
+	return reflect.DeepEqual(p.BootstrapperImage, other.BootstrapperImage) &&
+		reflect.DeepEqual(p.SidecarImage, other.SidecarImage) &&
+		reflect.DeepEqual(p.Image, other.Image) &&
+		reflect.DeepEqual(p.LivenessProbe, other.LivenessProbe) &&
+		reflect.DeepEqual(p.ReadinessProbe, other.ReadinessProbe) &&
+		p.StorageSize.Cmp(other.StorageSize) == 0 &&
+		p.Memory.Cmp(other.Memory) == 0 &&
+		p.CPU.Cmp(other.CPU) == 0
 }

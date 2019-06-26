@@ -2,16 +2,18 @@ package snapshot
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	coreV1 "k8s.io/api/core/v1"
+
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e/parallel"
-	coreV1 "k8s.io/api/core/v1"
-	"testing"
-	"time"
 )
 
 var (
@@ -70,11 +72,10 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 			AClusterWithName(clusterName).
 				AndRacks([]v1alpha1.Rack{Rack("a", 1)}).
 				AndScheduledSnapshot(&v1alpha1.Snapshot{
-					Image:     CassandraSnapshotImageName,
+					Image:     &CassandraSnapshotImageName,
 					Schedule:  "59 23 * * *",
 					Keyspaces: []string{"keyspace1", "keyspace3"},
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:               true,
 						RetentionPeriodDays:   &retentionPeriod,
 						CleanupSchedule:       "11 22 1 * *",
 						CleanupTimeoutSeconds: &timeout,
@@ -117,14 +118,14 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterSnapshotCreationScheduleEvent,
 				Message:              fmt.Sprintf("Snapshot creation scheduled for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: clusterCreatedTime,
+				LastTimestampCloseTo: &clusterCreatedTime,
 			}))
 			By("registering an event for the snapshot cleanup job creation")
 			Eventually(CassandraEventsFor(Namespace, clusterName), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterSnapshotCleanupScheduleEvent,
 				Message:              fmt.Sprintf("Snapshot cleanup scheduled for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: clusterCreatedTime,
+				LastTimestampCloseTo: &clusterCreatedTime,
 			}))
 		})
 	})
@@ -138,11 +139,16 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 				UsingEmptyDir().
 				Exists()
 
+			// wait long enough to ensure we see all events related to cluster creation, so we can filter these out later
+			waitForClusterCreationCompleteEvent(clusterName)
+
 			// when
-			clusterModifiedTime := time.Now()
+			// wait a bit to help spreading the creation from modification events
+			time.Sleep(time.Second)
+			clusterModifiedTime := asEventTime(time.Now())
 			snapshotTimeout := int32(5)
 			AScheduledSnapshotIsAddedToCluster(Namespace, clusterName, &v1alpha1.Snapshot{
-				Image:          CassandraSnapshotImageName,
+				Image:          &CassandraSnapshotImageName,
 				Schedule:       "1 23 * * *",
 				TimeoutSeconds: &snapshotTimeout,
 				Keyspaces:      []string{"k1", "k2"},
@@ -166,12 +172,16 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 			))
 
 			By("registering an event for the cronjob creation")
-			Eventually(CassandraEventsFor(Namespace, clusterName), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
+			Eventually(CassandraEventsSince(Namespace, clusterName, clusterModifiedTime), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterSnapshotCreationScheduleEvent,
 				Message:              fmt.Sprintf("Snapshot creation scheduled for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: clusterModifiedTime,
+				LastTimestampCloseTo: &clusterModifiedTime,
 			}))
+
+			By("not performing a rolling update of the cluster")
+			Expect(CassandraEventsSince(Namespace, clusterName, clusterModifiedTime)()).Should(HaveLen(1))
+			Expect(PodRestartForCluster(Namespace, clusterName)()).Should(Equal(0))
 		})
 	})
 
@@ -182,11 +192,10 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 			AClusterWithName(clusterName).
 				AndRacks([]v1alpha1.Rack{Rack("a", 1)}).
 				AndScheduledSnapshot(&v1alpha1.Snapshot{
-					Image:     CassandraSnapshotImageName,
+					Image:     &CassandraSnapshotImageName,
 					Schedule:  "59 23 * * *",
 					Keyspaces: []string{"keyspace1", "keyspace3"},
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:               true,
 						RetentionPeriodDays:   &retentionPeriod,
 						CleanupSchedule:       "11 22 1 * *",
 						CleanupTimeoutSeconds: &timeout,
@@ -195,28 +204,37 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 				UsingEmptyDir().
 				Exists()
 
+			// wait long enough to ensure we see all events related to cluster creation, so we can filter these out later
+			waitForClusterCreationCompleteEvent(clusterName)
+
 			// when
-			snapshotDeletedTime := time.Now()
+			// wait a bit to help spreading the creation from modification events
+			time.Sleep(time.Second)
+			snapshotDeletedTime := asEventTime(time.Now())
 			AScheduledSnapshotIsRemovedFromCluster(Namespace, clusterName)
 
 			// then
 			By("registering an event for the snapshot job deletion")
-			Eventually(CassandraEventsFor(Namespace, clusterName), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
+			Eventually(CassandraEventsSince(Namespace, clusterName, snapshotDeletedTime), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterSnapshotCreationUnscheduleEvent,
 				Message:              fmt.Sprintf("Snapshot creation unscheduled for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: snapshotDeletedTime,
+				LastTimestampCloseTo: &snapshotDeletedTime,
 			}))
 			By("registering an event for the snapshot cleanup job deletion")
-			Eventually(CassandraEventsFor(Namespace, clusterName), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
+			Eventually(CassandraEventsSince(Namespace, clusterName, snapshotDeletedTime), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterSnapshotCleanupUnscheduleEvent,
 				Message:              fmt.Sprintf("Snapshot cleanup unscheduled for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: snapshotDeletedTime,
+				LastTimestampCloseTo: &snapshotDeletedTime,
 			}))
 
 			By("removing the snapshot jobs")
 			Expect(CronJobsForCluster(Namespace, clusterName)()).Should(HaveLen(0))
+
+			By("not performing a rolling update of the cluster")
+			Expect(CassandraEventsSince(Namespace, clusterName, snapshotDeletedTime)()).Should(HaveLen(2))
+			Expect(PodRestartForCluster(Namespace, clusterName)()).Should(Equal(0))
 		})
 	})
 
@@ -227,11 +245,10 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 			AClusterWithName(clusterName).
 				AndRacks([]v1alpha1.Rack{Rack("a", 1)}).
 				AndScheduledSnapshot(&v1alpha1.Snapshot{
-					Image:     CassandraSnapshotImageName,
+					Image:     &CassandraSnapshotImageName,
 					Schedule:  "59 23 * * *",
 					Keyspaces: []string{"keyspace1", "keyspace3"},
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:               true,
 						RetentionPeriodDays:   &retentionPeriod,
 						CleanupSchedule:       "11 22 1 * *",
 						CleanupTimeoutSeconds: &timeout,
@@ -240,14 +257,18 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 				UsingEmptyDir().
 				Exists()
 
+			// wait long enough to ensure we see all events related to cluster creation, so we can filter these out later
+			waitForClusterCreationCompleteEvent(clusterName)
+
 			// when
-			snapshotModificationTime := time.Now()
+			// wait a bit to help spreading the creation from modification events
+			time.Sleep(time.Second)
+			snapshotModificationTime := asEventTime(time.Now())
 			AScheduledSnapshotIsChangedForCluster(Namespace, clusterName, &v1alpha1.Snapshot{
-				Image:     CassandraSnapshotImageName,
+				Image:     &CassandraSnapshotImageName,
 				Schedule:  "15 9 * * *",
 				Keyspaces: []string{"k2"},
 				RetentionPolicy: &v1alpha1.RetentionPolicy{
-					Enabled:               true,
 					RetentionPeriodDays:   &retentionPeriod,
 					CleanupSchedule:       "2 5 1 * *",
 					CleanupTimeoutSeconds: &timeout,
@@ -282,20 +303,37 @@ var _ = Describe("Cassandra snapshot scheduling", func() {
 			))
 
 			By("registering an event for the snapshot job modification")
-			Eventually(CassandraEventsFor(Namespace, clusterName), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
+			Eventually(CassandraEventsSince(Namespace, clusterName, snapshotModificationTime), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterSnapshotCreationModificationEvent,
 				Message:              fmt.Sprintf("Snapshot creation modified for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: snapshotModificationTime,
+				LastTimestampCloseTo: &snapshotModificationTime,
 			}))
+
 			By("registering an event for the snapshot cleanup job modification")
-			Eventually(CassandraEventsFor(Namespace, clusterName), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
+			Eventually(CassandraEventsSince(Namespace, clusterName, snapshotModificationTime), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterSnapshotCleanupModificationEvent,
 				Message:              fmt.Sprintf("Snapshot cleanup modified for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: snapshotModificationTime,
+				LastTimestampCloseTo: &snapshotModificationTime,
 			}))
+
+			By("not performing a rolling update of the cluster")
+			Expect(CassandraEventsSince(Namespace, clusterName, snapshotModificationTime)()).Should(HaveLen(2))
+			Expect(PodRestartForCluster(Namespace, clusterName)()).Should(Equal(0))
 		})
 	})
 
 })
+
+// events appears to be recorded with truncated seconds
+func asEventTime(theTime time.Time) time.Time {
+	return theTime.Truncate(time.Second)
+}
+
+func waitForClusterCreationCompleteEvent(clusterName string) {
+	Eventually(CassandraEventsFor(Namespace, clusterName), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
+		Type:   coreV1.EventTypeNormal,
+		Reason: cluster.StatefulSetChangeComplete,
+	}))
+}

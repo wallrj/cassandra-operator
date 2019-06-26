@@ -1,8 +1,9 @@
 package operator
 
 import (
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
 	"time"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
 
 	"fmt"
 	"net/http"
@@ -10,19 +11,29 @@ import (
 	"os/signal"
 	"syscall"
 
+	"reflect"
+
+	"github.com/davecgh/go-spew/spew"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
-	informers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/informers/externalversions"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"reflect"
 )
 
 // The Operator itself.
@@ -30,6 +41,7 @@ type Operator struct {
 	clusters           map[string]*cluster.Cluster
 	kubeClientset      *kubernetes.Clientset
 	cassandraClientset *versioned.Clientset
+	dynamicClient      dynamic.Interface
 	metricsPoller      *metrics.PrometheusMetrics
 	config             *Config
 	eventDispatcher    dispatcher.Dispatcher
@@ -46,7 +58,7 @@ type Config struct {
 const resourceResyncInterval = 5 * time.Minute
 
 // New creates a new Operator.
-func New(kubeClientset *kubernetes.Clientset, cassandraClientset *versioned.Clientset, operatorConfig *Config) *Operator {
+func New(kubeClientset *kubernetes.Clientset, cassandraClientset *versioned.Clientset, dynamicClient dynamic.Interface, operatorConfig *Config) *Operator {
 	clusters := make(map[string]*cluster.Cluster)
 	metricsPoller := metrics.NewMetrics(kubeClientset.CoreV1(), &metrics.Config{RequestTimeout: operatorConfig.MetricRequestDuration})
 
@@ -63,6 +75,7 @@ func New(kubeClientset *kubernetes.Clientset, cassandraClientset *versioned.Clie
 
 	return &Operator{
 		kubeClientset:      kubeClientset,
+		dynamicClient:      dynamicClient,
 		cassandraClientset: cassandraClientset,
 		config:             operatorConfig,
 		clusters:           clusters,
@@ -86,21 +99,29 @@ func (o *Operator) Run() {
 
 	o.startServer(o.metricsPoller)
 	o.addSignalHandler(o.stopCh)
-	cassandraInformer.Start(o.stopCh)
+
+	// this should be replaced with cassandraInformer.Start() once we have
+	// https://github.com/kubernetes/kubernetes/pull/77945 in a release
+	go cassandraInformer.Informer().Run(o.stopCh)
 	configMapInformer.Run(o.stopCh)
 	<-o.stopCh
 	log.Info("Operator shutting down")
 }
 
-func registerCassandraInformer(o *Operator, ns string) informers.SharedInformerFactory {
-	cassandraInformerFactory := informers.NewSharedInformerFactoryWithOptions(o.cassandraClientset, resourceResyncInterval, informers.WithNamespace(ns))
-	cassandraInformer := cassandraInformerFactory.Core().V1alpha1().Cassandras()
+func registerCassandraInformer(o *Operator, ns string) informers.GenericInformer {
+	resource := schema.GroupVersionResource{Group: cassandra.GroupName, Version: cassandra.Version, Resource: cassandra.Plural}
+
+	// this should be replaced with NewFilteredDynamicSharedInformerFactory
+	// once we have https://github.com/kubernetes/kubernetes/pull/77945 in a
+	// release
+	cassandraInformer := dynamicinformer.NewFilteredDynamicInformer(o.dynamicClient, resource, ns, resourceResyncInterval, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, nil)
 	cassandraInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    o.clusterAdded,
 		UpdateFunc: o.clusterUpdated,
 		DeleteFunc: o.clusterDeleted,
 	})
-	return cassandraInformerFactory
+
+	return cassandraInformer
 }
 
 func registerConfigMapInformer(o *Operator, ns string) cache.Controller {
@@ -114,7 +135,7 @@ func registerConfigMapInformer(o *Operator, ns string) cache.Controller {
 }
 
 func (o *Operator) configMapAdded(obj interface{}) {
-	cm := obj.(*v1.ConfigMap)
+	cm := o.safeGetConfigMap(obj)
 
 	if cluster.LooksLikeACassandraConfigMap(cm) {
 		clusterID := fmt.Sprintf("%s.%s", cm.Namespace, cm.Name)
@@ -123,7 +144,7 @@ func (o *Operator) configMapAdded(obj interface{}) {
 }
 
 func (o *Operator) configMapDeleted(obj interface{}) {
-	cm := obj.(*v1.ConfigMap)
+	cm := o.safeGetConfigMap(obj)
 
 	if cluster.ConfigMapBelongsToAManagedCluster(o.clusters, cm) {
 		clusterID := fmt.Sprintf("%s.%s", cm.Namespace, cm.Name)
@@ -132,8 +153,8 @@ func (o *Operator) configMapDeleted(obj interface{}) {
 }
 
 func (o *Operator) configMapUpdated(old interface{}, new interface{}) {
-	oldConfigMap := old.(*v1.ConfigMap)
-	newConfigMap := new.(*v1.ConfigMap)
+	oldConfigMap := o.safeGetConfigMap(old)
+	newConfigMap := o.safeGetConfigMap(new)
 
 	if reflect.DeepEqual(oldConfigMap.Data, newConfigMap.Data) {
 		log.Debugf("update event received for config map %s.%s but no changes detected", newConfigMap.Namespace, newConfigMap.Name)
@@ -146,16 +167,53 @@ func (o *Operator) configMapUpdated(old interface{}, new interface{}) {
 	}
 }
 
+// DeepCopy the object we get back from the informer to avoid modified the "cached" object
+func (o *Operator) safeGetConfigMap(obj interface{}) *v1.ConfigMap {
+	cm := obj.(*v1.ConfigMap)
+	return cm.DeepCopy()
+}
+
 func (o *Operator) clusterAdded(obj interface{}) {
-	clusterDefinition := obj.(*v1alpha1.Cassandra)
+	clusterDefinition, err := unstructuredToCassandra(obj)
+	if err != nil {
+		logCassandraDecodeError(obj, err)
+		return
+	}
+
+	v1alpha1helpers.SetDefaultsForCassandra(clusterDefinition)
 	o.adjustUseEmptyDir(clusterDefinition)
 
 	clusterID := fmt.Sprintf("%s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	o.eventDispatcher.Dispatch(&dispatcher.Event{Kind: operations.AddCluster, Key: clusterID, Data: clusterDefinition})
 }
 
+func unstructuredToCassandra(obj interface{}) (*v1alpha1.Cassandra, error) {
+	un, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		return nil, fmt.Errorf("object is not an unstructured")
+	}
+
+	var c v1alpha1.Cassandra
+	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.Object, &c)
+	if err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func logCassandraDecodeError(obj interface{}, err error) {
+	un := obj.(*unstructured.Unstructured)
+	log.Errorf("Could not decode Cassandra %s.%s: %v", un.GetNamespace(), un.GetName(), err)
+}
+
 func (o *Operator) clusterDeleted(obj interface{}) {
-	clusterDefinition := obj.(*v1alpha1.Cassandra)
+	clusterDefinition, err := unstructuredToCassandra(obj)
+	if err != nil {
+		logCassandraDecodeError(obj, err)
+		return
+	}
+	v1alpha1helpers.SetDefaultsForCassandra(clusterDefinition)
 	o.adjustUseEmptyDir(clusterDefinition)
 
 	clusterID := fmt.Sprintf("%s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
@@ -163,11 +221,23 @@ func (o *Operator) clusterDeleted(obj interface{}) {
 }
 
 func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
-	oldCluster := old.(*v1alpha1.Cassandra)
-	newCluster := new.(*v1alpha1.Cassandra)
-	log.Debugf("Cluster update detected for %s.%s, old: %v \nnew: %v", oldCluster.Namespace, oldCluster.Name, oldCluster.Spec, newCluster.Spec)
+	oldCluster, err := unstructuredToCassandra(old)
+	if err != nil {
+		logCassandraDecodeError(old, err)
+		return
+	}
 
+	newCluster, err := unstructuredToCassandra(new)
+	if err != nil {
+		logCassandraDecodeError(new, err)
+		return
+	}
+
+	log.Debug(spew.Sprintf("Cluster update detected for %s.%s, old: %+v \nnew: %+v", oldCluster.Namespace, oldCluster.Name, oldCluster.Spec, newCluster.Spec))
+
+	v1alpha1helpers.SetDefaultsForCassandra(oldCluster)
 	o.adjustUseEmptyDir(oldCluster)
+	v1alpha1helpers.SetDefaultsForCassandra(newCluster)
 	o.adjustUseEmptyDir(newCluster)
 
 	if reflect.DeepEqual(oldCluster.Spec, newCluster.Spec) {
@@ -184,9 +254,9 @@ func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
 }
 
 func (o *Operator) adjustUseEmptyDir(cluster *v1alpha1.Cassandra) {
-	if cluster.Spec.UseEmptyDir && !o.config.AllowEmptyDir {
+	if *cluster.Spec.UseEmptyDir && !o.config.AllowEmptyDir {
 		log.Warnf("Cluster %s.%s cannot be configured to use emptyDir, as the operator is configured not to allow the creation of clusters which use emptyDir storage.", cluster.Namespace, cluster.Name)
-		cluster.Spec.UseEmptyDir = false
+		cluster.Spec.UseEmptyDir = ptr.Bool(false)
 	}
 }
 

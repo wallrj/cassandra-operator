@@ -2,19 +2,21 @@ package modification
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e/parallel"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	"testing"
-	"time"
 )
 
 var (
@@ -79,21 +81,22 @@ var _ = Context("Allowable cluster modifications", func() {
 		// when
 		revisionsBeforeUpdate := statefulSetRevisions(clusterName, racks)
 		TheClusterPodSpecAreChangedTo(Namespace, clusterName, v1alpha1.Pod{
-			BootstrapperImage: CassandraBootstrapperImageName,
-			Image:             CassandraImageName,
+			BootstrapperImage: &CassandraBootstrapperImageName,
+			SidecarImage:      &CassandraSidecarImageName,
+			Image:             &CassandraImageName,
 			Memory:            resource.MustParse("999Mi"),
 			CPU:               resource.MustParse("1m"),
 			LivenessProbe: &v1alpha1.Probe{
-				FailureThreshold:    CassandraLivenessProbeFailureThreshold + 1,
-				InitialDelaySeconds: CassandraInitialDelay,
-				PeriodSeconds:       CassandraLivenessPeriod,
-				TimeoutSeconds:      6,
+				FailureThreshold:    ptr.Int32(CassandraLivenessProbeFailureThreshold + 1),
+				InitialDelaySeconds: ptr.Int32(CassandraInitialDelay),
+				PeriodSeconds:       ptr.Int32(CassandraLivenessPeriod),
+				TimeoutSeconds:      ptr.Int32(6),
 			},
 			ReadinessProbe: &v1alpha1.Probe{
-				FailureThreshold:    CassandraReadinessProbeFailureThreshold + 1,
-				TimeoutSeconds:      4,
-				InitialDelaySeconds: CassandraInitialDelay,
-				PeriodSeconds:       CassandraReadinessPeriod,
+				FailureThreshold:    ptr.Int32(CassandraReadinessProbeFailureThreshold + 1),
+				TimeoutSeconds:      ptr.Int32(4),
+				InitialDelaySeconds: ptr.Int32(CassandraInitialDelay),
+				PeriodSeconds:       ptr.Int32(CassandraReadinessPeriod),
 			},
 		})
 
@@ -102,8 +105,7 @@ var _ = Context("Allowable cluster modifications", func() {
 		By("updating only the CPU and memory for each pod within the cluster")
 		Eventually(PodsForCluster(Namespace, clusterName), 2*NodeRestartDuration, CheckInterval).Should(Each(And(
 			HaveDifferentRevisionTo(revisionsBeforeUpdate),
-			HaveASingleContainer(ContainerExpectation{
-				BootstrapperImageName:          CassandraBootstrapperImageName,
+			HaveContainer(ContainerExpectation{
 				ImageName:                      CassandraImageName,
 				ContainerName:                  "cassandra",
 				MemoryRequest:                  "999Mi",
@@ -201,7 +203,7 @@ var _ = Context("Allowable cluster modifications", func() {
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterUpdateEvent,
 				Message:              fmt.Sprintf("Custom config updated for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: modificationTime,
+				LastTimestampCloseTo: &modificationTime,
 			}))
 
 			By("applying the config changes to each pod")
@@ -238,7 +240,7 @@ var _ = Context("Allowable cluster modifications", func() {
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterUpdateEvent,
 				Message:              fmt.Sprintf("Custom config created for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: modificationTime,
+				LastTimestampCloseTo: &modificationTime,
 			}))
 
 			By("applying the config changes to each pod")
@@ -274,7 +276,7 @@ var _ = Context("Allowable cluster modifications", func() {
 				Type:                 coreV1.EventTypeNormal,
 				Reason:               cluster.ClusterUpdateEvent,
 				Message:              fmt.Sprintf("Custom config deleted for cluster %s.%s", Namespace, clusterName),
-				LastTimestampCloseTo: modificationTime,
+				LastTimestampCloseTo: &modificationTime,
 			}))
 
 			By("applying the config changes to each pod")

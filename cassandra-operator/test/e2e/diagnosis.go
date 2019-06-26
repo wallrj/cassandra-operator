@@ -2,10 +2,11 @@ package e2e
 
 import (
 	"fmt"
-	coreV1 "k8s.io/api/core/v1"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"time"
+
+	coreV1 "k8s.io/api/core/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func PrintDiagnosis(namespace string, testStartTime time.Time, clusterNames ...string) {
@@ -31,7 +32,7 @@ func operatorDiagnosis(namespace string, logSince time.Time) string {
 	}
 	operatorPod := pods.Items[0]
 	diagnosis = append(diagnosis, fmt.Sprintf("==== Logs for Operator pod %s since %v =====", operatorPod.Name, logSince))
-	diagnosis = append(diagnosis, fmt.Sprintf("%v", podLogsSince(namespace, &operatorPod, logSince)))
+	diagnosis = append(diagnosis, fmt.Sprintf("%v", podLogsSince(namespace, &operatorPod, "cassandra-operator", logSince)))
 	return strings.Join(diagnosis, "\n")
 }
 
@@ -39,20 +40,27 @@ func clusterDiagnosis(namespace, clusterName string) string {
 	var diagnosis []string
 	diagnosis = append(diagnosis, fmt.Sprintf("\n==== Cluster %s =====", clusterName))
 	diagnosis = append(diagnosis, fmt.Sprintf("%v", clusterPodsWide(namespace, clusterName)))
+	diagnosis = append(diagnosis, fmt.Sprintf("\n==== Cassandra definition ====="))
+	diagnosis = append(diagnosis, fmt.Sprintf("%v", cassandraDefinition(namespace, clusterName)))
+	diagnosis = append(diagnosis, fmt.Sprintf("\n==== Describing statefulsets ====="))
+	diagnosis = append(diagnosis, fmt.Sprintf("%v", KubectlOutputAsString(namespace, "describe", "statefulset", "-l", fmt.Sprintf("sky.uk/cassandra-operator=%s", clusterName))))
 
 	pods, err := KubeClientset.CoreV1().Pods(namespace).List(metaV1.ListOptions{LabelSelector: fmt.Sprintf("sky.uk/cassandra-operator=%s", clusterName)})
 	if err != nil {
 		return fmt.Sprintf("error while retrieving the pods list for cluster %s.%s: %v", namespace, clusterName, err)
 	}
-
 	for _, pod := range pods.Items {
 		diagnosis = append(diagnosis, fmt.Sprintf("\n==== Describing pod %s =====", pod.Name))
 		diagnosis = append(diagnosis, fmt.Sprintf("%v", podDescription(namespace, &pod)))
 		diagnosis = append(diagnosis, fmt.Sprintf("\n==== Logs for pod %s ====", pod.Name))
-		diagnosis = append(diagnosis, fmt.Sprintf("%v", podLogs(namespace, &pod)))
+		diagnosis = append(diagnosis, fmt.Sprintf("%v", podLogs(namespace, &pod, "cassandra")))
 		diagnosis = append(diagnosis, "\n\n")
 	}
 	return strings.Join(diagnosis, "\n")
+}
+
+func cassandraDefinition(namespace, clusterName string) string {
+	return KubectlOutputAsString(namespace, "get", "cassandra", clusterName, "-o", "yaml")
 }
 
 func clusterPodsWide(namespace, clusterName string) string {
@@ -63,10 +71,10 @@ func podDescription(namespace string, pod *coreV1.Pod) string {
 	return KubectlOutputAsString(namespace, "describe", "pod", pod.Name)
 }
 
-func podLogsSince(namespace string, pod *coreV1.Pod, logSince time.Time) string {
-	return KubectlOutputAsString(namespace, "logs", pod.Name, fmt.Sprintf("--since-time=%s", logSince.Format(time.RFC3339)))
+func podLogsSince(namespace string, pod *coreV1.Pod, containerName string, logSince time.Time) string {
+	return KubectlOutputAsString(namespace, "logs", "--container", containerName, pod.Name, fmt.Sprintf("--since-time=%s", logSince.Format(time.RFC3339)))
 }
 
-func podLogs(namespace string, pod *coreV1.Pod) string {
-	return KubectlOutputAsString(namespace, "logs", pod.Name)
+func podLogs(namespace string, pod *coreV1.Pod, containerName string) string {
+	return KubectlOutputAsString(namespace, "logs", "--container", containerName, pod.Name)
 }

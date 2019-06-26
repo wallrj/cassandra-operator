@@ -1,45 +1,30 @@
 package metrics
 
 import (
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	"testing"
-
 	"fmt"
+	"math/rand"
 	"net/http"
-	"net/http/httptest"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/stub"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"math/rand"
-	"time"
-)
 
-func TestMetrics(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecsWithDefaultAndCustomReporters(t, "Metrics Suite", test.CreateParallelReporters("metrics"))
-}
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	metricstesting "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics/testing"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/test/stub"
+)
 
 var _ = Describe("Cluster Metrics", func() {
 	var (
-		server             *httptest.Server
-		serverURL          string
-		jolokia            *jolokiaHandler
-		jolokiaURLProvider *stubbedJolokiaURLProvider
+		jolokiaURLProvider *metricstesting.StubbedJolokiaURLProvider
 		metricsGatherer    Gatherer
 		cluster            *cluster.Cluster
 	)
-
-	BeforeSuite(func() {
-		jolokia = &jolokiaHandler{}
-		server = httptest.NewServer(jolokia)
-		serverURL = server.URL
-	})
 
 	BeforeEach(func() {
 		jolokia.responsePrimers = make(map[string]jolokiaResponsePrimer)
@@ -52,14 +37,10 @@ var _ = Describe("Cluster Metrics", func() {
 		jolokia.returnsRackForNode("racka", "172.16.46.58")
 		jolokia.returnsRackForNode("racka", "172.16.101.30")
 
-		jolokiaURLProvider = &stubbedJolokiaURLProvider{serverURL}
+		jolokiaURLProvider = &metricstesting.StubbedJolokiaURLProvider{BaseURL: serverURL}
 		metricsGatherer = NewGatherer(jolokiaURLProvider, &Config{1 * time.Second})
 
 		cluster = aCluster("testcluster", "test")
-	})
-
-	AfterSuite(func() {
-		server.Close()
 	})
 
 	Context("A cluster has been defined", func() {
@@ -125,7 +106,7 @@ var _ = Describe("Cluster Metrics", func() {
 
 		It("returns an error when jolokia is not available", func() {
 			// given
-			jolokiaURLProvider.jolokiaIsUnavailable()
+			jolokiaURLProvider.JolokiaIsUnavailable()
 
 			// when
 			_, err := metricsGatherer.GatherMetricsFor(cluster)
@@ -197,7 +178,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		// when
 		urlsProvided := make(map[string]int)
 		for i := 0; i < 10; i++ {
-			urlProvided := urlProvider.urlFor(cluster)
+			urlProvided := urlProvider.URLFor(cluster)
 			urlsProvided[urlProvided] = 1
 		}
 
@@ -213,7 +194,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 		// when
-		urlProvided := urlProvider.urlFor(cluster)
+		urlProvided := urlProvider.URLFor(cluster)
 
 		// then
 		Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -225,7 +206,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 		urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 		// when
-		urlProvided := urlProvider.urlFor(cluster)
+		urlProvided := urlProvider.URLFor(cluster)
 
 		// then
 		Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -239,7 +220,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 
 			for i := 0; i < 10; i++ {
 				// when
-				urlProvided := urlProvider.urlFor(cluster)
+				urlProvided := urlProvider.URLFor(cluster)
 
 				// then
 				Expect(urlProvided).To(Equal("http://10.0.0.1:7777"))
@@ -252,7 +233,7 @@ var _ = Describe("Metrics URL randomisation", func() {
 			urlProvider := &randomisingJolokiaURLProvider{podsGetter, rand.New(rand.NewSource(0))}
 
 			// when
-			urlProvided := urlProvider.urlFor(cluster)
+			urlProvided := urlProvider.URLFor(cluster)
 
 			// then
 			Expect(urlProvided).To(Equal("http://testcluster.test:7777"))
@@ -381,12 +362,12 @@ func (jh *jolokiaHandler) returnsRackForNode(rack string, nodeIP string) {
 	jh.responsePrimers[fmt.Sprintf("getRack/%s", nodeIP)] = jolokiaResponsePrimer{
 		response: fmt.Sprintf(`{
   "request": {
-    "mbean": "org.apache.cassandra.db:type=EndpointSnitchInfo",
-    "arguments": [
-      "%s"
-    ],
-    "type": "exec",
-    "operation": "getRack"
+	"mbean": "org.apache.cassandra.db:type=EndpointSnitchInfo",
+	"arguments": [
+	  "%s"
+	],
+	"type": "exec",
+	"operation": "getRack"
   },
   "value": "%s",
   "timestamp": 1525190806,
@@ -394,18 +375,6 @@ func (jh *jolokiaHandler) returnsRackForNode(rack string, nodeIP string) {
 }`, nodeIP, rack),
 		statusCode: 200,
 	}
-}
-
-type stubbedJolokiaURLProvider struct {
-	baseURL string
-}
-
-func (p *stubbedJolokiaURLProvider) urlFor(cluster *cluster.Cluster) string {
-	return p.baseURL
-}
-
-func (p *stubbedJolokiaURLProvider) jolokiaIsUnavailable() {
-	p.baseURL = "localhost:9999"
 }
 
 func (jh *jolokiaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -422,19 +391,19 @@ func (jh *jolokiaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func aCluster(clusterName, namespace string) *cluster.Cluster {
-	theCluster, err := cluster.New(
-		&v1alpha1.Cassandra{
-			ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: namespace},
-			Spec: v1alpha1.CassandraSpec{
-				Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
-				Pod: v1alpha1.Pod{
-					Memory:      resource.MustParse("1Gi"),
-					CPU:         resource.MustParse("100m"),
-					StorageSize: resource.MustParse("1Gi"),
-				},
+	clusterDef := v1alpha1.Cassandra{
+		ObjectMeta: metav1.ObjectMeta{Name: clusterName, Namespace: namespace},
+		Spec: v1alpha1.CassandraSpec{
+			Racks: []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
+			Pod: v1alpha1.Pod{
+				Memory:      resource.MustParse("1Gi"),
+				CPU:         resource.MustParse("100m"),
+				StorageSize: resource.MustParse("1Gi"),
 			},
 		},
-	)
+	}
+	v1alpha1helpers.SetDefaultsForCassandra(&clusterDef)
+	theCluster, err := cluster.New(&clusterDef)
 	Expect(err).ToNot(HaveOccurred())
 	return theCluster
 }

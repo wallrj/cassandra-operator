@@ -1,5 +1,5 @@
-.DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image prepare-deployment release check-style
+.DEFAULT_GOAL := all
+.PHONY: all clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image prepare-deployment release check-style
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -9,6 +9,7 @@ IMAGE_UNDER_TEST ?= $(dockerTestImage)
 NAMESPACE ?= test-cassandra-operator
 GINKGO_NODES ?= 0
 GINKGO_COMPILERS ?= 0
+E2E_TEST ?=
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 k8ResourcesDir := $(projectDir)/../cassandra-operator/kubernetes-resources
@@ -20,15 +21,15 @@ testPkgs := $(shell go list ./... | grep /test/e2e)
 
 include $(projectDir)/../MakefileDocker
 
-travis: clean install check
+all: clean install check
 
-build: go-build docker-image
+build: go-build check-style validate-licences docker-image
 
 install: build go-install push-image
 
 check-style: fmt vet lint
 
-check: check-style validate-licences test prepare-deployment integration-test e2e-test
+check: test prepare-deployment integration-test e2e-test
 
 ensure-go-modules:
 ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')
@@ -37,11 +38,12 @@ else
 	@echo "go modules enabled"
 endif
 
-setup:
+setup: ensure-go-modules
 	@echo "== setup"
 	go install \
 		github.com/sky-uk/licence-compliance-checker \
-		github.com/onsi/ginkgo/ginkgo
+		github.com/onsi/ginkgo/ginkgo \
+		golang.org/x/lint/golint
 
 go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"
@@ -102,7 +104,7 @@ e2e-test: ensure-test-report-dir-exists
         KUBE_CONTEXT=$(KUBE_CONTEXT) \
         NAMESPACE=$(NAMESPACE) \
         USE_MOCK=$(USE_MOCK) \
-        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e -- -junit-report-dir $(junitReportDir)
+        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/$(E2E_TEST) -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 

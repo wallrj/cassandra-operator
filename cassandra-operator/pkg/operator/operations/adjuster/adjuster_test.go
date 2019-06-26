@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"encoding/json"
 	"fmt"
@@ -14,7 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -35,6 +35,7 @@ const (
 	rackReplicas                      = "$.spec.replicas"
 	clusterConfigHash                 = "$.spec.template.metadata.annotations.clusterConfigHash"
 	bootstrapperImage                 = "$.spec.template.spec.initContainers[0].image"
+	sidecarImage                      = "$.spec.template.spec.containers[1].image"
 )
 
 func TestCluster(t *testing.T) {
@@ -43,49 +44,54 @@ func TestCluster(t *testing.T) {
 }
 
 var _ = Describe("cluster events", func() {
-	var oldClusterSpec *v1alpha1.CassandraSpec
-	var newClusterSpec *v1alpha1.CassandraSpec
+	var oldCluster, newCluster *v1alpha1.Cassandra
 	var adjuster *Adjuster
 
 	BeforeEach(func() {
 		livenessProbe := &v1alpha1.Probe{
-			FailureThreshold:    int32(3),
-			InitialDelaySeconds: int32(30),
-			PeriodSeconds:       int32(30),
-			SuccessThreshold:    int32(1),
-			TimeoutSeconds:      int32(5),
+			FailureThreshold:    ptr.Int32(3),
+			InitialDelaySeconds: ptr.Int32(30),
+			PeriodSeconds:       ptr.Int32(30),
+			SuccessThreshold:    ptr.Int32(1),
+			TimeoutSeconds:      ptr.Int32(5),
 		}
 		readinessProbe := &v1alpha1.Probe{
-			FailureThreshold:    int32(3),
-			InitialDelaySeconds: int32(30),
-			PeriodSeconds:       int32(15),
-			SuccessThreshold:    int32(1),
-			TimeoutSeconds:      int32(5),
+			FailureThreshold:    ptr.Int32(3),
+			InitialDelaySeconds: ptr.Int32(30),
+			PeriodSeconds:       ptr.Int32(15),
+			SuccessThreshold:    ptr.Int32(1),
+			TimeoutSeconds:      ptr.Int32(5),
 		}
-		oldClusterSpec = &v1alpha1.CassandraSpec{
-			Datacenter: ptr.String("ADatacenter"),
-			Racks:      []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
-			Pod: v1alpha1.Pod{
-				Image:          "anImage",
-				Memory:         resource.MustParse("2Gi"),
-				CPU:            resource.MustParse("100m"),
-				StorageSize:    resource.MustParse("1Gi"),
-				LivenessProbe:  livenessProbe.DeepCopy(),
-				ReadinessProbe: readinessProbe.DeepCopy(),
+		oldCluster = &v1alpha1.Cassandra{
+			Spec: v1alpha1.CassandraSpec{
+				Datacenter: ptr.String("ADatacenter"),
+				Racks:      []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
+				Pod: v1alpha1.Pod{
+					Image:          ptr.String("anImage"),
+					Memory:         resource.MustParse("2Gi"),
+					CPU:            resource.MustParse("100m"),
+					StorageSize:    resource.MustParse("1Gi"),
+					LivenessProbe:  livenessProbe.DeepCopy(),
+					ReadinessProbe: readinessProbe.DeepCopy(),
+				},
 			},
 		}
-		newClusterSpec = &v1alpha1.CassandraSpec{
-			Datacenter: ptr.String("ADatacenter"),
-			Racks:      []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
-			Pod: v1alpha1.Pod{
-				Image:          "anImage",
-				Memory:         resource.MustParse("2Gi"),
-				CPU:            resource.MustParse("100m"),
-				StorageSize:    resource.MustParse("1Gi"),
-				LivenessProbe:  livenessProbe.DeepCopy(),
-				ReadinessProbe: readinessProbe.DeepCopy(),
+		v1alpha1helpers.SetDefaultsForCassandra(oldCluster)
+		newCluster = &v1alpha1.Cassandra{
+			Spec: v1alpha1.CassandraSpec{
+				Datacenter: ptr.String("ADatacenter"),
+				Racks:      []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}},
+				Pod: v1alpha1.Pod{
+					Image:          ptr.String("anImage"),
+					Memory:         resource.MustParse("2Gi"),
+					CPU:            resource.MustParse("100m"),
+					StorageSize:    resource.MustParse("1Gi"),
+					LivenessProbe:  livenessProbe.DeepCopy(),
+					ReadinessProbe: readinessProbe.DeepCopy(),
+				},
 			},
 		}
+		v1alpha1helpers.SetDefaultsForCassandra(newCluster)
 		var err error
 		adjuster, err = New()
 		Expect(err).To(Not(HaveOccurred()))
@@ -109,33 +115,33 @@ var _ = Describe("cluster events", func() {
 
 	Context("pod spec change is detected", func() {
 		It("should produce a change with updated cpu when cpu specification has changed", func() {
-			newClusterSpec.Pod.CPU = resource.MustParse("110m")
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Pod.CPU = resource.MustParse("110m")
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
-			Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0], UpdateRack, map[string]interface{}{containerCPU: "110m"}, 0))
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{containerCPU: "110m"}, 0))
 		})
 
 		It("should produce a change with updated memory when memory specification has changed", func() {
-			newClusterSpec.Pod.Memory = resource.MustParse("1Gi")
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Pod.Memory = resource.MustParse("1Gi")
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
-			Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0], UpdateRack, map[string]interface{}{containerMemoryRequest: "1Gi", containerMemoryLimit: "1Gi"}, 0))
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{containerMemoryRequest: "1Gi", containerMemoryLimit: "1Gi"}, 0))
 		})
 
 		It("should produce a change with updated timeout when liveness probe specification has changed", func() {
-			newClusterSpec.Pod.LivenessProbe.FailureThreshold = 5
-			newClusterSpec.Pod.LivenessProbe.InitialDelaySeconds = 99
-			newClusterSpec.Pod.LivenessProbe.PeriodSeconds = 20
-			newClusterSpec.Pod.LivenessProbe.TimeoutSeconds = 10
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Pod.LivenessProbe.FailureThreshold = ptr.Int32(5)
+			newCluster.Spec.Pod.LivenessProbe.InitialDelaySeconds = ptr.Int32(99)
+			newCluster.Spec.Pod.LivenessProbe.PeriodSeconds = ptr.Int32(20)
+			newCluster.Spec.Pod.LivenessProbe.TimeoutSeconds = ptr.Int32(10)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
-			Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0],
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0],
 				UpdateRack,
 				map[string]interface{}{
 					livenessProbeFailureThreshold:    float64(5),
@@ -147,16 +153,16 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should produce a change with updated timeout when readiness probe specification has changed", func() {
-			newClusterSpec.Pod.ReadinessProbe.FailureThreshold = 27
-			newClusterSpec.Pod.ReadinessProbe.InitialDelaySeconds = 55
-			newClusterSpec.Pod.ReadinessProbe.PeriodSeconds = 77
-			newClusterSpec.Pod.ReadinessProbe.SuccessThreshold = 80
-			newClusterSpec.Pod.ReadinessProbe.TimeoutSeconds = 4
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Pod.ReadinessProbe.FailureThreshold = ptr.Int32(27)
+			newCluster.Spec.Pod.ReadinessProbe.InitialDelaySeconds = ptr.Int32(55)
+			newCluster.Spec.Pod.ReadinessProbe.PeriodSeconds = ptr.Int32(77)
+			newCluster.Spec.Pod.ReadinessProbe.SuccessThreshold = ptr.Int32(80)
+			newCluster.Spec.Pod.ReadinessProbe.TimeoutSeconds = ptr.Int32(4)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
-			Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0],
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0],
 				UpdateRack, map[string]interface{}{
 					readinessProbeFailureThreshold:    float64(27),
 					readinessProbeInitialDelaySeconds: float64(55),
@@ -167,58 +173,113 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should produce a patch containing the updated image when the bootstrapper image has been updated", func() {
-			newClusterSpec.Pod.BootstrapperImage = "someotherimage"
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Pod.BootstrapperImage = ptr.String("someotherimage")
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
-			Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0], UpdateRack, map[string]interface{}{bootstrapperImage: "someotherimage"}, 0))
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{bootstrapperImage: "someotherimage"}, 0))
+		})
+
+		It("should produce a patch containing the updated image when the sidecar image has been updated", func() {
+			newCluster.Spec.Pod.SidecarImage = ptr.String("anotherImage")
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(1))
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{sidecarImage: "anotherImage"}, 0))
 		})
 	})
 
 	Context("scale-up change is detected", func() {
 		Context("single-rack cluster", func() {
 			It("should produce a change with the updated number of replicas", func() {
-				newClusterSpec.Racks[0].Replicas = 2
-				changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+				newCluster.Spec.Racks[0].Replicas = 2
+				changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(changes).To(HaveLen(1))
-				Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0], UpdateRack, map[string]interface{}{rackReplicas: float64(2)}, 0))
+				Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{rackReplicas: float64(2)}, 0))
 			})
 		})
 
 		Context("multiple-rack cluster", func() {
 			It("should produce a change for each changed rack with the updated number of replicas", func() {
-				oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "another-storage", Zone: "another-zone"}, {Name: "c", Replicas: 1, StorageClass: "yet-another-storage", Zone: "yet-another-zone"}}
-				newClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "another-storage", Zone: "another-zone"}, {Name: "c", Replicas: 3, StorageClass: "yet-another-storage", Zone: "yet-another-zone"}}
-				changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+				oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "another-storage", Zone: "another-zone"}, {Name: "c", Replicas: 1, StorageClass: "yet-another-storage", Zone: "yet-another-zone"}}
+				newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "another-storage", Zone: "another-zone"}, {Name: "c", Replicas: 3, StorageClass: "yet-another-storage", Zone: "yet-another-zone"}}
+				changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 				Expect(err).ToNot(HaveOccurred())
 				Expect(changes).To(HaveLen(2))
-				Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0], UpdateRack, map[string]interface{}{rackReplicas: float64(2)}, 0))
-				Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[2], UpdateRack, map[string]interface{}{rackReplicas: float64(3)}, 0))
+				Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{rackReplicas: float64(2)}, 0))
+				Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[2], UpdateRack, map[string]interface{}{rackReplicas: float64(3)}, 0))
 			})
 		})
 	})
 
 	Context("both pod resource and scale-up changes are detected", func() {
 		It("should produce a change for all racks with the updated pod resource and replication", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "another-storage", Zone: "another-zone"}}
-			newClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 3, StorageClass: "another-storage", Zone: "another-zone"}}
-			newClusterSpec.Pod.CPU = resource.MustParse("1")
-			newClusterSpec.Pod.Memory = resource.MustParse("999Mi")
+			oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 1, StorageClass: "another-storage", Zone: "another-zone"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}, {Name: "b", Replicas: 3, StorageClass: "another-storage", Zone: "another-zone"}}
+			newCluster.Spec.Pod.CPU = resource.MustParse("1")
+			newCluster.Spec.Pod.Memory = resource.MustParse("999Mi")
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(2))
-			Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0], UpdateRack, map[string]interface{}{rackReplicas: float64(1), containerCPU: "1", containerMemoryRequest: "999Mi", containerMemoryLimit: "999Mi"}, 0))
-			Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[1], UpdateRack, map[string]interface{}{rackReplicas: float64(3), containerCPU: "1", containerMemoryRequest: "999Mi", containerMemoryLimit: "999Mi"}, 0))
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], UpdateRack, map[string]interface{}{rackReplicas: float64(1), containerCPU: "1", containerMemoryRequest: "999Mi", containerMemoryLimit: "999Mi"}, 0))
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[1], UpdateRack, map[string]interface{}{rackReplicas: float64(3), containerCPU: "1", containerMemoryRequest: "999Mi", containerMemoryLimit: "999Mi"}, 0))
 		})
 	})
 
-	Context("nothing has changed in the definition", func() {
-		It("should not produce any changes", func() {
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+	Context("nothing relevant has changed in the definition", func() {
+		It("should not produce any changes when nothing has changed", func() {
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when a snapshot configuration is added", func() {
+			newCluster.Spec.Snapshot = &v1alpha1.Snapshot{
+				Schedule: "2 * * * *",
+			}
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when a snapshot configuration is modified", func() {
+			oldCluster.Spec.Snapshot = &v1alpha1.Snapshot{
+				Schedule: "2 * * * *",
+			}
+			newCluster.Spec.Snapshot = &v1alpha1.Snapshot{
+				Schedule: "3 * * * *",
+			}
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when a snapshot configuration is removed", func() {
+			oldCluster.Spec.Snapshot = &v1alpha1.Snapshot{
+				Schedule: "2 * * * *",
+			}
+			newCluster.Spec.Snapshot = nil
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when cpu values are the same but expressed with different units", func() {
+			oldCluster.Spec.Pod.CPU = resource.MustParse("1000m")
+			newCluster.Spec.Pod.CPU = resource.MustParse("1")
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(changes).To(HaveLen(0))
+		})
+
+		It("should not produce a change when memory values are the same but expressed with different units", func() {
+			oldCluster.Spec.Pod.Memory = resource.MustParse("1Gi")
+			newCluster.Spec.Pod.Memory = resource.MustParse("1024Mi")
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(0))
 		})
@@ -226,53 +287,51 @@ var _ = Describe("cluster events", func() {
 
 	Context("unsupported property change is detected", func() {
 		It("should reject the change with an error message when DC is changed", func() {
-			newClusterSpec.Datacenter = ptr.String("other-dc")
-			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Datacenter = ptr.String("other-dc")
+			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
-			Expect(err).To(MatchError("changing dc is forbidden. The dc used will continue to be 'ADatacenter'"))
+			Expect(err).To(MatchError("changing datacenter is forbidden. The datacenter used will continue to be 'ADatacenter'"))
 		})
 
 		It("should report that the default DC name will continue to be used when no DC was previously provided", func() {
-			oldClusterSpec.Datacenter = nil
-			newClusterSpec.Datacenter = ptr.String("new-dc")
-			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Datacenter = ptr.String("new-dc")
+			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
-			Expect(err).To(MatchError(fmt.Sprintf("changing dc is forbidden. The dc used will continue to be '%s'", v1alpha1.DefaultDCName)))
+			Expect(err).To(MatchError(fmt.Sprintf("changing datacenter is forbidden. The datacenter used will continue to be '%s'", *oldCluster.Spec.Datacenter)))
 		})
 
 		It("should reject the change with an error message when Image is changed", func() {
-			newClusterSpec.Pod.Image = "other-image"
-			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Pod.Image = ptr.String("other-image")
+			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).To(MatchError("changing image is forbidden. The image used will continue to be 'anImage'"))
 		})
 
 		It("should report that the default image will continue to be used if an image was not previously specified", func() {
-			oldClusterSpec.Pod.Image = ""
-			newClusterSpec.Pod.Image = "other-image"
+			newCluster.Spec.Pod.Image = ptr.String("other-image")
 
-			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
-			Expect(err).To(MatchError(fmt.Sprintf("changing image is forbidden. The image used will continue to be '%s'", cluster.DefaultCassandraImage)))
+			Expect(err).To(MatchError(fmt.Sprintf("changing image is forbidden. The image used will continue to be '%s'", *oldCluster.Spec.Pod.Image)))
 		})
 
 		It("should reject the change with an error message when UseEmptyDir is changed", func() {
-			newClusterSpec.UseEmptyDir = true
-			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.UseEmptyDir = ptr.Bool(true)
+			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).To(MatchError("changing useEmptyDir is forbidden. The useEmptyDir used will continue to be 'false'"))
 		})
 
 		It("should reject the change with an error message when a rack storageClass is changed", func() {
-			newClusterSpec.Racks[0].StorageClass = "another-storage-class"
-			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Racks[0].StorageClass = "another-storage-class"
+			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).To(MatchError("changing storageClass for rack 'a' is forbidden. The storageClass used will continue to be 'some-storage'"))
 		})
 
 		It("should reject the change with an error message when a rack zone is changed", func() {
-			newClusterSpec.Racks[0].Zone = "another-zone"
-			_, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			newCluster.Spec.Racks[0].Zone = "another-zone"
+			_, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).To(MatchError("changing zone for rack 'a' is forbidden. The zone used will continue to be 'some-zone'"))
 		})
@@ -280,9 +339,9 @@ var _ = Describe("cluster events", func() {
 	Context("a new rack definition is added", func() {
 		It("should produce a change describing the new rack", func() {
 			newRack := v1alpha1.Rack{Name: "b", Replicas: 2, Zone: "zone-b", StorageClass: "storage-class-b"}
-			newClusterSpec.Racks = append(newClusterSpec.Racks, newRack)
+			newCluster.Spec.Racks = append(newCluster.Spec.Racks, newRack)
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
 			Expect(changes).To(HaveClusterChange(newRack, AddRack, nil, 0))
@@ -291,45 +350,45 @@ var _ = Describe("cluster events", func() {
 
 	Context("a rack definition is deleted", func() {
 		BeforeEach(func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{
+			oldCluster.Spec.Racks = []v1alpha1.Rack{
 				{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"},
 				{Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"},
 			}
 		})
 
 		It("should produce a change describing the rack which was deleted", func() {
-			newClusterSpec.Racks = []v1alpha1.Rack{{Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"}}
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
-			Expect(changes).To(HaveClusterChange(oldClusterSpec.Racks[0], deleteRack, nil, 0))
+			Expect(changes).To(HaveClusterChange(oldCluster.Spec.Racks[0], deleteRack, nil, 0))
 		})
 	})
 
 	Context("a rack is scaled down", func() {
 		It("should produce a change describing the rack which was scaled down, and how many pods should be removed", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, StorageClass: "some-storage", Zone: "some-zone"}}
-			newClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}}
+			oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, StorageClass: "some-storage", Zone: "some-zone"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, StorageClass: "some-storage", Zone: "some-zone"}}
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
-			Expect(changes).To(HaveClusterChange(newClusterSpec.Racks[0], scaleDownRack, nil, 1))
+			Expect(changes).To(HaveClusterChange(newCluster.Spec.Racks[0], scaleDownRack, nil, 1))
 		})
 	})
 
 	Context("correct ordering of changes", func() {
 		It("should perform rack additions before rack deletions", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"}}
-			newClusterSpec.Racks = []v1alpha1.Rack{
+			oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{
 				{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"},
 				{Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"},
 			}
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(3))
@@ -344,11 +403,11 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should perform scale down operations before update operations", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"}}
-			newClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}}
-			newClusterSpec.Pod.Memory = resource.MustParse("3Gi")
+			oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}}
+			newCluster.Spec.Pod.Memory = resource.MustParse("3Gi")
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(2))
@@ -357,14 +416,14 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should perform delete operations before scale down and update operations", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{
+			oldCluster.Spec.Racks = []v1alpha1.Rack{
 				{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"},
 				{Name: "b", Replicas: 2, Zone: "zone-b", StorageClass: "storage-class-b"},
 			}
-			newClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}}
-			newClusterSpec.Pod.Memory = resource.MustParse("3Gi")
+			newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}}
+			newCluster.Spec.Pod.Memory = resource.MustParse("3Gi")
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(3))
@@ -379,15 +438,15 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should perform add operations before scale down and update operations", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "b", Replicas: 2, Zone: "zone-b", StorageClass: "storage-class-b"}}
-			newClusterSpec.Racks = []v1alpha1.Rack{
+			oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "b", Replicas: 2, Zone: "zone-b", StorageClass: "storage-class-b"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{
 				{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"},
 				{Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"},
 				{Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"},
 			}
-			newClusterSpec.Pod.Memory = resource.MustParse("3Gi")
+			newCluster.Spec.Pod.Memory = resource.MustParse("3Gi")
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(5))
@@ -408,11 +467,11 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should perform adds before delete, scale down and update operations", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "b", Replicas: 2, Zone: "zone-b", StorageClass: "storage-class-b"}}
-			newClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"}}
-			newClusterSpec.Pod.Memory = resource.MustParse("3Gi")
+			oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "b", Replicas: 2, Zone: "zone-b", StorageClass: "storage-class-b"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"}}
+			newCluster.Spec.Pod.Memory = resource.MustParse("3Gi")
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(4))
@@ -430,11 +489,11 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should treat a scale up and update as a single update operation", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}}
-			newClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"}}
-			newClusterSpec.Pod.Memory = resource.MustParse("3Gi")
+			oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 2, Zone: "zone-a", StorageClass: "storage-class-a"}}
+			newCluster.Spec.Pod.Memory = resource.MustParse("3Gi")
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(1))
@@ -443,11 +502,11 @@ var _ = Describe("cluster events", func() {
 		})
 
 		It("should order racks changes in the order in which the racks were defined in the old cluster state", func() {
-			oldClusterSpec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"}, {Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"}}
-			newClusterSpec.Racks = []v1alpha1.Rack{{Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"}, {Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"}}
-			newClusterSpec.Pod.CPU = resource.MustParse("101m")
+			oldCluster.Spec.Racks = []v1alpha1.Rack{{Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"}, {Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"}}
+			newCluster.Spec.Racks = []v1alpha1.Rack{{Name: "c", Replicas: 1, Zone: "zone-c", StorageClass: "storage-class-c"}, {Name: "a", Replicas: 1, Zone: "zone-a", StorageClass: "storage-class-a"}, {Name: "b", Replicas: 1, Zone: "zone-b", StorageClass: "storage-class-b"}}
+			newCluster.Spec.Pod.CPU = resource.MustParse("101m")
 
-			changes, err := adjuster.ChangesForCluster(oldClusterSpec, newClusterSpec)
+			changes, err := adjuster.ChangesForCluster(oldCluster, newCluster)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(changes).To(HaveLen(3))

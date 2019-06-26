@@ -2,10 +2,12 @@ package e2e
 
 import (
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	coreV1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,7 +73,7 @@ func (c *ClusterBuilder) IsDefined() {
 
 	if c.useEmptyDir {
 		c.clusterSpec.Pod.StorageSize = resource.MustParse("0")
-		c.clusterSpec.UseEmptyDir = true
+		c.clusterSpec.UseEmptyDir = ptr.Bool(true)
 	}
 
 	if !c.withoutCustomConfig {
@@ -106,7 +108,7 @@ func TheClusterPodSpecAreChangedTo(namespace, clusterName string, podSpec v1alph
 
 func TheImageImmutablePropertyIsChangedTo(namespace, clusterName, imageName string) {
 	mutateCassandraSpec(namespace, clusterName, func(spec *v1alpha1.CassandraSpec) {
-		spec.Pod.Image = imageName
+		spec.Pod.Image = &imageName
 	})
 	log.Infof("Updated pod image for cluster %s", clusterName)
 }
@@ -187,10 +189,13 @@ func AScheduledSnapshotIsChangedForCluster(namespace, clusterName string, snapsh
 func mutateCassandraSpec(namespace, clusterName string, mutator func(*v1alpha1.CassandraSpec)) {
 	cass, err := CassandraClientset.CoreV1alpha1().Cassandras(namespace).Get(clusterName, metaV1.GetOptions{})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	cassBeforeMutation := cass.DeepCopy()
 
 	mutator(&cass.Spec)
-	_, err = CassandraClientset.CoreV1alpha1().Cassandras(namespace).Update(cass)
+	var cassAfterMutation *v1alpha1.Cassandra
+	cassAfterMutation, err = CassandraClientset.CoreV1alpha1().Cassandras(namespace).Update(cass)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	log.Infof(spew.Sprintf("Updated cassandra spec for cluster %s, before: %+v, \nafter: %+v", clusterName, cassBeforeMutation, cassAfterMutation))
 }
 
 func EventuallyClusterIsCreatedWithRacks(namespace string, clusterName string, racks []v1alpha1.Rack) {
@@ -204,6 +209,19 @@ func EventuallyClusterIsCreatedWithRacks(namespace string, clusterName string, r
 }
 
 func CassandraEventsFor(namespace, clusterName string) func() ([]coreV1.Event, error) {
+	allEvents := func(coreV1.Event) bool { return true }
+	return cassandraEventsFilteredFor(namespace, clusterName, allEvents)
+}
+
+func CassandraEventsSince(namespace, clusterName string, sinceTime time.Time) func() ([]coreV1.Event, error) {
+	eventsOnOrAfterTime := func(event coreV1.Event) bool {
+		metaSinceTime := metaV1.NewTime(sinceTime)
+		return event.LastTimestamp.Equal(&metaSinceTime) || event.LastTimestamp.After(sinceTime)
+	}
+	return cassandraEventsFilteredFor(namespace, clusterName, eventsOnOrAfterTime)
+}
+
+func cassandraEventsFilteredFor(namespace, clusterName string, filter func(coreV1.Event) bool) func() ([]coreV1.Event, error) {
 	var cassandraEvents []coreV1.Event
 	return func() ([]coreV1.Event, error) {
 		allEvents, err := KubeClientset.CoreV1().Events(namespace).List(metaV1.ListOptions{})
@@ -212,7 +230,7 @@ func CassandraEventsFor(namespace, clusterName string) func() ([]coreV1.Event, e
 		}
 
 		for _, event := range allEvents.Items {
-			if event.InvolvedObject.Kind == cassandra.Kind && event.InvolvedObject.Name == clusterName {
+			if event.InvolvedObject.Kind == cassandra.Kind && event.InvolvedObject.Name == clusterName && filter(event) {
 				cassandraEvents = append(cassandraEvents, event)
 			}
 		}

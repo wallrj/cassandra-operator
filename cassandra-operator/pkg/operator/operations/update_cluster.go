@@ -30,9 +30,15 @@ func (o *UpdateClusterOperation) Execute() {
 		return
 	}
 
-	clusterChanges, err := o.adjuster.ChangesForCluster(&oldCluster.Spec, &newCluster.Spec)
+	clusterChanges, err := o.adjuster.ChangesForCluster(oldCluster, newCluster)
 	if err != nil {
+		log.Warnf("unable to generate patch for cluster %s.%s: %v", newCluster.Namespace, newCluster.Name, err)
 		o.eventRecorder.Eventf(oldCluster, v1.EventTypeWarning, cluster.InvalidChangeEvent, "unable to generate patch for cluster %s.%s: %v", newCluster.Namespace, newCluster.Name, err)
+		return
+	}
+
+	if len(clusterChanges) == 0 {
+		log.Infof("No changes are required to be applied for cluster %s", oldCluster.QualifiedName())
 		return
 	}
 

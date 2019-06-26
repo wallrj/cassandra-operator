@@ -61,6 +61,7 @@ Flag | Meaning | Default
 `CASSANDRA_BOOTSTRAPPER_IMAGE` | The fully qualified name for the `cassandra-bootstrapper` docker image | `$(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)`
 `FAKE_CASSANDRA_IMAGE`         | The fully qualified name for the `fake-cassandra-docker` docker image | `$(TEST_REGISTRY)/fake-cassandra:v$(gitRev)`
 `CASSANDRA_SNAPSHOT_IMAGE`     | The fully qualified name for the `cassandra-snapshot` docker image | `$(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)`
+`CASSANDRA_SIDECAR_IMAGE`      | The fully qualified name for the `cassandra-sidecar` docker image | `$(TEST_REGISTRY)/cassandra-sidecar:v$(gitRev)`
 `POD_START_TIMEOUT`            | The max duration allowed for a Cassandra pod to start. The time varies depending on whether a real or fake cassandra image is used and whether PVC or empty dir is used for the cassandra volumes. As a starting point use 120s for fake cassandra otherwise 5m | `120s`
 `DOMAIN`                       | Domain name used to create the test operator ingress host | `localhost`
 `KUBE_CONTEXT`                 | The Kubernetes context where the test operator will be deployed | `dind`
@@ -69,7 +70,7 @@ Flag | Meaning | Default
 `DOCKER_PASSWORD`              | The password for the docker username allowed to push to the release registry | (provided as encrypted variable in `.travis.yml`)
 `GINKGO_COMPILERS`             | Ginkgo `-compilers` value to use when compiling multiple tests suite | `0`, equivalent to not setting the option at all
 `GINKGO_NODES`                 | Ginkgo `-nodes` value to use when running tests suite in parallel | `0`, equivalent to not setting the option at all
-
+`E2E_TEST`                     | Name of the end-to-end test suite to run. Use this to run a specific test suite | ``, equivalent to running all test suites 
 
 ## What to work on
 
@@ -81,11 +82,10 @@ you should look for an issue with a `good first issue` or `bug` label.
 1. If your changes include multiple commits, please squash them into a single commit.  Stack Overflow
    and various blogs can help with this process if you're not already familiar with it.
 2. Update the README.md / WIKI where relevant.
-3. Update the CHANGELOG.md with details of the change and referencing the issue you worked on.
-4. When submitting your pull request, please provide a comment which describes the change and the problem
+3. When submitting your pull request, please provide a comment which describes the change and the problem
    it is intended to resolve. If your pull request is fixing something for which there is a related GitHub issue,
    make reference to that issue with the text "Closes #<issue-number>" in the pull request description.
-5. You may merge the pull request to master once a reviewer has approved it. If you do not have permission to
+4. You may merge the pull request to master once a reviewer has approved it. If you do not have permission to
    do that, you may request the reviewer to merge it for you.
 
 ## Pinning dependencies
@@ -105,8 +105,11 @@ For example, to pin both of these:
 
 ## Releasing
 
-Once a pull request has been merged, the commit in master should be tagged with a new version number and pushed.
-Only maintainers are able to do this.
+Only maintainers would need to do this:
+- Update the CHANGELOG.md with details of all the changes that have been merged since the last release
+- Tag the master branch with a new version number; this will trigger a new build which will release
+docker images labelled after the tag
+- Publish the release (via github), referencing issues and contributors
 
 This project follows the [Semantic Versioning](https://semver.org/) specification, and version numbers
 should be chosen accordingly.

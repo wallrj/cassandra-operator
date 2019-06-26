@@ -6,14 +6,17 @@ import (
 	"time"
 
 	"github.com/robfig/cron"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 	appsv1 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/hash"
 )
 
 const (
@@ -28,39 +31,31 @@ const (
 	RackLabel       = "rack"
 	customConfigDir = "/custom-config"
 
-	// DefaultCassandraImage is the name of the default Docker image used on Cassandra pods
-	DefaultCassandraImage = "cassandra:3.11"
-
-	// DefaultCassandraSnapshotImage is the name of the Docker image used to make and cleanup snapshots
-	DefaultCassandraSnapshotImage = "skyuk/cassandra-snapshot:latest"
-
 	cassandraContainerName             = "cassandra"
 	cassandraBootstrapperContainerName = "cassandra-bootstrapper"
-
-	// DefaultCassandraBootstrapperImage is the name of the Docker image used to prepare the configuration for the Cassandra node before it can be started
-	DefaultCassandraBootstrapperImage = "skyuk/cassandra-bootstrapper:latest"
+	cassandraSidecarContainerName      = "cassandra-sidecar"
 
 	storageVolumeMountPath       = "/var/lib/cassandra"
 	configurationVolumeMountPath = "/etc/cassandra"
 	extraLibVolumeMountPath      = "/extra-lib"
 	configurationVolumeName      = "configuration"
 	extraLibVolumeName           = "extra-lib"
+
+	healthServerPort = 8080
 )
 
-var defaultLivenessProbe = v1alpha1.Probe{
-	FailureThreshold:    int32(3),
-	InitialDelaySeconds: int32(30),
-	PeriodSeconds:       int32(30),
-	SuccessThreshold:    int32(1),
-	TimeoutSeconds:      int32(5),
-}
+var (
+	maxSidecarMemoryRequest resource.Quantity
+	sidecarMemoryLimit      resource.Quantity
+	maxSidecarCPURequest    resource.Quantity
+	sidecarCPULimit         resource.Quantity
+)
 
-var defaultReadinessProbe = v1alpha1.Probe{
-	FailureThreshold:    int32(3),
-	InitialDelaySeconds: int32(30),
-	PeriodSeconds:       int32(15),
-	SuccessThreshold:    int32(1),
-	TimeoutSeconds:      int32(5),
+func init() {
+	maxSidecarMemoryRequest = resource.MustParse("50Mi")
+	sidecarMemoryLimit = resource.MustParse("50Mi")
+	maxSidecarCPURequest = resource.MustParse("100m")
+	sidecarCPULimit = resource.MustParse("200m")
 }
 
 // Cluster defines the properties of a Cassandra cluster which the operator should manage.
@@ -78,6 +73,14 @@ func New(clusterDefinition *v1alpha1.Cassandra) (*Cluster, error) {
 	return cluster, nil
 }
 
+// NewWithoutValidation creates a new cluster definition from the supplied Cassandra definition without performing validation
+func NewWithoutValidation(clusterDefinition *v1alpha1.Cassandra) *Cluster {
+	cluster := &Cluster{
+		definition: clusterDefinition,
+	}
+	return cluster
+}
+
 // CopyInto copies a Cassandra cluster definition into the internal cluster data structure supplied.
 func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 	if err := validateRacks(clusterDefinition); err != nil {
@@ -92,47 +95,15 @@ func CopyInto(cluster *Cluster, clusterDefinition *v1alpha1.Cassandra) error {
 		return err
 	}
 
-	cassandraImage := clusterDefinition.Spec.Pod.Image
-	if cassandraImage == "" {
-		cassandraImage = DefaultCassandraImage
+	if err := validateLivenessProbe(clusterDefinition.Spec.Pod.LivenessProbe, clusterDefinition); err != nil {
+		return err
 	}
 
-	bootstrapperImage := clusterDefinition.Spec.Pod.BootstrapperImage
-	if bootstrapperImage == "" {
-		bootstrapperImage = DefaultCassandraBootstrapperImage
-	}
-
-	if clusterDefinition.Spec.Snapshot != nil {
-		if clusterDefinition.Spec.Snapshot.Image == "" {
-			clusterDefinition.Spec.Snapshot.Image = DefaultCassandraSnapshotImage
-		}
-	}
-
-	if clusterDefinition.Spec.Pod.LivenessProbe == nil {
-		clusterDefinition.Spec.Pod.LivenessProbe = defaultLivenessProbe.DeepCopy()
-	} else {
-		livenessProbe := clusterDefinition.Spec.Pod.LivenessProbe
-		mergeProbeDefaults(livenessProbe, &defaultLivenessProbe)
-		err := validateLivenessProbe(livenessProbe, clusterDefinition)
-		if err != nil {
-			return err
-		}
-	}
-
-	if clusterDefinition.Spec.Pod.ReadinessProbe == nil {
-		clusterDefinition.Spec.Pod.ReadinessProbe = defaultReadinessProbe.DeepCopy()
-	} else {
-		readinessProbe := clusterDefinition.Spec.Pod.ReadinessProbe
-		mergeProbeDefaults(readinessProbe, &defaultReadinessProbe)
-		err := validateReadinessProbe(readinessProbe, clusterDefinition)
-		if err != nil {
-			return err
-		}
+	if err := validateReadinessProbe(clusterDefinition.Spec.Pod.ReadinessProbe, clusterDefinition); err != nil {
+		return err
 	}
 
 	cluster.definition = clusterDefinition.DeepCopy()
-	cluster.definition.Spec.Pod.BootstrapperImage = bootstrapperImage
-	cluster.definition.Spec.Pod.Image = cassandraImage
 	return nil
 }
 
@@ -149,9 +120,9 @@ func validateRacks(clusterDefinition *v1alpha1.Cassandra) error {
 	for _, rack := range clusterDefinition.Spec.Racks {
 		if rack.Replicas < 1 {
 			return fmt.Errorf("invalid rack replicas value %d provided for Cassandra cluster definition: %s.%s", rack.Replicas, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.StorageClass == "" && !clusterDefinition.Spec.UseEmptyDir {
+		} else if rack.StorageClass == "" && !*clusterDefinition.Spec.UseEmptyDir {
 			return fmt.Errorf("rack named '%s' with no storage class specified, either set useEmptyDir to true or specify storage class: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
-		} else if rack.Zone == "" && !clusterDefinition.Spec.UseEmptyDir {
+		} else if rack.Zone == "" && !*clusterDefinition.Spec.UseEmptyDir {
 			return fmt.Errorf("rack named '%s' with no zone specified, either set useEmptyDir to true or specify zone: %s.%s", rack.Name, clusterDefinition.Namespace, clusterDefinition.Name)
 		}
 	}
@@ -163,11 +134,11 @@ func validatePodResources(clusterDefinition *v1alpha1.Cassandra) error {
 		return fmt.Errorf("no podMemory property provided for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 
-	if clusterDefinition.Spec.UseEmptyDir && !clusterDefinition.Spec.Pod.StorageSize.IsZero() {
+	if *clusterDefinition.Spec.UseEmptyDir && !clusterDefinition.Spec.Pod.StorageSize.IsZero() {
 		return fmt.Errorf("podStorageSize property provided when useEmptyDir is true for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 
-	if !clusterDefinition.Spec.UseEmptyDir && clusterDefinition.Spec.Pod.StorageSize.IsZero() {
+	if !*clusterDefinition.Spec.UseEmptyDir && clusterDefinition.Spec.Pod.StorageSize.IsZero() {
 		return fmt.Errorf("no podStorageSize property provided and useEmptyDir false for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 	return nil
@@ -214,7 +185,7 @@ func validateSnapshot(clusterDefinition *v1alpha1.Cassandra) error {
 }
 
 func validateLivenessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	if probe.SuccessThreshold != 1 {
+	if probe.SuccessThreshold == nil || *probe.SuccessThreshold != 1 {
 		return fmt.Errorf("invalid success threshold for liveness probe, must be set to 1 for Cassandra cluster definition: %s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 	return validateProbe("liveness", probe, clusterDefinition)
@@ -225,42 +196,42 @@ func validateReadinessProbe(probe *v1alpha1.Probe, clusterDefinition *v1alpha1.C
 }
 
 func validateProbe(name string, probe *v1alpha1.Probe, clusterDefinition *v1alpha1.Cassandra) error {
-	if probe.FailureThreshold < 1 {
-		return fmt.Errorf("invalid failure threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.FailureThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.FailureThreshold == nil || *probe.FailureThreshold < 1 {
+		return fmt.Errorf("invalid failure threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.FailureThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
-	if probe.InitialDelaySeconds < 1 {
-		return fmt.Errorf("invalid initial delay for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.InitialDelaySeconds, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.InitialDelaySeconds == nil || *probe.InitialDelaySeconds < 1 {
+		return fmt.Errorf("invalid initial delay for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.InitialDelaySeconds, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
-	if probe.PeriodSeconds < 1 {
-		return fmt.Errorf("invalid period seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.PeriodSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.PeriodSeconds == nil || *probe.PeriodSeconds < 1 {
+		return fmt.Errorf("invalid period seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.PeriodSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
-	if probe.SuccessThreshold < 1 {
-		return fmt.Errorf("invalid success threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.SuccessThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.SuccessThreshold == nil || *probe.SuccessThreshold < 1 {
+		return fmt.Errorf("invalid success threshold for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.SuccessThreshold, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
-	if probe.TimeoutSeconds < 1 {
-		return fmt.Errorf("invalid timeout seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, probe.TimeoutSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
+	if probe.TimeoutSeconds == nil || *probe.TimeoutSeconds < 1 {
+		return fmt.Errorf("invalid timeout seconds for %s probe, must be 1 or greater, got %d for Cassandra cluster definition: %s.%s", name, *probe.TimeoutSeconds, clusterDefinition.Namespace, clusterDefinition.Name)
 	}
 	return nil
 }
 
 func mergeProbeDefaults(configuredProbe *v1alpha1.Probe, defaultProbe *v1alpha1.Probe) {
-	if configuredProbe.TimeoutSeconds == 0 {
+	if configuredProbe.TimeoutSeconds == nil {
 		configuredProbe.TimeoutSeconds = defaultProbe.TimeoutSeconds
 	}
 
-	if configuredProbe.SuccessThreshold == 0 {
+	if configuredProbe.SuccessThreshold == nil {
 		configuredProbe.SuccessThreshold = defaultProbe.SuccessThreshold
 	}
 
-	if configuredProbe.FailureThreshold == 0 {
+	if configuredProbe.FailureThreshold == nil {
 		configuredProbe.FailureThreshold = defaultProbe.FailureThreshold
 	}
 
-	if configuredProbe.InitialDelaySeconds == 0 {
+	if configuredProbe.InitialDelaySeconds == nil {
 		configuredProbe.InitialDelaySeconds = defaultProbe.InitialDelaySeconds
 	}
 
-	if configuredProbe.PeriodSeconds == 0 {
+	if configuredProbe.PeriodSeconds == nil {
 		configuredProbe.PeriodSeconds = defaultProbe.PeriodSeconds
 	}
 }
@@ -287,7 +258,7 @@ func (c *Cluster) Racks() []v1alpha1.Rack {
 
 func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) *appsv1.StatefulSet {
 	sts := &appsv1.StatefulSet{
-		ObjectMeta: c.objectMetadata(c.definition.RackName(rack), RackLabel, rack.Name),
+		ObjectMeta: c.objectMetadataWithOwner(c.definition.RackName(rack), RackLabel, rack.Name),
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
@@ -314,6 +285,7 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 					},
 					Containers: []v1.Container{
 						c.createCassandraContainer(rack, customConfigMap),
+						c.createCassandraSidecarContainer(rack),
 					},
 					Volumes: c.createPodVolumes(customConfigMap),
 					Affinity: &v1.Affinity{
@@ -361,7 +333,7 @@ func (c *Cluster) createStatefulSetForRack(rack *v1alpha1.Rack, customConfigMap 
 // CreateService creates a headless service for the supplied cluster definition.
 func (c *Cluster) CreateService() *v1.Service {
 	return &v1.Service{
-		ObjectMeta: c.objectMetadata(c.definition.Name, "app", c.definition.Name),
+		ObjectMeta: c.objectMetadataWithOwner(c.definition.Name, "app", c.definition.Name),
 		Spec: v1.ServiceSpec{
 			Selector: map[string]string{
 				"app": c.definition.Name,
@@ -414,7 +386,7 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotJobName(),
-		Image:   snapshot.Image,
+		Image:   *c.definition.Spec.Snapshot.Image,
 		Command: backupCommand,
 	}
 }
@@ -422,7 +394,7 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 // CreateSnapshotCleanupJob creates a cronjob to trigger the snapshot cleanup
 func (c *Cluster) CreateSnapshotCleanupJob() *v1beta1.CronJob {
 	if c.definition.Spec.Snapshot == nil ||
-		!c.definition.Spec.Snapshot.HasRetentionPolicyEnabled() {
+		!v1alpha1helpers.HasRetentionPolicyEnabled(c.definition.Spec.Snapshot) {
 		return nil
 	}
 
@@ -451,22 +423,22 @@ func (c *Cluster) CreateSnapshotCleanupContainer(snapshot *v1alpha1.Snapshot) *v
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotCleanupJobName(),
-		Image:   snapshot.Image,
+		Image:   *c.definition.Spec.Snapshot.Image,
 		Command: cleanupCommand,
 	}
 }
 
 func (c *Cluster) createCronJob(objectName, serviceAccountName, schedule string, container *v1.Container) *v1beta1.CronJob {
 	return &v1beta1.CronJob{
-		ObjectMeta: c.objectMetadata(objectName, "app", objectName),
+		ObjectMeta: c.objectMetadataWithOwner(objectName, "app", objectName),
 		Spec: v1beta1.CronJobSpec{
 			Schedule:          schedule,
 			ConcurrencyPolicy: v1beta1.ForbidConcurrent,
 			JobTemplate: v1beta1.JobTemplateSpec{
-				ObjectMeta: c.objectMetadata(objectName, "app", objectName),
+				ObjectMeta: c.objectMetadataWithOwner(objectName, "app", objectName),
 				Spec: batchv1.JobSpec{
 					Template: v1.PodTemplateSpec{
-						ObjectMeta: c.objectMetadata(objectName, "app", objectName),
+						ObjectMeta: c.objectMetadataWithOwner(objectName, "app", objectName),
 						Spec: v1.PodSpec{
 							RestartPolicy:      v1.RestartPolicyOnFailure,
 							ServiceAccountName: serviceAccountName,
@@ -492,11 +464,16 @@ func (c *Cluster) objectMetadata(name string, extraLabels ...string) metav1.Obje
 	}
 }
 
-func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
+func (c *Cluster) objectMetadataWithOwner(name string, extraLabels ...string) metav1.ObjectMeta {
+	meta := c.objectMetadata(name, extraLabels...)
+	meta.OwnerReferences = []metav1.OwnerReference{v1alpha1helpers.NewControllerRef(c.definition)}
+	return meta
+}
 
+func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap *v1.ConfigMap) v1.Container {
 	return v1.Container{
 		Name:  cassandraContainerName,
-		Image: c.definition.Spec.Pod.Image,
+		Image: *c.definition.Spec.Pod.Image,
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "internode",
@@ -525,8 +502,8 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 			},
 		},
 		Resources:      c.createResourceRequirements(),
-		LivenessProbe:  createProbe(c.definition.Spec.Pod.LivenessProbe, "/bin/sh", "-c", "nodetool info"),
-		ReadinessProbe: createProbe(c.definition.Spec.Pod.ReadinessProbe, "/bin/sh", "-c", "nodetool status | grep -E \"^UN\\s+${NODE_LISTEN_ADDRESS}\""),
+		LivenessProbe:  createHTTPProbe(c.definition.Spec.Pod.LivenessProbe, "/live", healthServerPort),
+		ReadinessProbe: createHTTPProbe(c.definition.Spec.Pod.ReadinessProbe, "/ready", healthServerPort),
 		Lifecycle: &v1.Lifecycle{
 			PreStop: &v1.Handler{
 				Exec: &v1.ExecAction{
@@ -534,8 +511,45 @@ func (c *Cluster) createCassandraContainer(rack *v1alpha1.Rack, customConfigMap 
 				},
 			},
 		},
-		Env:          []v1.EnvVar{{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"}},
+		Env: []v1.EnvVar{
+			{Name: "EXTRA_CLASSPATH", Value: "/extra-lib/cassandra-seed-provider.jar"},
+		},
 		VolumeMounts: c.createVolumeMounts(customConfigMap),
+	}
+}
+
+func (c *Cluster) createCassandraSidecarContainer(rack *v1alpha1.Rack) v1.Container {
+	return v1.Container{
+		Name:  cassandraSidecarContainerName,
+		Image: *c.definition.Spec.Pod.SidecarImage,
+		Ports: []v1.ContainerPort{
+			{
+				Name:          "api",
+				Protocol:      v1.ProtocolTCP,
+				ContainerPort: healthServerPort,
+			},
+		},
+		Env: c.createEnvironmentVariableDefinition(rack),
+		Args: []string{
+			"--log-level=info",
+			fmt.Sprintf("--health-server-port=%d", healthServerPort),
+		},
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU: minQuantity(
+					c.definition.Spec.Pod.CPU,
+					maxSidecarCPURequest,
+				),
+				v1.ResourceMemory: minQuantity(
+					c.definition.Spec.Pod.Memory,
+					maxSidecarMemoryRequest,
+				),
+			},
+			Limits: v1.ResourceList{
+				v1.ResourceCPU:    sidecarCPULimit,
+				v1.ResourceMemory: sidecarMemoryLimit,
+			},
+		},
 	}
 }
 
@@ -555,7 +569,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 		},
 		{
 			Name:  "CLUSTER_DATA_CENTER",
-			Value: c.definition.Spec.GetDatacenter(),
+			Value: *c.definition.Spec.Datacenter,
 		},
 		{
 			Name: "NODE_LISTEN_ADDRESS",
@@ -581,7 +595,7 @@ func (c *Cluster) createEnvironmentVariableDefinition(rack *v1alpha1.Rack) []v1.
 func (c *Cluster) createCassandraDataPersistentVolumeClaimForRack(rack *v1alpha1.Rack) []v1.PersistentVolumeClaim {
 	var persistentVolumeClaim []v1.PersistentVolumeClaim
 
-	if !c.definition.Spec.UseEmptyDir {
+	if !*c.definition.Spec.UseEmptyDir {
 		persistentVolumeClaim = append(persistentVolumeClaim, v1.PersistentVolumeClaim{
 			ObjectMeta: c.objectMetadata(c.definition.StorageVolumeName(), RackLabel, rack.Name, "app", c.definition.Name),
 			Spec: v1.PersistentVolumeClaimSpec{
@@ -626,7 +640,7 @@ func (c *Cluster) createPodVolumes(customConfigMap *v1.ConfigMap) []v1.Volume {
 		volumes = append(volumes, c.createConfigMapVolume(customConfigMap))
 	}
 
-	if c.definition.Spec.UseEmptyDir {
+	if *c.definition.Spec.UseEmptyDir {
 		volumes = append(volumes, emptyDir(c.definition.StorageVolumeName()))
 	}
 
@@ -660,11 +674,27 @@ func createProbe(probe *v1alpha1.Probe, command ...string) *v1.Probe {
 				Command: command,
 			},
 		},
-		InitialDelaySeconds: probe.InitialDelaySeconds,
-		PeriodSeconds:       probe.PeriodSeconds,
-		TimeoutSeconds:      probe.TimeoutSeconds,
-		FailureThreshold:    probe.FailureThreshold,
-		SuccessThreshold:    probe.SuccessThreshold,
+		InitialDelaySeconds: *probe.InitialDelaySeconds,
+		PeriodSeconds:       *probe.PeriodSeconds,
+		TimeoutSeconds:      *probe.TimeoutSeconds,
+		FailureThreshold:    *probe.FailureThreshold,
+		SuccessThreshold:    *probe.SuccessThreshold,
+	}
+}
+
+func createHTTPProbe(probe *v1alpha1.Probe, path string, port int) *v1.Probe {
+	return &v1.Probe{
+		Handler: v1.Handler{
+			HTTPGet: &v1.HTTPGetAction{
+				Port: intstr.FromInt(port),
+				Path: path,
+			},
+		},
+		InitialDelaySeconds: *probe.InitialDelaySeconds,
+		PeriodSeconds:       *probe.PeriodSeconds,
+		TimeoutSeconds:      *probe.TimeoutSeconds,
+		FailureThreshold:    *probe.FailureThreshold,
+		SuccessThreshold:    *probe.SuccessThreshold,
 	}
 }
 
@@ -716,7 +746,7 @@ func (c *Cluster) customConfigMapVolumeName() string {
 func (c *Cluster) createInitConfigContainer() v1.Container {
 	return v1.Container{
 		Name:    "init-config",
-		Image:   c.definition.Spec.Pod.Image,
+		Image:   *c.definition.Spec.Pod.Image,
 		Command: []string{"sh", "-c", "cp -vr /etc/cassandra/* /configuration"},
 		VolumeMounts: []v1.VolumeMount{
 			{Name: "configuration", MountPath: "/configuration"},
@@ -737,7 +767,7 @@ func (c *Cluster) createCassandraBootstrapperContainer(rack *v1alpha1.Rack, cust
 	return v1.Container{
 		Name:         cassandraBootstrapperContainerName,
 		Env:          c.createEnvironmentVariableDefinition(rack),
-		Image:        c.definition.Spec.Pod.BootstrapperImage,
+		Image:        *c.definition.Spec.Pod.BootstrapperImage,
 		Resources:    c.createResourceRequirements(),
 		VolumeMounts: mounts,
 	}
@@ -784,4 +814,12 @@ func durationDays(days *int32) time.Duration {
 
 func durationSeconds(seconds *int32) time.Duration {
 	return time.Duration(*seconds) * time.Second
+}
+
+func minQuantity(r1, r2 resource.Quantity) resource.Quantity {
+	d := r1.Cmp(r2)
+	if d > 0 {
+		return r2
+	}
+	return r1
 }

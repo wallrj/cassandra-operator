@@ -2,23 +2,20 @@ package cluster
 
 import (
 	"fmt"
+	"time"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
-	"time"
 
 	"github.com/prometheus/common/log"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
 	"k8s.io/api/apps/v1beta2"
 	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
-)
-
-var (
-	statefulSetCascadingPolicy = metaV1.DeletePropagationForeground
 )
 
 // Accessor exposes operations to access various kubernetes resources belonging to a Cluster
@@ -45,18 +42,6 @@ func (h *Accessor) GetCassandraForCluster(c *Cluster) (*v1alpha1.Cassandra, erro
 // CreateServiceForCluster creates a Kubernetes service from the supplied cluster definition
 func (h *Accessor) CreateServiceForCluster(c *Cluster) (*v1.Service, error) {
 	return h.kubeClientset.CoreV1().Services(c.Namespace()).Create(c.CreateService())
-}
-
-// DeleteServiceForCluster deletes the Kubernetes service for the supplied cluster definition
-func (h *Accessor) DeleteServiceForCluster(c *Cluster) error {
-	return h.kubeClientset.CoreV1().Services(c.Namespace()).Delete(c.Name(), metaV1.NewDeleteOptions(0))
-}
-
-// DeleteStatefulSetsForCluster deletes all Kubernetes stateful sets related to the supplied cluster definition
-func (h *Accessor) DeleteStatefulSetsForCluster(c *Cluster) error {
-	return h.kubeClientset.AppsV1beta2().StatefulSets(c.Namespace()).DeleteCollection(
-		&metaV1.DeleteOptions{PropagationPolicy: &statefulSetCascadingPolicy},
-		metaV1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", OperatorLabel, c.Name())})
 }
 
 // FindCustomConfigMap looks for a custom config map which is associated with a given named cluster in a given
@@ -124,10 +109,10 @@ func (h *Accessor) WaitUntilRackChangeApplied(cluster *Cluster, statefulSet *v1b
 	// on all replicas of the stateful set. similarly, there's no point in checking more often than the readiness probe
 	// checks.
 	readinessProbe := cluster.definition.Spec.Pod.ReadinessProbe
-	timeBeforeFirstCheck := time.Duration(*statefulSet.Spec.Replicas*readinessProbe.InitialDelaySeconds) * time.Second
+	timeBeforeFirstCheck := time.Duration(*statefulSet.Spec.Replicas**readinessProbe.InitialDelaySeconds) * time.Second
 
 	// have a lower limit of 5 seconds for time between checks, to avoid spamming events.
-	timeBetweenChecks := time.Duration(max(readinessProbe.PeriodSeconds, 5)) * time.Second
+	timeBetweenChecks := time.Duration(max(*readinessProbe.PeriodSeconds, 5)) * time.Second
 
 	// time.Sleep is fine for us to use because this check is executed in its own goroutine and won't block any other
 	// operations on other clusters.
@@ -137,6 +122,7 @@ func (h *Accessor) WaitUntilRackChangeApplied(cluster *Cluster, statefulSet *v1b
 		return fmt.Errorf("error while waiting for stateful set %s.%s creation to complete: %v", statefulSet.Namespace, statefulSet.Name, err)
 	}
 
+	h.recordWaitCompleteEvent(cluster, statefulSet)
 	log.Infof("stateful set %s.%s is ready", statefulSet.Namespace, statefulSet.Name)
 
 	return nil
@@ -229,17 +215,16 @@ func (h *Accessor) statefulSetChangeApplied(cluster *Cluster, appliedStatefulSet
 		updateCompleted := currentStatefulSet.Status.UpdateRevision == currentStatefulSet.Status.CurrentRevision
 		allReplicasReady := currentStatefulSet.Status.ReadyReplicas == currentStatefulSet.Status.Replicas
 
-		done := controllerObservedChange && updateCompleted && allReplicasReady
-		if !done {
-			h.recordWaitEvent(cluster, appliedStatefulSet)
-		}
-
-		return done, nil
+		return controllerObservedChange && updateCompleted && allReplicasReady, nil
 	}
 }
 
 func (h *Accessor) recordWaitEvent(cluster *Cluster, statefulSet *v1beta2.StatefulSet) {
-	h.eventRecorder.Eventf(cluster.definition, v1.EventTypeNormal, WaitingForStatefulSetChange, "waiting for stateful set %s.%s to be ready", statefulSet.Namespace, statefulSet.Name)
+	h.eventRecorder.Eventf(cluster.definition, v1.EventTypeNormal, WaitingForStatefulSetChange, "Waiting for stateful set %s.%s to be ready", statefulSet.Namespace, statefulSet.Name)
+}
+
+func (h *Accessor) recordWaitCompleteEvent(cluster *Cluster, statefulSet *v1beta2.StatefulSet) {
+	h.eventRecorder.Eventf(cluster.definition, v1.EventTypeNormal, StatefulSetChangeComplete, "Stateful set %s.%s is ready", statefulSet.Namespace, statefulSet.Name)
 }
 
 func max(x, y int32) int32 {

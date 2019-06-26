@@ -1,4 +1,4 @@
-# Cassandra Operator
+# Cassandra Operator [![Build Status](https://travis-ci.com/sky-uk/cassandra-operator.svg?branch=master)](https://travis-ci.com/sky-uk/cassandra-operator)
 
 The Cassandra Operator is a Kubernetes operator that manages Cassandra clusters inside Kubernetes.
 

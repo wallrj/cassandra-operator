@@ -2,6 +2,7 @@ package creation
 
 import (
 	"fmt"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
 	"path/filepath"
 	"testing"
 	"time"
@@ -14,12 +15,15 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
+
+	coreV1 "k8s.io/api/core/v1"
 )
 
 var (
-	multipleRacksCluster *TestCluster
-	emptyDirCluster      *TestCluster
-	testStartTime        time.Time
+	multipleRacksCluster          *TestCluster
+	emptyDirCluster               *TestCluster
+	testStartTime                 time.Time
+	multipleRacksClusterReadyTime time.Time
 )
 
 func TestCreation(t *testing.T) {
@@ -46,22 +50,23 @@ func createClustersInParallel(multipleRacksCluster, emptyDirCluster *TestCluster
 	AClusterWithName(multipleRacksCluster.Name).AndClusterSpec(&v1alpha1.CassandraSpec{
 		Datacenter: ptr.String("custom-dc"),
 		Pod: v1alpha1.Pod{
-			BootstrapperImage: CassandraBootstrapperImageName,
-			Image:             CassandraImageName,
+			BootstrapperImage: &CassandraBootstrapperImageName,
+			SidecarImage:      &CassandraSidecarImageName,
+			Image:             &CassandraImageName,
 			Memory:            resource.MustParse("987Mi"),
 			CPU:               resource.MustParse("1m"),
 			StorageSize:       resource.MustParse("100Mi"),
 			LivenessProbe: &v1alpha1.Probe{
-				FailureThreshold:    CassandraLivenessProbeFailureThreshold,
-				TimeoutSeconds:      7,
-				InitialDelaySeconds: CassandraInitialDelay,
-				PeriodSeconds:       CassandraLivenessPeriod,
+				FailureThreshold:    ptr.Int32(CassandraLivenessProbeFailureThreshold),
+				TimeoutSeconds:      ptr.Int32(7),
+				InitialDelaySeconds: ptr.Int32(CassandraInitialDelay),
+				PeriodSeconds:       ptr.Int32(CassandraLivenessPeriod),
 			},
 			ReadinessProbe: &v1alpha1.Probe{
-				FailureThreshold:    CassandraReadinessProbeFailureThreshold,
-				TimeoutSeconds:      6,
-				InitialDelaySeconds: CassandraInitialDelay,
-				PeriodSeconds:       CassandraReadinessPeriod,
+				FailureThreshold:    ptr.Int32(CassandraReadinessProbeFailureThreshold),
+				TimeoutSeconds:      ptr.Int32(6),
+				InitialDelaySeconds: ptr.Int32(CassandraInitialDelay),
+				PeriodSeconds:       ptr.Int32(CassandraReadinessPeriod),
 			},
 		},
 	}).AndRacks(multipleRacksCluster.Racks).AndCustomConfig(extraFile).IsDefined()
@@ -83,6 +88,7 @@ var _ = Context("When a cluster with a given name doesn't already exist", func()
 		testStartTime = time.Now()
 		Eventually(PodReadyForCluster(Namespace, multipleRacksCluster.Name), 3*NodeStartDuration, CheckInterval).
 			Should(Equal(3), fmt.Sprintf("For cluster %s", multipleRacksCluster.Name))
+		multipleRacksClusterReadyTime = time.Now()
 		Eventually(PodReadyForCluster(Namespace, emptyDirCluster.Name), NodeStartDuration, CheckInterval).
 			Should(Equal(1), fmt.Sprintf("For cluster %s", emptyDirCluster.Name))
 	})
@@ -100,8 +106,7 @@ var _ = Context("When a cluster with a given name doesn't already exist", func()
 
 		By("creating pods with the specified resources")
 		Expect(PodsForCluster(Namespace, multipleRacksCluster.Name)()).Should(Each(And(
-			HaveASingleContainer(ContainerExpectation{
-				BootstrapperImageName:          CassandraBootstrapperImageName,
+			HaveContainer(ContainerExpectation{
 				ImageName:                      CassandraImageName,
 				ContainerName:                  "cassandra",
 				MemoryRequest:                  "987Mi",
@@ -190,5 +195,33 @@ var _ = Context("When a cluster with a given name doesn't already exist", func()
 		Expect(PodsForCluster(Namespace, emptyDirCluster.Name)()).Should(Each(
 			Not(HaveAnnotation("clusterConfigHash")),
 		))
+	})
+
+	It("should generate events informing of cluster creation", func() {
+		By("registering an event while each stateful set is being created")
+		Expect(CassandraEventsFor(Namespace, multipleRacksCluster.Name)()).Should(HaveEvent(EventExpectation{
+			Type:    coreV1.EventTypeNormal,
+			Reason:  cluster.WaitingForStatefulSetChange,
+			Message: fmt.Sprintf("Waiting for stateful set %s.%s-%s to be ready", Namespace, multipleRacksCluster.Name, multipleRacksCluster.Racks[0].Name),
+		}))
+		Expect(CassandraEventsFor(Namespace, multipleRacksCluster.Name)()).Should(HaveEvent(EventExpectation{
+			Type:    coreV1.EventTypeNormal,
+			Reason:  cluster.WaitingForStatefulSetChange,
+			Message: fmt.Sprintf("Waiting for stateful set %s.%s-%s to be ready", Namespace, multipleRacksCluster.Name, multipleRacksCluster.Racks[1].Name),
+		}))
+
+		By("registering an event when each stateful set creation is complete")
+		Expect(CassandraEventsFor(Namespace, multipleRacksCluster.Name)()).Should(HaveEvent(EventExpectation{
+			Type:    coreV1.EventTypeNormal,
+			Reason:  cluster.StatefulSetChangeComplete,
+			Message: fmt.Sprintf("Stateful set %s.%s-%s is ready", Namespace, multipleRacksCluster.Name, multipleRacksCluster.Racks[0].Name),
+		}))
+		// give long enough to ensure event is propagated
+		Eventually(CassandraEventsFor(Namespace, multipleRacksCluster.Name), 30*time.Second, CheckInterval).Should(HaveEvent(EventExpectation{
+			Type:                 coreV1.EventTypeNormal,
+			Reason:               cluster.StatefulSetChangeComplete,
+			Message:              fmt.Sprintf("Stateful set %s.%s-%s is ready", Namespace, multipleRacksCluster.Name, multipleRacksCluster.Racks[1].Name),
+			LastTimestampCloseTo: &multipleRacksClusterReadyTime, // cluster's ready when its last stateful set is
+		}))
 	})
 })

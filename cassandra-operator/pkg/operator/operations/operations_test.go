@@ -1,19 +1,23 @@
 package operations
 
 import (
+	"reflect"
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
-	"testing"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 )
 
 func TestOperations(t *testing.T) {
@@ -45,7 +49,7 @@ var _ = Describe("operations to execute based on event", func() {
 					Schedule:       "2 * * * *",
 					TimeoutSeconds: &timeout,
 					RetentionPolicy: &v1alpha1.RetentionPolicy{
-						Enabled:               true,
+						Enabled:               ptr.Bool(true),
 						CleanupSchedule:       "1 * * * *",
 						CleanupTimeoutSeconds: &timeout,
 						RetentionPeriodDays:   &sevenDays,
@@ -53,6 +57,7 @@ var _ = Describe("operations to execute based on event", func() {
 				},
 			},
 		}
+		v1alpha1helpers.SetDefaultsForCassandra(oldClusterDef)
 		newClusterDef = oldClusterDef.DeepCopy()
 
 		c, _ := cluster.New(newClusterDef)
@@ -90,7 +95,7 @@ var _ = Describe("operations to execute based on event", func() {
 
 			It("should return add cluster and add snapshot operations when the retention policy is disabled", func() {
 				// given
-				newClusterDef.Spec.Snapshot.RetentionPolicy.Enabled = false
+				newClusterDef.Spec.Snapshot.RetentionPolicy.Enabled = ptr.Bool(false)
 
 				// when
 				operations := receiver.operationsToExecute(&dispatcher.Event{Kind: AddCluster, Data: newClusterDef})
@@ -153,7 +158,7 @@ var _ = Describe("operations to execute based on event", func() {
 			})
 			It("should return a delete cluster and delete snapshot operations when a retention policy is disabled", func() {
 				// given
-				newClusterDef.Spec.Snapshot.RetentionPolicy.Enabled = false
+				newClusterDef.Spec.Snapshot.RetentionPolicy.Enabled = ptr.Bool(false)
 
 				// when
 				operations := receiver.operationsToExecute(&dispatcher.Event{Kind: DeleteCluster, Data: newClusterDef})
@@ -224,7 +229,7 @@ var _ = Describe("operations to execute based on event", func() {
 				})
 				It("should return update cluster and delete snapshot cleanup when snapshot retention policy is disabled", func() {
 					// given
-					newClusterDef.Spec.Snapshot.RetentionPolicy.Enabled = false
+					newClusterDef.Spec.Snapshot.RetentionPolicy.Enabled = ptr.Bool(false)
 
 					// when
 					operations := receiver.operationsToExecute(&dispatcher.Event{Kind: UpdateCluster, Data: ClusterUpdate{OldCluster: oldClusterDef, NewCluster: newClusterDef}})
@@ -266,7 +271,7 @@ var _ = Describe("operations to execute based on event", func() {
 				It("should return update cluster and add snapshot when snapshot with retention policy disabled", func() {
 					// given
 					oldClusterDef.Spec.Snapshot = nil
-					newClusterDef.Spec.Snapshot.RetentionPolicy.Enabled = false
+					newClusterDef.Spec.Snapshot.RetentionPolicy.Enabled = ptr.Bool(false)
 
 					// when
 					operations := receiver.operationsToExecute(&dispatcher.Event{Kind: UpdateCluster, Data: ClusterUpdate{OldCluster: oldClusterDef, NewCluster: newClusterDef}})

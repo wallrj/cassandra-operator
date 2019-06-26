@@ -1,4 +1,3 @@
-.DEFAULT_GOAL := travis
 .PHONY: common-docker-build common-docker-push common-docker-clean common-docker-release
 
 TEST_REGISTRY ?= localhost:5000
@@ -9,6 +8,7 @@ gitTag := $(shell git tag --points-at=$(gitRev))
 
 # Variables recursively expanded, so $(image) can be set before/after including this file
 dockerTestImage = $(TEST_REGISTRY)/$(image):v$(gitRev)
+dockerReleaseCandidateImage = $(RELEASE_REGISTRY)/$(image):v$(gitRev)
 dockerReleaseImage = $(RELEASE_REGISTRY)/$(image):$(gitTag)
 dockerReleaseLatestImage = $(RELEASE_REGISTRY)/$(image):latest
 
@@ -29,12 +29,16 @@ common-docker-clean:
 common-docker-release:
 	@echo "== common-docker-release"
 ifeq ($(strip $(gitTag)),)
-	@echo "no tag on $(gitRev), skipping release"
+	@echo "Releasing candidate based on rev: $(gitRev). Docker image: $(dockerReleaseCandidateImage)"
+	@echo "$(DOCKER_PASSWORD)" | docker login -u $(DOCKER_USERNAME) --password-stdin
+	docker tag $(dockerTestImage) $(dockerReleaseCandidateImage)
+	docker push $(dockerReleaseCandidateImage)
 else
-	@echo "Releasing $(dockerReleaseImage)"
-	@docker login -u $(DOCKER_USERNAME) -p $(DOCKER_PASSWORD)
-	docker tag $(dockerTestImage) $(dockerReleaseImage)
-	docker tag $(dockerTestImage) $(dockerReleaseLatestImage)
+	@echo "Releasing based on tag: $(gitTag). Docker image: $(dockerReleaseImage)"
+	@echo "$(DOCKER_PASSWORD)" | docker login -u $(DOCKER_USERNAME) --password-stdin
+	docker pull $(dockerReleaseCandidateImage)
+	docker tag $(dockerReleaseCandidateImage) $(dockerReleaseImage)
+	docker tag $(dockerReleaseCandidateImage) $(dockerReleaseLatestImage)
 	docker push $(dockerReleaseImage)
 	docker push $(dockerReleaseLatestImage)
 endif

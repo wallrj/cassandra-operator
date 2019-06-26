@@ -11,8 +11,10 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -67,14 +69,14 @@ func startOperator(_ *cobra.Command, _ []string) error {
 		MetricPollInterval:    metricPollInterval,
 		AllowEmptyDir:         allowEmptyDir,
 	}
-	log.Infof("Starting Cassandra operator with config: %v", operatorConfig)
+	log.Infof("Starting Cassandra operator with config: %+v", operatorConfig)
 
 	if err := v1alpha1.AddToScheme(scheme.Scheme); err != nil {
 		return fmt.Errorf("unable to register metadata for Cassandra resources: %v", err)
 	}
 
 	kubernetesConfig := kubernetesConfig()
-	op := operator.New(kubernetesClient(kubernetesConfig), cassandraClient(kubernetesConfig), operatorConfig)
+	op := operator.New(kubernetesClient(kubernetesConfig), cassandraClient(kubernetesConfig), dynamicClient(kubernetesConfig), operatorConfig)
 	op.Run()
 
 	return nil
@@ -83,7 +85,18 @@ func startOperator(_ *cobra.Command, _ []string) error {
 func kubernetesConfig() *rest.Config {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Unable to obtain in-cluster config: %v", err)
+		log.Warnf("Falling back to default client config: %v", err)
+
+		apiConfig, err := clientcmd.NewDefaultClientConfigLoadingRules().Load()
+
+		if err != nil {
+			log.Fatalf("Unable to obtain cluster config: %v", err)
+		}
+
+		config, err = clientcmd.NewDefaultClientConfig(*apiConfig, &clientcmd.ConfigOverrides{}).ClientConfig()
+		if err != nil {
+			log.Fatalf("Unable to obtain cluster client config: %v", err)
+		}
 	}
 	return config
 }
@@ -98,4 +111,8 @@ func kubernetesClient(config *rest.Config) *kubernetes.Clientset {
 
 func cassandraClient(config *rest.Config) *versioned.Clientset {
 	return versioned.NewForConfigOrDie(config)
+}
+
+func dynamicClient(config *rest.Config) dynamic.Interface {
+	return dynamic.NewForConfigOrDie(config)
 }

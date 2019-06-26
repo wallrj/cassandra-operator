@@ -23,13 +23,27 @@ http:
     body: ["status\":403"]
   "http://localhost:7777/jolokia/exec/org.apache.cassandra.db:type=EndpointSnitchInfo/getRack/localhost":
     status: 200
-    body: ["status\":200"]
+    body: ['status":200']
   "http://localhost:7777/jolokia/exec/org.apache.cassandra.db:type=EndpointSnitchInfo/getDatacenter/localhost":
     status: 200
     body: ["status\":403"]
-  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/LiveNodes,UnreachableNodes,JoiningNodes,LeavingNodes,MovingNodes":
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/LiveNodes":
     status: 200
-    body: ["status\":200"]
+    body:
+      - '"status":200'
+      - '"value":["localhost"]'
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/UnreachableNodes":
+    status: 200
+    body: ['status":200']
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/JoiningNodes":
+    status: 200
+    body: ['status":200']
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/LeavingNodes":
+    status: 200
+    body: ['status":200']
+  "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/MovingNodes":
+    status: 200
+    body: ['status":200']
   "http://localhost:7777/jolokia/read/org.apache.cassandra.db:type=StorageService/ClusterName":
     status: 200
     body: ["status\":403"]

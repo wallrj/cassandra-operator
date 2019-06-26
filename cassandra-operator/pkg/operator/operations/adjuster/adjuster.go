@@ -3,6 +3,7 @@ package adjuster
 import (
 	"bytes"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
 	"reflect"
 	"text/template"
 	"time"
@@ -47,7 +48,11 @@ const statefulSetPatchTemplate = `{
                "memory": "{{ .PodMemory }}"
              }
 	       }
-        }]
+        },
+        {
+           "name": "cassandra-sidecar",
+           "image": "{{ .PodCassandraSidecarImage }}"
+		}]
       }
     }
   }
@@ -96,12 +101,13 @@ type Adjuster struct {
 }
 
 type patchProperties struct {
-	Replicas             int32
-	PodBootstrapperImage string
-	PodCPU               string
-	PodMemory            string
-	PodLivenessProbe     *v1alpha1.Probe
-	PodReadinessProbe    *v1alpha1.Probe
+	Replicas                 int32
+	PodBootstrapperImage     string
+	PodCassandraSidecarImage string
+	PodCPU                   string
+	PodMemory                string
+	PodLivenessProbe         *v1alpha1.Probe
+	PodReadinessProbe        *v1alpha1.Probe
 }
 
 // New creates a new Adjuster.
@@ -116,8 +122,8 @@ func New() (*Adjuster, error) {
 
 // ChangesForCluster compares oldCluster with newCluster, and produces an ordered list of ClusterChanges which need to
 // be applied in order for the running cluster to be in the state matching newCluster.
-func (r *Adjuster) ChangesForCluster(oldCluster *v1alpha1.CassandraSpec, newCluster *v1alpha1.CassandraSpec) ([]ClusterChange, error) {
-	addedRacks, matchedRacks, deletedRacks := r.matchRacks(oldCluster, newCluster)
+func (r *Adjuster) ChangesForCluster(oldCluster *v1alpha1.Cassandra, newCluster *v1alpha1.Cassandra) ([]ClusterChange, error) {
+	addedRacks, matchedRacks, deletedRacks := r.matchRacks(&oldCluster.Spec, &newCluster.Spec)
 	if err := r.ensureChangeIsAllowed(oldCluster, newCluster, matchedRacks); err != nil {
 		return nil, err
 	}
@@ -141,11 +147,19 @@ func (r *Adjuster) ChangesForCluster(oldCluster *v1alpha1.CassandraSpec, newClus
 
 	if r.podSpecHasChanged(oldCluster, newCluster) {
 		for _, matchedRack := range matchedRacks {
-			clusterChanges = append(clusterChanges, ClusterChange{Rack: matchedRack.new, ChangeType: UpdateRack, Patch: r.patchForRack(&matchedRack.new, newCluster, changeTime)})
+			patch, err := r.patchForRack(&matchedRack.new, newCluster, changeTime)
+			if err != nil {
+				return nil, err
+			}
+			clusterChanges = append(clusterChanges, ClusterChange{Rack: matchedRack.new, ChangeType: UpdateRack, Patch: patch})
 		}
 	} else {
 		for _, matchedRack := range r.scaledUpRacks(matchedRacks) {
-			clusterChanges = append(clusterChanges, ClusterChange{Rack: matchedRack, ChangeType: UpdateRack, Patch: r.patchForRack(&matchedRack, newCluster, changeTime)})
+			patch, err := r.patchForRack(&matchedRack, newCluster, changeTime)
+			if err != nil {
+				return nil, err
+			}
+			clusterChanges = append(clusterChanges, ClusterChange{Rack: matchedRack, ChangeType: UpdateRack, Patch: patch})
 		}
 	}
 
@@ -159,39 +173,39 @@ func (r *Adjuster) CreateConfigMapHashPatchForRack(rack *v1alpha1.Rack, configMa
 	return &ClusterChange{Rack: *rack, ChangeType: UpdateRack, Patch: patch}
 }
 
-func (r *Adjuster) patchForRack(rack *v1alpha1.Rack, newCluster *v1alpha1.CassandraSpec, changeTime time.Time) string {
+func (r *Adjuster) patchForRack(rack *v1alpha1.Rack, newCluster *v1alpha1.Cassandra, changeTime time.Time) (string, error) {
 	props := patchProperties{
-		Replicas:             rack.Replicas,
-		PodBootstrapperImage: newCluster.Pod.BootstrapperImage,
-		PodCPU:               newCluster.Pod.CPU.String(),
-		PodMemory:            newCluster.Pod.Memory.String(),
-		PodLivenessProbe:     newCluster.Pod.LivenessProbe,
-		PodReadinessProbe:    newCluster.Pod.ReadinessProbe,
+		Replicas:                 rack.Replicas,
+		PodBootstrapperImage:     *newCluster.Spec.Pod.BootstrapperImage,
+		PodCassandraSidecarImage: *newCluster.Spec.Pod.SidecarImage,
+		PodCPU:                   newCluster.Spec.Pod.CPU.String(),
+		PodMemory:                newCluster.Spec.Pod.Memory.String(),
+		PodLivenessProbe:         newCluster.Spec.Pod.LivenessProbe,
+		PodReadinessProbe:        newCluster.Spec.Pod.ReadinessProbe,
 	}
 	var patch bytes.Buffer
-	r.patchTemplate.Execute(&patch, props)
+	if err := r.patchTemplate.Execute(&patch, props); err != nil {
+		return "", fmt.Errorf("unable to create patch from template with properties: %v, error: %v", props, err)
+	}
+
 	patchString := patch.String()
-	return patchString
+	return patchString, nil
 }
 
 func (r *Adjuster) scaleDownPatchForRack(nodesToScaleDown int) string {
 	return fmt.Sprintf(scaleDownPatchTemplate, nodesToScaleDown)
 }
 
-func (r *Adjuster) ensureChangeIsAllowed(oldCluster, newCluster *v1alpha1.CassandraSpec, matchedRacks []matchedRack) error {
-	if oldCluster.GetDatacenter() != newCluster.GetDatacenter() {
-		return fmt.Errorf("changing dc is forbidden. The dc used will continue to be '%v'", oldCluster.GetDatacenter())
+func (r *Adjuster) ensureChangeIsAllowed(oldCluster, newCluster *v1alpha1.Cassandra, matchedRacks []matchedRack) error {
+	if *oldCluster.Spec.Datacenter != *newCluster.Spec.Datacenter {
+		return fmt.Errorf("changing datacenter is forbidden. The datacenter used will continue to be '%v'", *oldCluster.Spec.Datacenter)
 	}
 
-	if !reflect.DeepEqual(oldCluster.Pod.Image, newCluster.Pod.Image) {
-		currentImage := oldCluster.Pod.Image
-		if currentImage == "" {
-			currentImage = cluster.DefaultCassandraImage
-		}
-		return fmt.Errorf("changing image is forbidden. The image used will continue to be '%v'", currentImage)
+	if !reflect.DeepEqual(oldCluster.Spec.Pod.Image, newCluster.Spec.Pod.Image) {
+		return fmt.Errorf("changing image is forbidden. The image used will continue to be '%v'", *oldCluster.Spec.Pod.Image)
 	}
-	if !reflect.DeepEqual(oldCluster.UseEmptyDir, newCluster.UseEmptyDir) {
-		return fmt.Errorf("changing useEmptyDir is forbidden. The useEmptyDir used will continue to be '%v'", oldCluster.UseEmptyDir)
+	if !reflect.DeepEqual(oldCluster.Spec.UseEmptyDir, newCluster.Spec.UseEmptyDir) {
+		return fmt.Errorf("changing useEmptyDir is forbidden. The useEmptyDir used will continue to be '%v'", *oldCluster.Spec.UseEmptyDir)
 	}
 
 	for _, matchedRack := range matchedRacks {
@@ -206,12 +220,8 @@ func (r *Adjuster) ensureChangeIsAllowed(oldCluster, newCluster *v1alpha1.Cassan
 	return nil
 }
 
-func (r *Adjuster) podSpecHasChanged(oldCluster, newCluster *v1alpha1.CassandraSpec) bool {
-	return !reflect.DeepEqual(oldCluster.Pod.CPU, newCluster.Pod.CPU) ||
-		!reflect.DeepEqual(oldCluster.Pod.Memory, newCluster.Pod.Memory) ||
-		!reflect.DeepEqual(oldCluster.Pod.LivenessProbe, newCluster.Pod.LivenessProbe) ||
-		!reflect.DeepEqual(oldCluster.Pod.ReadinessProbe, newCluster.Pod.ReadinessProbe) ||
-		!reflect.DeepEqual(oldCluster.Pod.BootstrapperImage, newCluster.Pod.BootstrapperImage)
+func (r *Adjuster) podSpecHasChanged(oldCluster, newCluster *v1alpha1.Cassandra) bool {
+	return !cmp.Equal(oldCluster.Spec.Pod, newCluster.Spec.Pod)
 }
 
 func (r *Adjuster) scaledUpRacks(matchedRacks []matchedRack) []v1alpha1.Rack {

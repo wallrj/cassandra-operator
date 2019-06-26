@@ -1,5 +1,7 @@
-.DEFAULT_GOAL := travis
-.PHONY: travis clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style
+.DEFAULT_GOAL := all
+.PHONY: all clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style \
+	validate-crds generate-crds \
+	validate-types generate-types
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -7,12 +9,14 @@ POD_START_TIMEOUT ?= 120s
 USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)
+CASSANDRA_SIDECAR_IMAGE ?= $(TEST_REGISTRY)/cassandra-sidecar:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 DOMAIN ?= localhost
 IMAGE_TO_DEPLOY ?= $(dockerTestImage)
 NAMESPACE ?= test-cassandra-operator
 GINKGO_NODES ?= 0
 GINKGO_COMPILERS ?= 0
+E2E_TEST ?=
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 buildDir := $(projectDir)/build
@@ -23,15 +27,15 @@ testPkgs := $(shell go list ./... | grep /test/e2e)
 
 include $(projectDir)/../MakefileDocker
 
-travis: clean install check
+all: clean install check
 
-build: go-build go-install docker-image
+build: go-build check-style validate-licences validate-crds validate-types docker-image
 
-install: build push-image
+install: build go-install push-image
 
 check-style: fmt vet lint
 
-check: check-style validate-licences test deploy-operator integration-test e2e-test
+check: test deploy-operator integration-test e2e-test
 
 ensure-go-modules:
 ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')
@@ -40,13 +44,14 @@ else
 	@echo "go modules enabled"
 endif
 
-setup:
+setup: ensure-go-modules
 	@echo "== setup"
 	go install \
 		github.com/sky-uk/licence-compliance-checker \
 		github.com/onsi/ginkgo/ginkgo \
 		golang.org/x/tools/cmd/goimports \
-		golang.org/x/lint/golint
+		golang.org/x/lint/golint \
+		sigs.k8s.io/controller-tools/cmd/controller-gen
 
 go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"
@@ -83,12 +88,13 @@ integration-test: ensure-test-report-dir-exists
 ifeq ($(strip $(USE_MOCK)),true)
 	@echo "== e2e-test integration test against real cassandra"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
-	    NAMESPACE=$(NAMESPACE) \
-	    POD_START_TIMEOUT=5m \
-	    USE_MOCK=false \
-	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
-	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
-	    ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress -stream -timeout=30m test/e2e/parallel/creation -- -junit-report-dir $(junitReportDir)
+		NAMESPACE=$(NAMESPACE) \
+		POD_START_TIMEOUT=5m \
+		USE_MOCK=false \
+		CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
+		CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
+		CASSANDRA_SIDECAR_IMAGE=$(CASSANDRA_SIDECAR_IMAGE) \
+		ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress -stream -timeout=30m test/e2e/parallel/creation -- -junit-report-dir $(junitReportDir)
 endif
 
 e2e-test: e2e-test-parallel e2e-test-sequential
@@ -96,24 +102,26 @@ e2e-test: e2e-test-parallel e2e-test-sequential
 e2e-test-parallel: ensure-test-report-dir-exists
 	@echo "== e2e-test-parallel"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
-	    NAMESPACE=$(NAMESPACE) \
-	    POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
-	    FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
-	    USE_MOCK=$(USE_MOCK) \
-	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
-	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
-	    ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress -stream -timeout=30m test/e2e/parallel -- -junit-report-dir $(junitReportDir)
+		NAMESPACE=$(NAMESPACE) \
+		POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
+		FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
+		USE_MOCK=$(USE_MOCK) \
+		CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
+		CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
+		CASSANDRA_SIDECAR_IMAGE=$(CASSANDRA_SIDECAR_IMAGE) \
+		ginkgo -p -nodes=$(GINKGO_NODES) -r -compilers=$(GINKGO_COMPILERS) --v --progress -stream -timeout=30m test/e2e/parallel/$(E2E_TEST) -- -junit-report-dir $(junitReportDir)
 
 e2e-test-sequential: ensure-test-report-dir-exists
 	@echo "== e2e-test-sequential"
 	KUBE_CONTEXT=$(KUBE_CONTEXT) \
-	    NAMESPACE=$(NAMESPACE) \
-	    POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
-	    FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
-	    USE_MOCK=$(USE_MOCK) \
-	    CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
-	    CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
-	    ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress -timeout=30m test/e2e/sequential -- -junit-report-dir $(junitReportDir)
+		NAMESPACE=$(NAMESPACE) \
+		POD_START_TIMEOUT=$(POD_START_TIMEOUT) \
+		FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
+		USE_MOCK=$(USE_MOCK) \
+		CASSANDRA_SNAPSHOT_IMAGE=$(CASSANDRA_SNAPSHOT_IMAGE) \
+		CASSANDRA_BOOTSTRAPPER_IMAGE=$(CASSANDRA_BOOTSTRAPPER_IMAGE) \
+		CASSANDRA_SIDECAR_IMAGE=$(CASSANDRA_SIDECAR_IMAGE) \
+		ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress -timeout=30m test/e2e/sequential/$(E2E_TEST) -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 
@@ -138,8 +146,20 @@ clean: common-docker-clean
 	rm $(shell go env GOPATH)/bin/cassandra-operator || true
 	rm -rfv $(buildDir)
 
-generate-types:
+generate-types: setup
 	@echo "== generate-types"
 	$(projectDir)/hack/update-codegen.sh
+
+validate-types: setup
+	@echo "== validate-types"
+	$(projectDir)/hack/verify-codegen.sh
+
+generate-crds: setup
+	@echo "== generate-crds"
+	$(projectDir)/hack/update-crds.sh
+
+validate-crds: setup
+	@echo "== validate-crds"
+	$(projectDir)/hack/verify-crds.sh
 
 release: common-docker-release

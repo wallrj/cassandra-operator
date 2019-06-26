@@ -71,7 +71,7 @@ var _ = Context("forbidden cluster modifications", func() {
 			Type:                 coreV1.EventTypeWarning,
 			Reason:               cluster.InvalidChangeEvent,
 			Message:              fmt.Sprintf("Change type 'scale down rack' isn't supported for cluster %s.%s", Namespace, multipleNodeCluster.Name),
-			LastTimestampCloseTo: modificationTime,
+			LastTimestampCloseTo: &modificationTime,
 		}))
 
 		By("not changing the number of pods in the rack")
@@ -93,7 +93,7 @@ var _ = Context("forbidden cluster modifications", func() {
 			Type:                 coreV1.EventTypeWarning,
 			Reason:               cluster.InvalidChangeEvent,
 			Message:              "changing image is forbidden",
-			LastTimestampCloseTo: modificationTime,
+			LastTimestampCloseTo: &modificationTime,
 		}))
 		By("not restarting any pods")
 		Expect(podEvents.PodsStartedEventCount(PodName(multipleNodeCluster.Name, "a", 0))).To(Equal(1))
@@ -109,7 +109,7 @@ var _ = Context("forbidden cluster modifications", func() {
 			Type:                 coreV1.EventTypeWarning,
 			Reason:               cluster.InvalidChangeEvent,
 			Message:              fmt.Sprintf("Change type 'delete rack' isn't supported for cluster %s.%s", Namespace, multipleNodeCluster.Name),
-			LastTimestampCloseTo: modificationTime,
+			LastTimestampCloseTo: &modificationTime,
 		}))
 
 	})
