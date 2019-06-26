@@ -168,9 +168,7 @@ func validateSnapshot(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorLis
 			),
 		)
 	}
-	if c.Spec.Snapshot.TimeoutSeconds != nil {
-		allErrs = validateUnsignedInt(allErrs, fldPath.Child("TimeoutSeconds"), *c.Spec.Snapshot.TimeoutSeconds, 1)
-	}
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("TimeoutSeconds"), *c.Spec.Snapshot.TimeoutSeconds, 1)
 	if c.Spec.Snapshot.RetentionPolicy != nil {
 		allErrs = append(
 			allErrs,
@@ -182,12 +180,8 @@ func validateSnapshot(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorLis
 
 func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
-	if c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays != nil {
-		allErrs = validateUnsignedInt(allErrs, fldPath.Child("RetentionPeriodDays"), *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays, 1)
-	}
-	if c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds != nil {
-		allErrs = validateUnsignedInt(allErrs, fldPath.Child("CleanupTimeoutSeconds"), *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds, 0)
-	}
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("RetentionPeriodDays"), *c.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays, 0)
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("CleanupTimeoutSeconds"), *c.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds, 0)
 	if _, err := cron.Parse(c.Spec.Snapshot.RetentionPolicy.CleanupSchedule); err != nil {
 		allErrs = append(
 			allErrs,
