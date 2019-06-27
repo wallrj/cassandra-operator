@@ -1,30 +1,19 @@
 package operator
 
 import (
-	"time"
-
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
-
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
-
 	"reflect"
+	"syscall"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,6 +23,17 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	v1alpha1helpers "github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/helpers"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/validation"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/client/clientset/versioned"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/cluster"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/dispatcher"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/metrics"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator/operations"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 )
 
 // The Operator itself.
@@ -174,78 +174,113 @@ func (o *Operator) safeGetConfigMap(obj interface{}) *v1.ConfigMap {
 }
 
 func (o *Operator) clusterAdded(obj interface{}) {
+	logger := log.WithField("origin", "Operator.clusterAdded")
+
 	clusterDefinition, err := unstructuredToCassandra(obj)
 	if err != nil {
-		logCassandraDecodeError(obj, err)
+		logger.WithError(err).Error("decoding error")
 		return
 	}
+
+	clusterID := clusterDefinition.QualifiedName()
+	logger = logger.WithField("clusterID", clusterID)
 
 	v1alpha1helpers.SetDefaultsForCassandra(clusterDefinition)
 	o.adjustUseEmptyDir(clusterDefinition)
 
-	clusterID := fmt.Sprintf("%s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
+	err = validation.ValidateCassandra(clusterDefinition).ToAggregate()
+	if err != nil {
+		logger.WithError(err).Error("validation error")
+		return
+	}
 	o.eventDispatcher.Dispatch(&dispatcher.Event{Kind: operations.AddCluster, Key: clusterID, Data: clusterDefinition})
 }
 
 func unstructuredToCassandra(obj interface{}) (*v1alpha1.Cassandra, error) {
 	un, ok := obj.(*unstructured.Unstructured)
 	if !ok {
-		return nil, fmt.Errorf("object is not an unstructured")
+		return nil, fmt.Errorf("object is not an unstructured: %#v", obj)
 	}
-
 	var c v1alpha1.Cassandra
 	err := runtime.DefaultUnstructuredConverter.FromUnstructured(un.Object, &c)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(
+			err,
+			"unable to decode unstructured %s.%s to Cassandra",
+			un.GetNamespace(),
+			un.GetName(),
+		)
 	}
 
 	return &c, nil
 }
 
-func logCassandraDecodeError(obj interface{}, err error) {
-	un := obj.(*unstructured.Unstructured)
-	log.Errorf("Could not decode Cassandra %s.%s: %v", un.GetNamespace(), un.GetName(), err)
-}
-
 func (o *Operator) clusterDeleted(obj interface{}) {
+	logger := log.WithField("origin", "Operator.clusterDeleted")
+
 	clusterDefinition, err := unstructuredToCassandra(obj)
 	if err != nil {
-		logCassandraDecodeError(obj, err)
+		logger.WithError(err).Error("decoding error")
 		return
 	}
+
+	clusterID := clusterDefinition.QualifiedName()
+	logger = logger.WithField("clusterID", clusterID)
+
 	v1alpha1helpers.SetDefaultsForCassandra(clusterDefinition)
 	o.adjustUseEmptyDir(clusterDefinition)
 
-	clusterID := fmt.Sprintf("%s.%s", clusterDefinition.Namespace, clusterDefinition.Name)
+	err = validation.ValidateCassandra(clusterDefinition).ToAggregate()
+	if err != nil {
+		logger.WithError(err).Error("validation error")
+		return
+	}
+
 	o.eventDispatcher.Dispatch(&dispatcher.Event{Kind: operations.DeleteCluster, Key: clusterID, Data: clusterDefinition})
 }
 
+// clusterUpdated is called when there is an UPDATE operation on a Cassandra API object.
+// NB We only validate the *new* Cassandra object, not the old object.
+// This allows the operator to proceed if an invalid Cassandra API object is eventually corrected.
+// The operator will have ignored the invalid object when it was first added.
+// Webhook validation would ensure that the invalid Cassandra object is never accepted by the API server,
+// but we can't guarantee that a validating webhook has been deployed.
 func (o *Operator) clusterUpdated(old interface{}, new interface{}) {
+	logger := log.WithField("origin", "Operator.clusterUpdated")
+
 	oldCluster, err := unstructuredToCassandra(old)
 	if err != nil {
-		logCassandraDecodeError(old, err)
+		logger.WithError(err).Error("decoding error (old)")
 		return
 	}
 
 	newCluster, err := unstructuredToCassandra(new)
 	if err != nil {
-		logCassandraDecodeError(new, err)
+		logger.WithError(err).Error("decoding error (new)")
 		return
 	}
 
-	log.Debug(spew.Sprintf("Cluster update detected for %s.%s, old: %+v \nnew: %+v", oldCluster.Namespace, oldCluster.Name, oldCluster.Spec, newCluster.Spec))
+	clusterID := newCluster.QualifiedName()
+	logger = logger.WithField("clusterID", clusterID)
+
+	logger.Debug(spew.Sprintf("Cluster update detected. old: %+v \nnew: %+v", oldCluster.Spec, newCluster.Spec))
 
 	v1alpha1helpers.SetDefaultsForCassandra(oldCluster)
 	o.adjustUseEmptyDir(oldCluster)
 	v1alpha1helpers.SetDefaultsForCassandra(newCluster)
 	o.adjustUseEmptyDir(newCluster)
 
-	if reflect.DeepEqual(oldCluster.Spec, newCluster.Spec) {
-		log.Debugf("update event received for cluster %s.%s but no changes detected", newCluster.Namespace, newCluster.Name)
+	err = validation.ValidateCassandra(newCluster).ToAggregate()
+	if err != nil {
+		logger.WithError(err).Error("validation error (new)")
 		return
 	}
 
-	clusterID := fmt.Sprintf("%s.%s", newCluster.Namespace, newCluster.Name)
+	if reflect.DeepEqual(oldCluster.Spec, newCluster.Spec) {
+		logger.Debugf("update event received but no changes detected")
+		return
+	}
+
 	o.eventDispatcher.Dispatch(&dispatcher.Event{
 		Kind: operations.UpdateCluster,
 		Key:  clusterID,

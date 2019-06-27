@@ -1,16 +1,16 @@
 package helpers
 
 import (
-	"k8s.io/apimachinery/pkg/api/resource"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/util/ptr"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestHelpers(t *testing.T) {
@@ -36,15 +36,20 @@ var _ = Describe("Cassandra Helpers", func() {
 			}
 		})
 
-		Context("Defaulting retention policy", func() {
-			It("should default Snapshot.RetentionPolicy.Enabled to true", func() {
-				clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
-					Schedule:        "1 23 * * *",
-					RetentionPolicy: &v1alpha1.RetentionPolicy{},
-				}
-				clusterDef.Spec.Snapshot.RetentionPolicy.Enabled = nil
-				SetDefaultsForCassandra(clusterDef)
-				Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.Enabled).To(BeTrue())
+		Context("Snapshot", func() {
+			Context("TimeoutSeconds", func() {
+				It("should default to 10", func() {
+					clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{}
+					SetDefaultsForCassandra(clusterDef)
+					Expect(*clusterDef.Spec.Snapshot.TimeoutSeconds).To(Equal(int32(v1alpha1.DefaultSnapshotTimeoutSeconds)))
+				})
+				It("should not overwrite existing value", func() {
+					clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
+						TimeoutSeconds: ptr.Int32(456),
+					}
+					SetDefaultsForCassandra(clusterDef)
+					Expect(*clusterDef.Spec.Snapshot.TimeoutSeconds).To(Equal(int32(456)))
+				})
 			})
 
 			It("should not change an undefined Snapshot", func() {
@@ -53,13 +58,73 @@ var _ = Describe("Cassandra Helpers", func() {
 				Expect(clusterDef.Spec.Snapshot).To(BeNil())
 			})
 
-			It("should not change an undefined Snapshot.RetentionPolicy", func() {
-				clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
-					Schedule: "1 23 * * *",
-				}
-				clusterDef.Spec.Snapshot.RetentionPolicy = nil
-				SetDefaultsForCassandra(clusterDef)
-				Expect(clusterDef.Spec.Snapshot.RetentionPolicy).To(BeNil())
+			Context("RetentionPolicy", func() {
+				Context("Enabled", func() {
+					It("should default to true", func() {
+						clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
+							RetentionPolicy: &v1alpha1.RetentionPolicy{
+								Enabled: nil,
+							},
+						}
+						SetDefaultsForCassandra(clusterDef)
+						Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.Enabled).To(BeTrue())
+					})
+					It("should not overwrite existing value", func() {
+						clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
+							RetentionPolicy: &v1alpha1.RetentionPolicy{
+								Enabled: ptr.Bool(false),
+							},
+						}
+						SetDefaultsForCassandra(clusterDef)
+						Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.Enabled).To(BeFalse())
+					})
+				})
+				Context("RetentionPeriodDays", func() {
+					It("should default to 7", func() {
+						clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
+							RetentionPolicy: &v1alpha1.RetentionPolicy{
+								RetentionPeriodDays: nil,
+							},
+						}
+						SetDefaultsForCassandra(clusterDef)
+						Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays).To(Equal(int32(v1alpha1.DefaultRetentionPolicyRetentionPeriodDays)))
+					})
+					It("should not overwrite existing value", func() {
+						clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
+							RetentionPolicy: &v1alpha1.RetentionPolicy{
+								RetentionPeriodDays: ptr.Int32(543),
+							},
+						}
+						SetDefaultsForCassandra(clusterDef)
+						Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays).To(Equal(int32(543)))
+					})
+				})
+				Context("CleanupTimeoutSeconds", func() {
+					It("should default to 10", func() {
+						clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
+							RetentionPolicy: &v1alpha1.RetentionPolicy{
+								CleanupTimeoutSeconds: nil,
+							},
+						}
+						SetDefaultsForCassandra(clusterDef)
+						Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds).To(Equal(int32(v1alpha1.DefaultRetentionPolicyCleanupTimeoutSeconds)))
+					})
+					It("should not overwrite existing value", func() {
+						clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{
+							RetentionPolicy: &v1alpha1.RetentionPolicy{
+								CleanupTimeoutSeconds: ptr.Int32(321),
+							},
+						}
+						SetDefaultsForCassandra(clusterDef)
+						Expect(*clusterDef.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds).To(Equal(int32(321)))
+					})
+				})
+				It("should not change an undefined Snapshot.RetentionPolicy", func() {
+					clusterDef.Spec.Snapshot = &v1alpha1.Snapshot{}
+					clusterDef.Spec.Snapshot.RetentionPolicy = nil
+					SetDefaultsForCassandra(clusterDef)
+					Expect(clusterDef.Spec.Snapshot.RetentionPolicy).To(BeNil())
+				})
 			})
 		})
 

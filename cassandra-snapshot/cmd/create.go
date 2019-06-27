@@ -1,11 +1,14 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-snapshot/pkg/snapshot"
-	"github.com/spf13/cobra"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-snapshot/pkg/snapshot"
 )
 
 var createCmd = &cobra.Command{
@@ -18,7 +21,7 @@ var snapshotTimeout time.Duration
 
 func init() {
 	rootCmd.AddCommand(createCmd)
-	createCmd.Flags().DurationVarP(&snapshotTimeout, "snapshot-timeout", "t", 10*time.Second, "Max wait time for the snapshot creation")
+	createCmd.Flags().DurationVarP(&snapshotTimeout, "snapshot-timeout", "t", v1alpha1.DefaultSnapshotTimeoutSeconds*time.Second, "Max wait time for the snapshot creation")
 }
 
 func createSnapshot(_ *cobra.Command, _ []string) {
