@@ -7,4 +7,9 @@ set -o pipefail
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd -P)"/..
 cd "${REPO_ROOT}"
 
-controller-gen paths=./... output:webhook:dir="./kubernetes-resources"
+webhook_path="${REPO_ROOT}/kubernetes-resources/cassandra-webhook.yml"
+webhook_path="${REPO_ROOT}/kubernetes-resources/manifests.yaml"
+output="$(mktemp -d)"
+
+controller-gen paths=./... output:webhook:dir="${output}"
+go run "${REPO_ROOT}/hack/munge-webhook.go" "${output}"/manifests.yaml > "${webhook_path}"
