@@ -61,6 +61,32 @@ Controller Tools
 Openshift Generic Webhook
 1. Easy, just compare old and new structs
 
+
+## Security
+
+Both libraries will require a third-party certificate management tool to be deployed in the cluster, in order to rotate the certificate used by the webhook server.
+This might be handled by cert-manager or in future, by an improved Kubernetes Certificate controller (See Further Reading links below).
+
+Openshift:
+
+The Openshift library makes it simple to also have the webhook server authenticate the requests it receives from the Kubernetes API servers.
+It takes advantage of the well established mutual authentication mechanism for aggregate API servers. See https://github.com/openshift/generic-admission-server#architecture
+
+Additionally the Openshift library performs authorization of incoming requests.
+It POSTs SubjectAccessReview API resources to the Kubernetes API server,
+asking whether the user who made the original API request is permitted to interact with the webhook server endpoint.
+For this reason, the webhook service account needs a role binding to the `system:auth-delegator` cluster role.
+This authorization is probably overkill for a validating webhook, but it is strictly necessary for other types of webhooks which may perform more complex interactions back to the Kubernetes API server.
+See the example from deads2k in the "discussion" section below.
+
+Controller Tools:
+
+Controller tools doesn't provide any help for configuring mutual authentication.
+It is left up to the cluster administrator to create and refresh a Kube config bundle which is added to the Kubernetes API server configuration file.
+See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
+
+
+
 ## Discussion
 
 A summary of a discussion from #kubebuilder channel in Kubernetes Slack:
@@ -92,3 +118,9 @@ directxman12 [18:57] wrote:
 > we've got a few helpers for higher-level tasks (e.g. writing validating webhooks that are for validating custom resources to augment declarative validation)
 
 > generic-admission-server has certainly been around for longer though, and the approach with aggregated API servers is pretty useful for securing webhooks.  It wouldn't be too hard to set up in CR, I think.  We haven't (as of yet) considered it in CR, mainly because there haven't been very many people asking for it, and we've been focused a lot more on the usecase of "we need to validate that this object is correct to augment declarative validation" and similar
+
+## Further Reading
+
+ * [KEP: Auto Approve Webhook HTTPs Serving CertificateSignRequest](https://github.com/kubernetes/enhancements/pull/977)
+ * [API server authentication to webhooks](https://github.com/kubernetes/enhancements/pull/658)
+ * [Admission Webhooks to GA](https://github.com/kubernetes/enhancements/blob/master/keps/sig-api-machinery/00xx-admission-webhooks-to-ga.md)
