@@ -2,7 +2,7 @@
 .PHONY: all check-style clean-all build-all setup setup-all check-style-all run-local-registry
 
 TEST_REGISTRY ?= localhost:5000
-POD_START_TIMEOUT ?= 120s
+POD_START_TIMEOUT ?= 150s
 KUBE_CONTEXT ?= dind
 USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)

@@ -206,7 +206,7 @@ class FakeJolokiaServer extends NanoHTTPD {
 
     @Override
     public Response serve(final IHTTPSession session) {
-        LOGGER.info("serve: {} {}", session.getMethod(), session.getUri());
+        LOGGER.debug("serve: {} {}", session.getMethod(), session.getUri());
         if (session.getMethod() == Method.POST) {
             return newFixedLengthResponse(Response.Status.FORBIDDEN, "application/text", "HTTP method post is not allowed according to the installed security policy\",\"{\"status\":403}");
         }

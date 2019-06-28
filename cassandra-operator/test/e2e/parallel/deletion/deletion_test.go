@@ -2,15 +2,16 @@ package deletion
 
 import (
 	"fmt"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
-	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
+	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 )
 
 var (

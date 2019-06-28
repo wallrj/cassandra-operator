@@ -5,7 +5,7 @@
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
-POD_START_TIMEOUT ?= 120s
+POD_START_TIMEOUT ?= 150s
 USE_MOCK ?= true
 FAKE_CASSANDRA_IMAGE ?= $(TEST_REGISTRY)/fake-cassandra:v$(gitRev)
 CASSANDRA_BOOTSTRAPPER_IMAGE ?= $(TEST_REGISTRY)/cassandra-bootstrapper:v$(gitRev)

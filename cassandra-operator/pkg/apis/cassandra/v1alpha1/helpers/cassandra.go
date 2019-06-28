@@ -62,11 +62,27 @@ func setDefaultsForUseEmptyDir(clusterDefinition *v1alpha1.Cassandra) {
 }
 
 func setDefaultsForSnapshot(snapshot *v1alpha1.Snapshot) {
-	switch {
-	case snapshot == nil:
-	case snapshot.RetentionPolicy == nil:
-	case snapshot.RetentionPolicy.Enabled == nil:
-		snapshot.RetentionPolicy.Enabled = ptr.Bool(true)
+	if snapshot == nil {
+		return
+	}
+	if snapshot.TimeoutSeconds == nil {
+		snapshot.TimeoutSeconds = ptr.Int32(v1alpha1.DefaultSnapshotTimeoutSeconds)
+	}
+
+	if snapshot.RetentionPolicy != nil {
+		setDefaultsForRetentionPolicy(snapshot.RetentionPolicy)
+	}
+}
+
+func setDefaultsForRetentionPolicy(rp *v1alpha1.RetentionPolicy) {
+	if rp.Enabled == nil {
+		rp.Enabled = ptr.Bool(true)
+	}
+	if rp.RetentionPeriodDays == nil {
+		rp.RetentionPeriodDays = ptr.Int32(v1alpha1.DefaultRetentionPolicyRetentionPeriodDays)
+	}
+	if rp.CleanupTimeoutSeconds == nil {
+		rp.CleanupTimeoutSeconds = ptr.Int32(v1alpha1.DefaultRetentionPolicyCleanupTimeoutSeconds)
 	}
 }
 
