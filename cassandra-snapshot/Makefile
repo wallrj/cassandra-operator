@@ -63,7 +63,9 @@ validate-licences:
 	restricted=$$(paste -s -d ',' restricted-licences.txt) ;\
 	licence-compliance-checker -L error -E -r $$restricted \
 		-m github.com/sky-uk/cassandra-operator/cassandra-snapshot=BSD-3-Clause \
+		-m github.com/sky-uk/cassandra-operator/cassandra-operator=BSD-3-Clause \
 		-m sigs.k8s.io/yaml=BSD-3-Clause \
+		-m github.com/hashicorp/golang-lru=MPL-2.0 \
 		--check-go-modules ;\
 
 vet:
@@ -91,20 +93,20 @@ integration-test: ensure-test-report-dir-exists
 ifeq ($(strip $(USE_MOCK)),true)
 	@echo "== e2e-test integration test against real cassandra"
 	IMAGE_UNDER_TEST=$(dockerTestImage) \
-        KUBE_CONTEXT=$(KUBE_CONTEXT) \
-        NAMESPACE=$(NAMESPACE) \
-        USE_MOCK=false \
-        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/create -- -junit-report-dir $(junitReportDir)
+				KUBE_CONTEXT=$(KUBE_CONTEXT) \
+				NAMESPACE=$(NAMESPACE) \
+				USE_MOCK=false \
+				ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/create -- -junit-report-dir $(junitReportDir)
 endif
 
 e2e-test: ensure-test-report-dir-exists
 	@echo "== e2e-test"
 	IMAGE_UNDER_TEST=$(IMAGE_UNDER_TEST) \
-        FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
-        KUBE_CONTEXT=$(KUBE_CONTEXT) \
-        NAMESPACE=$(NAMESPACE) \
-        USE_MOCK=$(USE_MOCK) \
-        ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/$(E2E_TEST) -- -junit-report-dir $(junitReportDir)
+				FAKE_CASSANDRA_IMAGE=$(FAKE_CASSANDRA_IMAGE) \
+				KUBE_CONTEXT=$(KUBE_CONTEXT) \
+				NAMESPACE=$(NAMESPACE) \
+				USE_MOCK=$(USE_MOCK) \
+				ginkgo -r -compilers=$(GINKGO_COMPILERS) --v --progress test/e2e/$(E2E_TEST) -- -junit-report-dir $(junitReportDir)
 
 docker-image: go-build common-docker-build
 

@@ -1,11 +1,14 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
-	"github.com/sky-uk/cassandra-operator/cassandra-snapshot/pkg/snapshot"
-	"github.com/spf13/cobra"
 	"os"
 	"time"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
+	"github.com/sky-uk/cassandra-operator/cassandra-snapshot/pkg/snapshot"
 )
 
 var cleanupCmd = &cobra.Command{
@@ -21,8 +24,8 @@ var (
 
 func init() {
 	rootCmd.AddCommand(cleanupCmd)
-	cleanupCmd.Flags().DurationVarP(&retentionPeriod, "retention-period", "r", 7*24*time.Hour, "Duration backups should be kept for")
-	cleanupCmd.Flags().DurationVarP(&cleanupTimeout, "cleanup-timeout", "t", 10*time.Second, "Max wait time for the cleanup operation")
+	cleanupCmd.Flags().DurationVarP(&retentionPeriod, "retention-period", "r", v1alpha1.DefaultRetentionPolicyRetentionPeriodDays*24*time.Hour, "Duration backups should be kept for")
+	cleanupCmd.Flags().DurationVarP(&cleanupTimeout, "cleanup-timeout", "t", v1alpha1.DefaultRetentionPolicyCleanupTimeoutSeconds*time.Second, "Max wait time for the cleanup operation")
 }
 
 func cleanupSnapshot(_ *cobra.Command, _ []string) {

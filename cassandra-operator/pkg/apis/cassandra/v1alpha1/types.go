@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"reflect"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// required for dep management
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	// required for dep management
 	_ "k8s.io/code-generator/cmd/client-gen/types"
 )
 
@@ -28,6 +29,15 @@ const (
 
 	// DefaultCassandraSidecarImage is the name of the Docker image used to inform liveness/readiness probes
 	DefaultCassandraSidecarImage = "skyuk/cassandra-sidecar:latest"
+
+	// DefaultSnapshotTimeoutSeconds is the default for Cassandra.Spec.Snapshot.TimeoutSeconds
+	DefaultSnapshotTimeoutSeconds = 10
+
+	// DefaultRetentionPolicyRetentionPeriodDays is the default for Cassandra.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays
+	DefaultRetentionPolicyRetentionPeriodDays = 7
+
+	// DefaultRetentionPolicyCleanupTimeoutSeconds is the default for Cassandra.Spec.Snapshot.RetentionPolicy.CleanupTimeoutSeconds
+	DefaultRetentionPolicyCleanupTimeoutSeconds = 10
 )
 
 // +genclient

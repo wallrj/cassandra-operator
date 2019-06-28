@@ -230,10 +230,8 @@ func (c *Cluster) CreateSnapshotContainer(snapshot *v1alpha1.Snapshot) *v1.Conta
 		"-n", c.Namespace(),
 		"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, c.Name(), "app", c.Name()),
 	}
-	if snapshot.TimeoutSeconds != nil {
-		timeoutDuration := durationSeconds(snapshot.TimeoutSeconds)
-		backupCommand = append(backupCommand, "-t", timeoutDuration.String())
-	}
+	timeoutDuration := durationSeconds(snapshot.TimeoutSeconds)
+	backupCommand = append(backupCommand, "-t", timeoutDuration.String())
 	if len(snapshot.Keyspaces) > 0 {
 		backupCommand = append(backupCommand, "-k")
 		backupCommand = append(backupCommand, strings.Join(snapshot.Keyspaces, ","))
@@ -267,14 +265,12 @@ func (c *Cluster) CreateSnapshotCleanupContainer(snapshot *v1alpha1.Snapshot) *v
 		"-n", c.Namespace(),
 		"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, c.Name(), "app", c.Name()),
 	}
-	if snapshot.RetentionPolicy.RetentionPeriodDays != nil {
-		retentionPeriodDuration := durationDays(snapshot.RetentionPolicy.RetentionPeriodDays)
-		cleanupCommand = append(cleanupCommand, "-r", retentionPeriodDuration.String())
-	}
-	if snapshot.RetentionPolicy.CleanupTimeoutSeconds != nil {
-		cleanupTimeoutDuration := durationSeconds(snapshot.RetentionPolicy.CleanupTimeoutSeconds)
-		cleanupCommand = append(cleanupCommand, "-t", cleanupTimeoutDuration.String())
-	}
+
+	retentionPeriodDuration := durationDays(snapshot.RetentionPolicy.RetentionPeriodDays)
+	cleanupCommand = append(cleanupCommand, "-r", retentionPeriodDuration.String())
+
+	cleanupTimeoutDuration := durationSeconds(snapshot.RetentionPolicy.CleanupTimeoutSeconds)
+	cleanupCommand = append(cleanupCommand, "-t", cleanupTimeoutDuration.String())
 
 	return &v1.Container{
 		Name:    c.definition.SnapshotCleanupJobName(),

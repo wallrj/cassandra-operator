@@ -559,22 +559,6 @@ var _ = Describe("creation of snapshot job", func() {
 		Expect(snapshotPod.RestartPolicy).To(Equal(v1.RestartPolicyOnFailure))
 	})
 
-	It("should not pass a snapshot time to the snapshot command if none is specified in the cluster spec", func() {
-		clusterDef.Spec.Snapshot.TimeoutSeconds = nil
-		cluster, err := ACluster(clusterDef)
-		Expect(err).NotTo(HaveOccurred())
-
-		cronJob := cluster.CreateSnapshotJob()
-		Expect(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers).To(HaveLen(1))
-
-		snapshotContainer := cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
-		Expect(snapshotContainer.Command).To(Equal([]string{
-			"/cassandra-snapshot", "create",
-			"-n", cluster.Namespace(),
-			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, clusterDef.Name, "app", clusterDef.Name),
-		}))
-	})
-
 	It("should not create a snapshot job if none is specified in the cluster spec", func() {
 		clusterDef.Spec.Snapshot = nil
 		cluster, err := ACluster(clusterDef)
@@ -701,25 +685,6 @@ var _ = Describe("creation of snapshot cleanup job", func() {
 			"-n", cluster.Namespace(),
 			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, clusterDef.Name, "app", clusterDef.Name),
 			"-r", durationDays(&retentionPeriod).String(),
-			"-t", durationSeconds(&cleanupTimeout).String(),
-		}))
-		Expect(cleanupContainer.Image).To(ContainSubstring("skyuk/cassandra-snapshot:latest"))
-	})
-
-	It("should create a cronjob that will trigger a snapshot cleanup without explicit retention period", func() {
-		clusterDef.Spec.Snapshot.RetentionPolicy.RetentionPeriodDays = nil
-		cluster, err := ACluster(clusterDef)
-		Expect(err).NotTo(HaveOccurred())
-
-		cronJob := cluster.CreateSnapshotCleanupJob()
-		Expect(cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers).To(HaveLen(1))
-
-		cleanupContainer := cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
-		Expect(cleanupContainer.Name).To(Equal(fmt.Sprintf("%s-snapshot-cleanup", clusterDef.Name)))
-		Expect(cleanupContainer.Command).To(Equal([]string{
-			"/cassandra-snapshot", "cleanup",
-			"-n", cluster.Namespace(),
-			"-l", fmt.Sprintf("%s=%s,%s=%s", OperatorLabel, clusterDef.Name, "app", clusterDef.Name),
 			"-t", durationSeconds(&cleanupTimeout).String(),
 		}))
 		Expect(cleanupContainer.Image).To(ContainSubstring("skyuk/cassandra-snapshot:latest"))

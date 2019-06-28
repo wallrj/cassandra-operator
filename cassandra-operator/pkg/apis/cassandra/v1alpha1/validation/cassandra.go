@@ -3,9 +3,9 @@ package validation
 import (
 	"fmt"
 
-	"github.com/robfig/cron"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/robfig/cron"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 )
 
@@ -49,7 +49,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 				allErrs,
 				field.Required(
 					fldPath.Child("StorageClass"),
-					"because spec.useEmptyDir is true",
+					"because spec.useEmptyDir is false",
 				),
 			)
 		}
@@ -58,7 +58,7 @@ func validateRacks(c *v1alpha1.Cassandra, fldPath *field.Path) field.ErrorList {
 				allErrs,
 				field.Required(
 					fldPath.Child("Zone"),
-					"because spec.useEmptyDir is true",
+					"because spec.useEmptyDir is false",
 				),
 			)
 		}
@@ -101,11 +101,11 @@ func validatePodResources(c *v1alpha1.Cassandra, fldPath *field.Path) field.Erro
 
 	allErrs = append(
 		allErrs,
-		validateProbe(c.Spec.Pod.LivenessProbe, fldPath.Child("LivenessProbe"), true)...,
+		validateLivenessProbe(c.Spec.Pod.LivenessProbe, fldPath.Child("LivenessProbe"))...,
 	)
 	allErrs = append(
 		allErrs,
-		validateProbe(c.Spec.Pod.ReadinessProbe, fldPath.Child("ReadinessProbe"), false)...,
+		validateReadinessProbe(c.Spec.Pod.ReadinessProbe, fldPath.Child("ReadinessProbe"))...,
 	)
 	return allErrs
 }
@@ -124,26 +124,45 @@ func validateUnsignedInt(allErrs field.ErrorList, fldPath *field.Path, value int
 	return allErrs
 }
 
-func validateProbe(probe *v1alpha1.Probe, fldPath *field.Path, livenessProbe bool) field.ErrorList {
+// validateLivenessProbe wraps `validateProbe` and filters out the results for `SuccessThreshold`,
+// instead performing a LivenessProbe specific check, to ensure that the value is always 1.
+// This is explained in the Kubernetes API docs as follows:
+//   Minimum consecutive successes for the probe to be considered successful after having failed.
+//   Defaults to 1. Must be 1 for liveness. Minimum value is 1.
+// See https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#probe-v1-core
+func validateLivenessProbe(probe *v1alpha1.Probe, fldPath *field.Path) field.ErrorList {
+	allErrs := validateProbe(probe, fldPath)
+	successThresholdFieldPath := fldPath.Child("SuccessThreshold")
+	allErrs = allErrs.Filter(func(e error) bool {
+		fieldErr, ok := e.(*field.Error)
+		if ok && fieldErr.Field == successThresholdFieldPath.String() {
+			return true
+		}
+		return false
+	})
+	if *probe.SuccessThreshold != 1 {
+		allErrs = append(
+			allErrs,
+			field.Invalid(
+				successThresholdFieldPath,
+				*probe.SuccessThreshold,
+				"must be 1",
+			),
+		)
+	}
+	return allErrs
+}
+
+func validateReadinessProbe(probe *v1alpha1.Probe, fldPath *field.Path) field.ErrorList {
+	return validateProbe(probe, fldPath)
+}
+
+func validateProbe(probe *v1alpha1.Probe, fldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 	allErrs = validateUnsignedInt(allErrs, fldPath.Child("FailureThreshold"), *probe.FailureThreshold, 1)
 	allErrs = validateUnsignedInt(allErrs, fldPath.Child("InitialDelaySeconds"), *probe.InitialDelaySeconds, 0)
 	allErrs = validateUnsignedInt(allErrs, fldPath.Child("PeriodSeconds"), *probe.PeriodSeconds, 1)
-	if livenessProbe {
-		if *probe.SuccessThreshold != 1 {
-			allErrs = append(
-				allErrs,
-				field.Invalid(
-					fldPath.Child("SuccessThreshold"),
-					*probe.SuccessThreshold,
-					"must be 1",
-				),
-			)
-		}
-	} else {
-		allErrs = validateUnsignedInt(allErrs, fldPath.Child("SuccessThreshold"), *probe.SuccessThreshold, 1)
-	}
-
+	allErrs = validateUnsignedInt(allErrs, fldPath.Child("SuccessThreshold"), *probe.SuccessThreshold, 1)
 	allErrs = validateUnsignedInt(allErrs, fldPath.Child("TimeoutSeconds"), *probe.TimeoutSeconds, 1)
 	return allErrs
 }
@@ -193,10 +212,5 @@ func validateSnapshotRetentionPolicy(c *v1alpha1.Cassandra, fldPath *field.Path)
 			),
 		)
 	}
-	return allErrs
-}
-
-func ValidateCassandraUpdate(old, new *v1alpha1.Cassandra) field.ErrorList {
-	var allErrs field.ErrorList
 	return allErrs
 }
