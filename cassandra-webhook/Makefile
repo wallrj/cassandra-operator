@@ -13,7 +13,7 @@ CASSANDRA_SIDECAR_IMAGE ?= $(TEST_REGISTRY)/cassandra-sidecar:v$(gitRev)
 CASSANDRA_SNAPSHOT_IMAGE ?= $(TEST_REGISTRY)/cassandra-snapshot:v$(gitRev)
 DOMAIN ?= localhost
 IMAGE_TO_DEPLOY ?= $(dockerTestImage)
-NAMESPACE ?= system
+NAMESPACE ?= test-cassandra-operator
 GINKGO_NODES ?= 0
 GINKGO_COMPILERS ?= 0
 
