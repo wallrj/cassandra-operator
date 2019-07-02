@@ -44,7 +44,9 @@ jobs:
   include:
     - stage: test
       name: cassandra-operator
-      before_script: make setup install dind
+      before_script:
+      - make setup install dind
+      - make -C cassandra-webhook deploy
       script: make -C cassandra-operator check
 
     - stage: test
