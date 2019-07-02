@@ -50,7 +50,9 @@ setup: ensure-go-modules
 		github.com/onsi/ginkgo/ginkgo \
 		golang.org/x/tools/cmd/goimports \
 		golang.org/x/lint/golint \
-		sigs.k8s.io/controller-tools/cmd/controller-gen
+		sigs.k8s.io/controller-tools/cmd/controller-gen \
+		github.com/cloudflare/cfssl/cmd/cfssl	\
+		github.com/cloudflare/cfssl/cmd/cfssljson
 
 go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"
