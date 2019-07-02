@@ -12,4 +12,4 @@ webhook_path="${REPO_ROOT}/kubernetes-resources/manifests.yaml"
 output="$(mktemp -d)"
 
 controller-gen paths=./... output:webhook:dir="${output}"
-go run "${REPO_ROOT}/hack/munge-webhook.go" "${output}"/manifests.yaml > "${webhook_path}"
+mv "${output}"/manifests.yaml "${webhook_path}"

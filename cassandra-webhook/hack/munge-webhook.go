@@ -20,6 +20,8 @@ func main() {
 		log.Fatal("usage: go run munge-webhook.go path/to/yaml-file.yml")
 	}
 
+	namespace := os.Getenv("TARGET_NAMESPACE")
+	caBundle := os.Getenv("CA_BUNDLE")
 	path := os.Args[1]
 	file, err := os.Open(path)
 	if err != nil {
@@ -27,9 +29,6 @@ func main() {
 	}
 
 	yamlReaderCloser := ioutil.NopCloser(file)
-	if err != nil {
-		log.Fatalf("err: %v\n", err)
-	}
 
 	decoder := apimachineryyaml.NewDocumentDecoder(yamlReaderCloser)
 
@@ -79,12 +78,16 @@ func main() {
 		buffer = bytes.NewBuffer(make([]byte, 0))
 	}
 
-	namespaceSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"webhooks.core.sky.uk": "enabled"}}
-	for i, _ := range mutator.Webhooks {
+	namespaceSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"webhooks.cassandra.core.sky.uk": "enabled"}}
+	for i := range mutator.Webhooks {
 		mutator.Webhooks[i].NamespaceSelector = namespaceSelector
+		mutator.Webhooks[i].ClientConfig.Service.Namespace = namespace
+		mutator.Webhooks[i].ClientConfig.CABundle = []byte(caBundle)
 	}
-	for i, _ := range validator.Webhooks {
+	for i := range validator.Webhooks {
 		validator.Webhooks[i].NamespaceSelector = namespaceSelector
+		validator.Webhooks[i].ClientConfig.Service.Namespace = namespace
+		validator.Webhooks[i].ClientConfig.CABundle = []byte(caBundle)
 	}
 
 	y, err := k8syaml.Marshal(mutator)
