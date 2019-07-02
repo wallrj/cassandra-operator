@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"io/ioutil"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -23,7 +24,9 @@ var env *envtest.Environment
 
 var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
-	env = &envtest.Environment{}
+	env = &envtest.Environment{
+		CRDDirectoryPaths: []string{"../../../cassandra-operator/kubernetes-resources"},
+	}
 	_, err := env.Start()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -38,6 +41,16 @@ var _ = AfterSuite(func(done Done) {
 
 var _ = Context("Validating Webhook", func() {
 	It("should...", func() {
-		Expect(nil).To(BeNil())
+		stdoutBuffer, stderrBuffer, err := env.ControlPlane.KubeCtl().Run("get", "crd")
+		Expect(err).To(Not(HaveOccurred()))
+
+		stdout, err := ioutil.ReadAll(stdoutBuffer)
+		Expect(err).To(Not(HaveOccurred()))
+
+		stderr, err := ioutil.ReadAll(stderrBuffer)
+		Expect(err).To(Not(HaveOccurred()))
+
+		Expect(string(stdout)).To(Equal(""))
+		Expect(string(stderr)).To(Equal(""))
 	})
 })
