@@ -32,19 +32,19 @@ func (v *CassandraValidator) Handle(ctx context.Context, req admission.Request) 
 		return admission.Denied(err.Error())
 	}
 
-	if req.OldObject.Size() == 0 {
-		return admission.Allowed("")
-	}
+	// if req.OldObject.Size() == 0 {
+	//	return admission.Allowed("")
+	// }
 
-	oldCass := &v1alpha1.Cassandra{}
-	err = v.decoder.DecodeRaw(req.OldObject, oldCass)
-	if err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-	err = validation.ValidateCassandraUpdate(oldCass, cass).ToAggregate()
-	if err != nil {
-		return admission.Denied(err.Error())
-	}
+	// oldCass := &v1alpha1.Cassandra{}
+	// err = v.decoder.DecodeRaw(req.OldObject, oldCass)
+	// if err != nil {
+	//	return admission.Errored(http.StatusBadRequest, err)
+	// }
+	// err = validation.ValidateCassandraUpdate(oldCass, cass).ToAggregate()
+	// if err != nil {
+	//	return admission.Denied(err.Error())
+	// }
 	return admission.Allowed("")
 }
 
