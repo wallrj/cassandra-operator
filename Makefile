@@ -70,6 +70,7 @@ check-all:
 build-all:
 	@echo "== build-all"
 	$(MAKE) -C fake-cassandra-docker build
+	$(MAKE) -C cassandra-webhook build
 	$(MAKE) -C cassandra-bootstrapper build
 	$(MAKE) -C cassandra-sidecar build
 	$(MAKE) -C cassandra-snapshot build
@@ -78,6 +79,7 @@ build-all:
 install-all:
 	@echo "== install-all"
 	$(MAKE) -C fake-cassandra-docker install
+	$(MAKE) -C cassandra-webhook install
 	$(MAKE) -C cassandra-bootstrapper install
 	$(MAKE) -C cassandra-snapshot install
 	$(MAKE) -C cassandra-operator install
@@ -86,6 +88,7 @@ install-all:
 clean-all:
 	@echo "== clean-all"
 	$(MAKE) -C fake-cassandra-docker clean
+	$(MAKE) -C cassandra-webhook clean
 	$(MAKE) -C cassandra-bootstrapper clean
 	$(MAKE) -C cassandra-snapshot clean
 	$(MAKE) -C cassandra-operator clean
@@ -94,6 +97,7 @@ clean-all:
 setup-all:
 	@echo "== setup-all"
 	$(MAKE) -C fake-cassandra-docker setup
+	$(MAKE) -C cassandra-webhook setup
 	$(MAKE) -C cassandra-bootstrapper setup
 	$(MAKE) -C cassandra-snapshot setup
 	$(MAKE) -C cassandra-operator setup
@@ -106,6 +110,7 @@ dind:
 release-all:
 	@echo "== release-all"
 	$(MAKE) -C fake-cassandra-docker release
+	$(MAKE) -C cassandra-webhook release
 	$(MAKE) -C cassandra-bootstrapper release
 	$(MAKE) -C cassandra-snapshot release
 	$(MAKE) -C cassandra-operator release
@@ -114,6 +119,7 @@ release-all:
 check-style-all:
 	@echo "== check-style-all"
 	$(MAKE) -C fake-cassandra-docker check-style
+	$(MAKE) -C cassandra-webhook check-style
 	$(MAKE) -C cassandra-bootstrapper check-style
 	$(MAKE) -C cassandra-snapshot check-style
 	$(MAKE) -C cassandra-operator check-style
