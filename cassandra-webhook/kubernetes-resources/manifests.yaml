@@ -1,3 +1,5 @@
+
+---
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -12,9 +14,6 @@ webhooks:
       path: /mutate-v1alpha1-cassandra
   failurePolicy: Fail
   name: vcass.core.sky.uk
-  namespaceSelector:
-    matchLabels:
-      webhooks.core.sky.uk: enabled
   rules:
   - apiGroups:
     - core.sky.uk
@@ -41,9 +40,6 @@ webhooks:
       path: /validate-v1alpha1-cassandra
   failurePolicy: Fail
   name: vcass.core.sky.uk
-  namespaceSelector:
-    matchLabels:
-      webhooks.core.sky.uk: enabled
   rules:
   - apiGroups:
     - core.sky.uk
@@ -54,4 +50,3 @@ webhooks:
     - UPDATE
     resources:
     - cassandras
-
