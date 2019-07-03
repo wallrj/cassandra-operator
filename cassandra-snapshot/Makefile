@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-.PHONY: all clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image prepare-deployment release check-style
+.PHONY: all clean install check build fmt vet lint validate-licences test e2e-test go-build go-install docker-image push-image prepare-deployment release check-style
 
 # Default context is running locally against a dind cluster
 KUBE_CONTEXT ?= dind
@@ -37,13 +37,6 @@ ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')
 else
 	@echo "go modules enabled"
 endif
-
-setup: ensure-go-modules
-	@echo "== setup"
-	go install \
-		github.com/sky-uk/licence-compliance-checker \
-		github.com/onsi/ginkgo/ginkgo \
-		golang.org/x/lint/golint
 
 go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"

@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-.PHONY: all clean install check build fmt vet lint validate-licences test e2e-te setup go-build go-install docker-image push-image release check-style \
+.PHONY: all clean install check build fmt vet lint validate-licences test e2e-te go-build go-install docker-image push-image release check-style \
 	validate-crds generate-crds \
 	validate-types generate-types
 
@@ -43,15 +43,6 @@ ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')
 else
 	@echo "go modules enabled"
 endif
-
-setup: ensure-go-modules
-	@echo "== setup"
-	go install \
-		github.com/sky-uk/licence-compliance-checker \
-		github.com/onsi/ginkgo/ginkgo \
-		golang.org/x/tools/cmd/goimports \
-		golang.org/x/lint/golint \
-		sigs.k8s.io/controller-tools/cmd/controller-gen
 
 go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"
@@ -146,19 +137,19 @@ clean: common-docker-clean
 	rm $(shell go env GOPATH)/bin/cassandra-operator || true
 	rm -rfv $(buildDir)
 
-generate-types: setup
+generate-types:
 	@echo "== generate-types"
 	$(projectDir)/hack/update-codegen.sh
 
-validate-types: setup
+validate-types:
 	@echo "== validate-types"
 	$(projectDir)/hack/verify-codegen.sh
 
-generate-crds: setup
+generate-crds:
 	@echo "== generate-crds"
 	$(projectDir)/hack/update-crds.sh
 
-validate-crds: setup
+validate-crds:
 	@echo "== validate-crds"
 	$(projectDir)/hack/verify-crds.sh
 

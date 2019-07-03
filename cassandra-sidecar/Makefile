@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := travis
-.PHONY: travis clean install build fmt vet lint validate-licences setup go-build go-install docker-image push-image release check-style
+.PHONY: travis clean install build fmt vet lint validate-licences go-build go-install docker-image push-image release check-style
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 buildDir := $(projectDir)/build
@@ -25,14 +25,6 @@ ifeq ('$(shell go env | grep -o "GOMOD.*")', 'GOMOD=""')
 else
 	@echo "go modules enabled"
 endif
-
-setup:
-	@echo "== setup"
-	go install \
-		github.com/sky-uk/licence-compliance-checker \
-		github.com/onsi/ginkgo/ginkgo \
-		golang.org/x/tools/cmd/goimports \
-		golang.org/x/lint/golint
 
 go-build: ensure-build-dir-exists ensure-go-modules
 	@echo "== build"

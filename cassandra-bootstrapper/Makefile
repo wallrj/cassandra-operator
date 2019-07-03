@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-.PHONY: all clean setup build install jar check dgoss docker-image push-image release check-style
+.PHONY: all clean build install jar check dgoss docker-image push-image release check-style
 
 projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 gradle := $(projectDir)/../gradlew
@@ -14,9 +14,6 @@ build: check-style jar docker-image
 install: build push-image
 
 check: dgoss
-
-setup:
-	@echo "== setup"
 
 jar:
 	@echo "== jar"

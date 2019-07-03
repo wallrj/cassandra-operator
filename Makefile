@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-.PHONY: all check-style clean-all build-all setup setup-all check-style-all run-local-registry
+.PHONY: all check-style clean-all build-all setup check-style-all run-local-registry
 
 TEST_REGISTRY ?= localhost:5000
 POD_START_TIMEOUT ?= 150s
@@ -18,7 +18,7 @@ projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 
 all: install dind check
 
-setup: check-system-dependencies setup-all run-local-registry
+setup: check-system-dependencies run-local-registry
 
 build: build-all
 
@@ -90,14 +90,6 @@ clean-all:
 	$(MAKE) -C cassandra-snapshot clean
 	$(MAKE) -C cassandra-operator clean
 	$(MAKE) -C cassandra-sidecar clean
-
-setup-all:
-	@echo "== setup-all"
-	$(MAKE) -C fake-cassandra-docker setup
-	$(MAKE) -C cassandra-bootstrapper setup
-	$(MAKE) -C cassandra-snapshot setup
-	$(MAKE) -C cassandra-operator setup
-	$(MAKE) -C cassandra-sidecar setup
 
 dind:
 	@echo "== recreate dind cluster"
