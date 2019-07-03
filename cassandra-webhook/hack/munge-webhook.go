@@ -50,7 +50,9 @@ func main() {
 		buffer.Write(part[:count])
 
 		res := yaml.MapSlice{}
-		yaml.Unmarshal(buffer.Bytes(), &res)
+		if err := yaml.Unmarshal(buffer.Bytes(), &res); err != nil {
+			log.Fatalf("err: %v\n", err)
+		}
 
 		for _, item := range res {
 			key, ok := item.Key.(string)
