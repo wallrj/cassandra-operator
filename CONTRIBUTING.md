@@ -12,24 +12,29 @@ All new code, including changes to existing code, should be tested and have a co
 
 The following must be installed on your development machine:
 
-- `go`
+- `go` (>=1.11)
 - `docker`
 - `openjdk-8` or another JDK
 - `gcc` (or `build-essential` package on debian distributions)
-- `kubectl`
-- `dgoss`
+- `curl`
+- `rsync`
 
-`cassandra-operator` must be cloned to a location on your `$GOPATH`, for example `go/src/github.com/sky-uk/cassandra-operator/`.
+This project uses [Go Modules](https://github.com/golang/go/wiki/Modules),
+so run the following commands (or add them to your `.bashrc` file):
+
+- `unset GOPATH`
+- `export GO111MODULE=on`
 
 ## Building and Testing
 
-To setup your environment with the required dependencies, run this at the project root level.
-This will create a [Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster/) cluster.
-Missing system libraries that need installing will be listed in the output:
+To install additional build dependencies, run this at the project root level:
 
 ```
 make setup
 ```
+
+Missing system libraries that need installing will be listed in the output.
+
 
 To run code style checks on all the sub-projects:
 
@@ -41,6 +46,15 @@ To build and run all tests:
 ```
 make
 ```
+
+This will:
+ * Run static "style" checks for all the cassandra-operator components.
+ * Build all the components.
+ * Run unit tests for all the components.
+ * Create docker images for each of the cassandra-operator components.
+ * Create a [Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster/) cluster.
+ * Deploy the components in the Kubernetes cluster.
+ * Run end-to-end tests on those components.
 
 An end-to-end testing approach is used wherever possible.
 The end-to-end tests are run in parallel in order to the reduce build time as much as possible.

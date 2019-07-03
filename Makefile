@@ -18,7 +18,7 @@ projectDir := $(realpath $(dir $(firstword $(MAKEFILE_LIST))))
 
 all: install dind check
 
-setup: check-system-dependencies run-local-registry
+setup: check-system-dependencies install-build-dependencies run-local-registry
 
 build: build-all
 
@@ -49,15 +49,13 @@ endif
 ifeq (, $(shell which docker))
 	$(error "docker not found in PATH")
 endif
-ifeq (, $(shell which dgoss))
-	$(error "dgoss not found in PATH")
-endif
 ifeq (, $(shell which java))
 	$(error "java not found in PATH")
 endif
-ifeq (, $(shell which kubectl))
-	$(error "kubectl not found in PATH")
-endif
+
+install-build-dependencies:
+	@echo "== install-build-dependencies"
+	hack/install-build-dependencies.sh
 
 check-all:
 	@echo "== check-all"

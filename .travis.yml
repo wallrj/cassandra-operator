@@ -33,8 +33,11 @@ stages:
 before_install:
   - sudo apt-get update
   - sudo apt-get install -y curl rsync
-  - hack/install-build-dependencies.sh
+  - make setup
   - export PATH=${TRAVIS_BUILD_DIR}/bin:${PATH}
+
+install:
+  - make install
 
 # skip script phase which defaults to running `make` for go languages
 script: true
@@ -43,34 +46,31 @@ jobs:
   include:
     - stage: test
       name: cassandra-operator
-      before_script: make setup install dind
+      before_script: make dind
       script: make -C cassandra-operator check
 
     - stage: test
       name: cassandra-bootstrapper
-      before_script: make setup install
       script: make -C cassandra-bootstrapper check
 
     - stage: test
       name: cassandra-snapshot
-      before_script: make setup install dind
+      before_script: make dind
       script: make -C cassandra-snapshot check
 
     - stage: test
       name: fake-cassandra-docker
-      before_script: make setup install
       script: make -C fake-cassandra-docker check
 
     - stage: test
       name: cassandra-sidecar
-      before_script: make setup install
       script: make -C cassandra-sidecar check
 
     - stage: deploy-release-candidate
       deploy:
         - provider: script
           skip_cleanup: true
-          script: make setup install release
+          script: make release
           on:
             # assumes this stage is only included on the correct branch or tag
             all_branches: true
