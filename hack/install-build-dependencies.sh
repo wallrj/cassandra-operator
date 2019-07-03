@@ -3,18 +3,16 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -o xtrace
 
 SCRIPT_DIR=$(dirname ${BASH_SOURCE})
 ROOT_DIR="$(cd ${SCRIPT_DIR}/.. && pwd)"
 : ${BIN_DIR:="${ROOT_DIR}/bin"}
-GO=$(type -p go)
 export GO111MODULE=on
 
 mkdir -p "${BIN_DIR}"
 
 pushd "$SCRIPT_DIR"
-GOBIN="${BIN_DIR}" $GO install \
+GOBIN="${BIN_DIR}" go install \
    github.com/sky-uk/licence-compliance-checker \
    github.com/onsi/ginkgo/ginkgo \
    golang.org/x/tools/cmd/goimports \
