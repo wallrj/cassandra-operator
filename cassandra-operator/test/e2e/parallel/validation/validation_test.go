@@ -46,12 +46,12 @@ var _ = Context("Cassandra resource validation", func() {
 
 	Context("webhook validation enabled", func() {
 		BeforeEach(func() {
-			command, output, err := Kubectl(Namespace, "label", "namespace", Namespace, "--overwrite", "webhooks.cassandra.core.sky.uk=enabled")
+			command, output, err := Kubectl(Namespace, "label", "namespace", Namespace, "--overwrite", "webhooks.cassandras.core.sky.uk=enabled")
 			Expect(err).To(Not(HaveOccurred()), fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)))
 		})
 
 		AfterEach(func() {
-			command, output, err := Kubectl(Namespace, "label", "namespace", Namespace, "webhooks.cassandra.core.sky.uk-")
+			command, output, err := Kubectl(Namespace, "label", "namespace", Namespace, "webhooks.cassandras.core.sky.uk-")
 			Expect(err).To(Not(HaveOccurred()), fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)))
 		})
 

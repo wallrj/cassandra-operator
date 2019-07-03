@@ -79,7 +79,7 @@ function deploy() {
     create_certificates "webhook-service.${namespace}.svc"
 
     # uncomment this line to enable webhook validation for target namespace
-    # kubectl label namespace $namespace webhooks.cassandra.core.sky.uk=enabled
+    # kubectl label namespace $namespace webhooks.cassandras.core.sky.uk=enabled
 
     TARGET_NAMESPACE=$namespace \
         CA_BUNDLE="$(cat ${tmpDir}/pki/server.pem)" \

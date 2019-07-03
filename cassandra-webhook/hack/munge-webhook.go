@@ -78,7 +78,7 @@ func main() {
 		buffer = bytes.NewBuffer(make([]byte, 0))
 	}
 
-	namespaceSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"webhooks.cassandra.core.sky.uk": "enabled"}}
+	namespaceSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"webhooks.cassandras.core.sky.uk": "enabled"}}
 	for i := range mutator.Webhooks {
 		mutator.Webhooks[i].NamespaceSelector = namespaceSelector
 		mutator.Webhooks[i].ClientConfig.Service.Namespace = namespace
