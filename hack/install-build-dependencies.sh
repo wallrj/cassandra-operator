@@ -8,13 +8,12 @@ SCRIPT_DIR=$(dirname ${BASH_SOURCE})
 ROOT_DIR="$(cd ${SCRIPT_DIR}/.. && pwd)"
 : ${BIN_DIR:="${ROOT_DIR}/bin"}
 
-export GOBIN="${BIN_DIR}"
 export GO111MODULE=on
 
 mkdir -p "${BIN_DIR}"
 
 pushd "$SCRIPT_DIR"
-go install \
+GOBIN="${BIN_DIR}" go install \
    github.com/sky-uk/licence-compliance-checker \
    github.com/onsi/ginkgo/ginkgo \
    golang.org/x/tools/cmd/goimports \
