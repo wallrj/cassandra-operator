@@ -42,7 +42,7 @@ trap '{ CODE=$?; rm -rf ${tmpDir} ; exit ${CODE}; }' EXIT
 function create_certificates() {
     local fqdn="${1}"
     mkdir "${tmpDir}/pki"
-    # See https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/
+    # See https://github.com/cloudflare/cfssl/wiki/Creating-a-new-CSR#creating-a-self-signed-cert
     cat <<EOF > "${tmpDir}/pki/cfssl.json"
 {
   "hosts": [
