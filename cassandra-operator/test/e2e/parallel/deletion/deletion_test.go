@@ -43,7 +43,7 @@ func createClustersInParallel(multipleNodeCluster, singleNodeCluster *TestCluste
 	AClusterWithName(multipleNodeCluster.Name).AndRacks(multipleNodeCluster.Racks).AndScheduledSnapshot(multipleNodeCluster.SnapshotConfig).IsDefined()
 	AClusterWithName(singleNodeCluster.Name).AndRacks(singleNodeCluster.Racks).AndScheduledSnapshot(singleNodeCluster.SnapshotConfig).IsDefined()
 
-	Eventually(PodReadyForCluster(Namespace, multipleNodeCluster.Name), 3*NodeStartDuration, CheckInterval).
+	Eventually(PodReadyForCluster(Namespace, multipleNodeCluster.Name), 2*NodeStartDuration, CheckInterval).
 		Should(Equal(2), fmt.Sprintf("For cluster %s", multipleNodeCluster.Name))
 	Eventually(PodReadyForCluster(Namespace, singleNodeCluster.Name), NodeStartDuration, CheckInterval).
 		Should(Equal(1), fmt.Sprintf("For cluster %s", singleNodeCluster.Name))
