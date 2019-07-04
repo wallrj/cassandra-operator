@@ -76,6 +76,13 @@ jobs:
             all_branches: true
 
     - stage: deploy-release
+      # This stage does not re-build the source.
+      # It only promotes the docker images created in the deploy-release-candidate stage above.
+      # So skip the install and script steps.
+      # See https://docs.travis-ci.com/user/build-stages/#build-stages-and-deployments
+      before_install: skip
+      install: skip
+      script: skip
       deploy:
         - provider: script
           skip_cleanup: true
