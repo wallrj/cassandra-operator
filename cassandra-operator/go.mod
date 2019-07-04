@@ -21,7 +21,7 @@ require (
 	github.com/prometheus/procfs v0.0.0-20190104112138-b1a0a9a36d74 // indirect
 	github.com/robfig/cron v1.1.0
 	github.com/sirupsen/logrus v1.3.0
-	github.com/sky-uk/licence-compliance-checker v1.1.0
+	github.com/sky-uk/licence-compliance-checker v1.1.1
 	github.com/spf13/cobra v0.0.3
 	github.com/theckman/go-flock v0.7.0
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422

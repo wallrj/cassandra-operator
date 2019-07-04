@@ -139,8 +139,8 @@ github.com/sirupsen/logrus v1.2.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPx
 github.com/sirupsen/logrus v1.3.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
 github.com/sirupsen/logrus v1.4.2 h1:SPIRibHv4MatM3XXNO2BJeFLZwZ2LvZgfQ5+UNI2im4=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
-github.com/sky-uk/licence-compliance-checker v1.1.0 h1:S3l+chcLXeTk7DoHUR+DNYOTP8k3HEMbkiz1871yl1A=
-github.com/sky-uk/licence-compliance-checker v1.1.0/go.mod h1:aV8k9xf/XY+DLnPXQvscJpgHMiB2PTZ4rD2gq1vMK8U=
+github.com/sky-uk/licence-compliance-checker v1.1.1 h1:7L9I1V98VG3Elp/bwVc8IM88EWwH6lrQHXtY9YcY4+g=
+github.com/sky-uk/licence-compliance-checker v1.1.1/go.mod h1:aV8k9xf/XY+DLnPXQvscJpgHMiB2PTZ4rD2gq1vMK8U=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
 github.com/spf13/cast v1.3.0/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
