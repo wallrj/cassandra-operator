@@ -25,16 +25,23 @@ so run the following commands (or add them to your `.bashrc` file):
 - `unset GOPATH`
 - `export GO111MODULE=on`
 
-## Building and Testing
-
-To install additional build dependencies, run this at the project root level:
+To install required build dependencies, run this at the project root level:
 
 ```
 make setup
 ```
 
-Missing system libraries that need installing will be listed in the output.
+This will install, among other things, a version of `kubectl` which matches the Kubernetes cluster used later in the tests.
+These dependencies will be downloaded and installed in the `bin/` directory in the project root.
+So you should add that directory to the start of your `$PATH`:
 
+```
+export PATH=PROJECT_ROOT/bin:${PATH}
+```
+
+If there are any missing system libraries that need installing these will be listed in the output.
+
+## Building and Testing
 
 To run code style checks on all the sub-projects:
 
