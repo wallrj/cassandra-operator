@@ -49,19 +49,37 @@ To run code style checks on all the sub-projects:
 make check-style
 ```
 
-To build and run all tests:
+To run unit tests for an individual sub-project:
+
 ```
-make
+make -C cassandra-operator test
 ```
 
-This will:
- * Run static "style" checks for all the cassandra-operator components.
- * Build all the components.
- * Run unit tests for all the components.
- * Create docker images for each of the cassandra-operator components.
- * Create a [Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster/) cluster.
+To compile, and create local docker images for each of the sub-projects:
+
+```
+make install
+```
+
+To create a DIND Kubernetes cluster for running end-to-end tests:
+
+```
+make dind
+```
+
+This will create a [Docker-in-Docker](https://github.com/kubernetes-sigs/kubeadm-dind-cluster/) cluster.
+
+To run end-to-end tests:
+
+```
+make check
+```
+
+In addition to checking style and rebuilding the docker images, this will:
  * Deploy the components in the Kubernetes cluster.
  * Run end-to-end tests on those components.
+
+### End-to-End Testing
 
 An end-to-end testing approach is used wherever possible.
 The end-to-end tests are run in parallel in order to the reduce build time as much as possible.
