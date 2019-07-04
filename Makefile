@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := all
-.PHONY: all check-style clean-all build-all setup check-style-all run-local-registry
+.PHONY: all check-style clean-all build-all setup check-style-all run-local-registry verify-go-mod
 
 TEST_REGISTRY ?= localhost:5000
 POD_START_TIMEOUT ?= 150s
@@ -30,7 +30,11 @@ clean: clean-all
 
 release: release-all
 
-check-style: check-style-all
+check-style: verify-go-mod check-style-all
+
+verify-go-mod:
+	@echo "== verify-go-mod"
+	hack/verify-go-mod.sh
 
 run-local-registry:
 	@echo "== run-local-registry"
