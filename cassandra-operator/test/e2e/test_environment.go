@@ -146,6 +146,34 @@ func Kubectl(namespace string, args ...string) (*exec.Cmd, []byte, error) {
 	return cmd, output, err
 }
 
+func CreateNamespace() (string, error) {
+	namespaceName := randomString(8)
+	cmd, output, err := Kubectl("", "create", "namespace", namespaceName)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{
+			"context":       "e2e.CreateNamespace",
+			"namespaceName": namespaceName,
+			"cmd":           cmd,
+			"output":        string(output),
+		}).Error("failed to create namespace")
+		return "", err
+	}
+	return namespaceName, err
+}
+
+func DeleteNamespace(namespaceName string) error {
+	cmd, output, err := Kubectl("", "delete", "namespace", namespaceName)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{
+			"context":       "e2e.DeleteNamespace",
+			"namespaceName": namespaceName,
+			"cmd":           cmd,
+			"output":        string(output),
+		}).Error("failed to delete namespace")
+	}
+	return err
+}
+
 func getEnvOrDefault(envKey, defaultValue string) string {
 	envValue := os.Getenv(envKey)
 	if envValue != "" {
