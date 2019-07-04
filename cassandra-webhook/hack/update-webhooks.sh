@@ -7,9 +7,8 @@ set -o pipefail
 REPO_ROOT="$(cd "$(dirname "$0")" && pwd -P)"/..
 cd "${REPO_ROOT}"
 
-webhook_path="${REPO_ROOT}/kubernetes-resources/cassandra-webhook.yml"
-webhook_path="${REPO_ROOT}/kubernetes-resources/manifests.yaml"
-output="$(mktemp -d)"
+kubernetes_resources="${REPO_ROOT}/kubernetes-resources"
+webhook_path="${kubernetes_resources}/cassandra-webhook-configuration.yaml"
 
-controller-gen paths=./... output:webhook:dir="${output}"
-mv "${output}"/manifests.yaml "${webhook_path}"
+controller-gen paths=./... "output:webhook:dir=${kubernetes_resources}"
+mv "${kubernetes_resources}/manifests.yaml" "${webhook_path}"

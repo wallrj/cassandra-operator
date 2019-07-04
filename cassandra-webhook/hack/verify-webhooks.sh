@@ -24,7 +24,7 @@ cd "${tmp}/cassandra-webhook"
 
 echo "diffing against freshly generated crd (${tmp})"
 ret=0
-diff -Naupr "${REPO_ROOT}/kubernetes-resources/manifests.yaml" "${tmp}/cassandra-webhook/kubernetes-resources/manifests.yaml" || ret=$?
+diff -Naupr "${REPO_ROOT}/kubernetes-resources" "${tmp}/cassandra-webhook/kubernetes-resources" || ret=$?
 if [[ $ret -eq 0 ]]
 then
   echo "${REPO_ROOT} up to date."

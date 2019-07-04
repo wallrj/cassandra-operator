@@ -78,21 +78,16 @@ function deploy() {
 
     create_certificates "webhook-service.${namespace}.svc"
 
-    # uncomment this line to enable webhook validation for target namespace
-    # kubectl label namespace $namespace webhooks.cassandras.core.sky.uk=enabled
-
     TARGET_NAMESPACE=$namespace \
         CA_BUNDLE="$(cat ${tmpDir}/pki/server.pem)" \
-        go run ./hack/munge-webhook.go ./kubernetes-resources/manifests.yaml > $tmpDir/manifests.yaml
+        go run ./hack/munge-webhook.go ./kubernetes-resources/cassandra-webhook-configuration.yaml > $tmpDir/cassandra-webhook-configuration.yaml
 
-    #kubectl -n "${namespace}" create secret tls --key tls.key --cert tls.crt webhook-tls
-    k8Resources="webhook-deployment.yaml"
+    k8Resources="cassandra-webhook-deployment.yaml"
     for k8Resource in ${k8Resources}
     do
         sed -e "s@\$TARGET_NAMESPACE@$namespace@g" \
             -e "s@\$WEBHOOK_IMAGE@$image@g" \
             ${resourcesDir}/${k8Resource} > ${tmpDir}/${k8Resource}
-        cat ${tmpDir}/${k8Resource}
     done
 
     kubectl --context ${context} -n ${namespace} apply -f ${tmpDir}/

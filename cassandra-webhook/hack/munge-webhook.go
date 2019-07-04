@@ -12,7 +12,6 @@ import (
 
 	"gopkg.in/yaml.v2"
 	admissionreg "k8s.io/api/admissionregistration/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apimachineryyaml "k8s.io/apimachinery/pkg/util/yaml"
 	k8syaml "sigs.k8s.io/yaml"
 )
@@ -82,14 +81,11 @@ func main() {
 		buffer = bytes.NewBuffer(make([]byte, 0))
 	}
 
-	namespaceSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"webhooks.cassandras.core.sky.uk": "enabled"}}
 	for i := range mutator.Webhooks {
-		mutator.Webhooks[i].NamespaceSelector = namespaceSelector
 		mutator.Webhooks[i].ClientConfig.Service.Namespace = namespace
 		mutator.Webhooks[i].ClientConfig.CABundle = []byte(caBundle)
 	}
 	for i := range validator.Webhooks {
-		validator.Webhooks[i].NamespaceSelector = namespaceSelector
 		validator.Webhooks[i].ClientConfig.Service.Namespace = namespace
 		validator.Webhooks[i].ClientConfig.CABundle = []byte(caBundle)
 	}
