@@ -6,7 +6,7 @@ require (
 	github.com/onsi/ginkgo v1.8.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/sky-uk/cassandra-operator/cassandra-operator v0.0.0-20190607105530-f2a6996272c3
-	github.com/sky-uk/licence-compliance-checker v1.1.0
+	github.com/sky-uk/licence-compliance-checker v1.1.1
 	github.com/spf13/cobra v0.0.4
 	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	golang.org/x/tools v0.0.0-20190606174628-0139d5756a7d
