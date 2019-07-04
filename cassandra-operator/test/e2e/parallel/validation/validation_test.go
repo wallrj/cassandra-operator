@@ -17,7 +17,14 @@ func TestValidation(t *testing.T) {
 }
 
 var _ = Context("Cassandra resource validation", func() {
-	Context("openapi validation", func() {
+	// The defaulting webhook is called before the OpenAPI validation occurs,
+	// See https://kubernetes.io/blog/2019/03/21/a-guide-to-kubernetes-admission-controllers/
+	// So the invalid manifests that we attempt to apply here, will instead be rejected by the defaulting webhook,
+	// because it will fail to Unmarshal the content.
+	// This is fixed in Kubernetes 1.15, which introduces a structural schema  validation step before the defaulting webhook is called.
+	// See: https://kubernetes.io/blog/2019/06/20/crd-structural-schema/
+	// Skip these tests for now.
+	XContext("openapi validation", func() {
 		It("should fail with an incomplete cassandra spec", func() {
 			command, output, err := e2e.Kubectl(e2e.Namespace, "apply", "-f", "testdata/incomplete-spec.yaml")
 			Expect(err).To(HaveOccurred(), fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)))
@@ -32,53 +39,17 @@ var _ = Context("Cassandra resource validation", func() {
 	})
 
 	Context("webhook validation", func() {
-		var namespace string
-
-		BeforeEach(func() {
-			var err error
-			namespace, err = e2e.CreateNamespace()
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			err := e2e.DeleteNamespace(namespace)
-			Expect(err).To(Not(HaveOccurred()))
-		})
-		Context("disabled", func() {
-			It("should succeed if cassandra spec has no racks", func() {
-				command, output, err := e2e.Kubectl(
-					namespace, "apply", "-f", "testdata/spec-no-racks.yaml",
-				)
-				Expect(err).ToNot(
-					HaveOccurred(),
-					fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)),
-				)
-			})
-		})
-
-		Context("enabled", func() {
-			BeforeEach(func() {
-				command, output, err := e2e.Kubectl(
-					"", "label", "--overwrite", "namespace",
-					namespace, "webhooks.cassandras.core.sky.uk=enabled",
-				)
-				Expect(err).ToNot(
-					HaveOccurred(),
-					fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)),
-				)
-			})
-			It("should fail if cassandra spec has no racks", func() {
-				command, output, err := e2e.Kubectl(
-					namespace, "apply", "-f", "testdata/spec-no-racks.yaml",
-				)
-				Expect(err).To(
-					HaveOccurred(),
-					fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)),
-				)
-				Expect(string(output)).To(
-					ContainSubstring(`admission webhook "vcass.core.sky.uk" denied the request`),
-				)
-			})
+		It("should fail if cassandra spec has no racks", func() {
+			command, output, err := e2e.Kubectl(
+				e2e.Namespace, "apply", "-f", "testdata/spec-no-racks.yaml",
+			)
+			Expect(err).To(
+				HaveOccurred(),
+				fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)),
+			)
+			Expect(string(output)).To(
+				ContainSubstring(`admission webhook "vcass.core.sky.uk" denied the request`),
+			)
 		})
 	})
 })

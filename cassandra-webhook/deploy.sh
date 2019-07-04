@@ -3,7 +3,6 @@
 set -o errexit
 set -o nounset
 set -o pipefail
-set -o xtrace
 
 scriptDir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 resourcesDir="${scriptDir}/kubernetes-resources"
@@ -58,8 +57,6 @@ EOF
 
     cfssl selfsign "${fqdn}" "${tmpDir}/pki/cfssl.json" \
         | cfssljson -bare "${tmpDir}/pki/server"
-
-    ls -l "${tmpDir}/pki"
 
     kubectl create secret tls \
             --dry-run \
