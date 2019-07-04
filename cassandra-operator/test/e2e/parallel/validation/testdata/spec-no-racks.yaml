@@ -1,0 +1,11 @@
+apiVersion: core.sky.uk/v1alpha1
+kind: Cassandra
+metadata:
+  name: no-racks-cluster
+spec:
+  pod:
+    image: "cassandra:3.11"
+    cpu: 1m
+    memory: 1Gi
+    storageSize: 100Mi
+  racks: []

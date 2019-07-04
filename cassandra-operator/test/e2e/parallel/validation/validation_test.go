@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
-	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
+	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
 )
 
 func TestValidation(t *testing.T) {
