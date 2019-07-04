@@ -97,11 +97,9 @@ validate-licences:
 	set -e ;\
 	restricted=$$(paste -s -d ',' restricted-licences.txt) ;\
 	licence-compliance-checker -L error -E -r $$restricted \
-		-m github.com/sky-uk/cassandra-operator/cassandra-webhook=BSD-3-Clause \
 		-m github.com/sky-uk/cassandra-operator/cassandra-operator=BSD-3-Clause \
+		-m github.com/sky-uk/cassandra-operator/cassandra-webhook=BSD-3-Clause \
 		-m sigs.k8s.io/yaml=BSD-3-Clause \
-		-m github.com/hashicorp/golang-lru=MPL-2.0 \
-		-m github.com/gogo/protobuf=BSD-3-Clause \
 		--check-go-modules ;\
 
 clean: common-docker-clean
