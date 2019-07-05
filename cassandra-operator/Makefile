@@ -129,7 +129,6 @@ validate-licences:
 	licence-compliance-checker -L error -E -r $$restricted \
 		-m github.com/sky-uk/cassandra-operator/cassandra-operator=BSD-3-Clause \
 		-m sigs.k8s.io/yaml=BSD-3-Clause \
-		-m github.com/hashicorp/golang-lru=MPL-2.0 \
 		--check-go-modules ;\
 
 clean: common-docker-clean
