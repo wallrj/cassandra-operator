@@ -10,9 +10,7 @@ require (
 	github.com/onsi/gomega v1.5.0
 	github.com/sirupsen/logrus v1.3.0
 	github.com/sky-uk/cassandra-operator/cassandra-operator v0.0.0-20190626140523-86a852951aa5
-	github.com/sky-uk/licence-compliance-checker v1.1.1
 	github.com/spf13/cobra v0.0.3
-	golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	k8s.io/api v0.0.0-20190503110853-61630f889b3c
 	k8s.io/apimachinery v0.0.0-20190502092502-a44ef629a3c9
 	k8s.io/client-go v11.0.0+incompatible
