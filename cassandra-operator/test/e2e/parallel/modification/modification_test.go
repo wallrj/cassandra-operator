@@ -292,6 +292,7 @@ var _ = Context("Allowable cluster modifications", func() {
 			Expect(podEvents.PodsRecreatedOneAfterTheOther(PodName(clusterName, "a", 0), PodName(clusterName, "b", 0))).To(BeTrue())
 		})
 
+		// Disabled because the webhook validation prevents this test from submitting the initial cluster `WithougtRacks`.
 		XIt("should allow the cluster to be created once the invalid spec has been corrected", func() {
 			// given
 			registerResourcesUsed(1)
