@@ -2,64 +2,72 @@
 
 We have evaluated two webhook libraries:
 
-1. Generic Admission Server: https://github.com/openshift/generic-admission-server
-2. Controller Runtime: https://github.com/kubernetes-sigs/controller-runtime
+1. Openshift: Generic Admission Server: https://github.com/openshift/generic-admission-server
+2. Controller-tools: Controller-runtime: https://github.com/kubernetes-sigs/controller-runtime
 
 Here is our evaluation / comparison:
 
 ## Popularity
 
-Openshift
+### Openshift
+
 * Used by 10-20 projects
-* https://github.com/search?l=Go&q=%22generic-admission-server%22&type=Code
-Controller tools
+  * https://github.com/search?l=Go&q=%22generic-admission-server%22&type=Code
+
+### Controller-tools
+
 * Used by 5-10  projects
-* https://github.com/search?q=%22%2Bkubebuilder%3Awebhook%22&type=Code
+  * https://github.com/search?q=%22%2Bkubebuilder%3Awebhook%22&type=Code
 
 
 ## Stability
 
-Controller-tools:
-* API still in flux:
-   * for example: https://github.com/kubernetes-sigs/controller-runtime/pull/497
+### Openshift
 
-Openshift:
 * Established October 2017.
 * Developed by Redhat and used throughout Openshift.
 * Stable.
 
+### Controller-tools
+
+* API still in flux:
+   * for example: https://github.com/kubernetes-sigs/controller-runtime/pull/497
 
 ## Maintainability
 
-Controller tools:
+### Openshift
+
+1. Stable, mostly unchanged for the last 2 years
+2. In maintenance mode, mostly only receiving updates for compatibility with new kubernetes versions
+
+### Controller-tools
+
 1. Currently unstable.
 2. API changes frequently.
 3. But likely to be better maintained in future.
 
-Openshift
-1. Stable, mostly unchanged for the last 2 years
-2. In maintenance mode, mostly only receiving updates for compatibility with new kubernetes versions
-
-
 ## Ease of deployment
 
-Controller tools:
-1. Requires certificate management (e.g. Cert-Manager) to be deployed to rotate webhook server certificates.
-2. Also requires you to figure out your own API server > Webhook server client authentication.
+### Openshift
 
-Openshift
 1. Requires certificate management (e.g. Cert-Manager) to be deployed to rotate webhook server certificates.
 2. API Server > Webhook server client authentication is handled for you by a well established token rotation system used for aggregate API servers.
 3. Also requires setting up RBAC policy for webhook server to make SubjectAccessReviews back to the API server.
 
+### Controller-tools
+
+1. Requires certificate management (e.g. Cert-Manager) to be deployed to rotate webhook server certificates.
+2. Also requires you to figure out your own API server > Webhook server client authentication.
 
 ## Ease of writing validation
 
-Controller Tools
-1. Easy, just compare old and new structs
+### Openshift
 
-Openshift Generic Webhook
-1. Easy, just compare old and new structs
+1. Easy, just compare old and new structs.
+
+### Controller-tools
+
+1. Easy, just compare old and new structs.
 
 
 ## Security
@@ -67,25 +75,22 @@ Openshift Generic Webhook
 Both libraries will require a third-party certificate management tool to be deployed in the cluster, in order to rotate the certificate used by the webhook server.
 This might be handled by cert-manager or in future, by an improved Kubernetes Certificate controller (See Further Reading links below).
 
-Openshift:
+### Openshift
 
-The Openshift library makes it simple to also have the webhook server authenticate the requests it receives from the Kubernetes API servers.
-It takes advantage of the well established mutual authentication mechanism for aggregate API servers. See https://github.com/openshift/generic-admission-server#architecture
+* The Openshift library makes it simple to also have the webhook server authenticate the requests it receives from the Kubernetes API servers.
+* It takes advantage of the well established mutual authentication mechanism for aggregate API servers. See https://github.com/openshift/generic-admission-server#architecture
+* Additionally the Openshift library performs authorization of incoming requests.
+* It POSTs SubjectAccessReview API resources to the Kubernetes API server,
+  asking whether the user who made the original API request is permitted to interact with the webhook server endpoint.
+* For this reason, the webhook service account needs a role binding to the `system:auth-delegator` cluster role.
+  This authorization is probably overkill for a validating webhook, but it is strictly necessary for other types of webhooks which may perform more complex interactions back to the Kubernetes API server.
+* See the example from deads2k in the "discussion" section below.
 
-Additionally the Openshift library performs authorization of incoming requests.
-It POSTs SubjectAccessReview API resources to the Kubernetes API server,
-asking whether the user who made the original API request is permitted to interact with the webhook server endpoint.
-For this reason, the webhook service account needs a role binding to the `system:auth-delegator` cluster role.
-This authorization is probably overkill for a validating webhook, but it is strictly necessary for other types of webhooks which may perform more complex interactions back to the Kubernetes API server.
-See the example from deads2k in the "discussion" section below.
+### Controller-tools
 
-Controller Tools:
-
-Controller tools doesn't provide any help for configuring mutual authentication.
-It is left up to the cluster administrator to create and refresh a Kube config bundle which is added to the Kubernetes API server configuration file.
-See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
-
-
+* Controller tools doesn't provide any help for configuring mutual authentication.
+* It is left up to the cluster administrator to create and refresh a Kube config bundle which is added to the Kubernetes API server configuration file.
+* See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 
 ## Discussion
 
