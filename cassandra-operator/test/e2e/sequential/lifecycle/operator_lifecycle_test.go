@@ -3,20 +3,22 @@ package lifecycle
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"testing"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
+
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/operator"
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/test"
 	. "github.com/sky-uk/cassandra-operator/cassandra-operator/test/e2e"
-	"io"
-	"io/ioutil"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
-	"net/http"
-	"testing"
-	"time"
 )
 
 var (
@@ -157,7 +159,9 @@ func theOperatorIsRestarted() {
 
 func operatorPodName() func() string {
 	return func() string {
-		operatorListOptions := metaV1.ListOptions{LabelSelector: "app=cassandra-operator"}
+		operatorListOptions := metaV1.ListOptions{
+			LabelSelector: "app=cassandra-operator,deployment=cassandra-operator",
+		}
 		operatorPods, err := KubeClientset.CoreV1().Pods(Namespace).List(operatorListOptions)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(operatorPods.Items).To(HaveLen(1))

@@ -22,7 +22,7 @@ spec:
       containers:
       - image: $WEBHOOK_IMAGE
         imagePullPolicy: IfNotPresent
-        name: cassandra-webhook
+        name: webhook
         resources:
           limits:
             memory: 50Mi
