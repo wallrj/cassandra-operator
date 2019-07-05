@@ -92,6 +92,20 @@ This might be handled by cert-manager or in future, by an improved Kubernetes Ce
 * It is left up to the cluster administrator to create and refresh a Kube config bundle which is added to the Kubernetes API server configuration file.
 * See https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 
+## Testability
+
+### Openshift
+
+1. Write unit tests for `ValidatingAdmissionHook.Validate` and `MutatingAdmissionHook.Admit` interfaces.
+2. Integration testing is likely to be harder because it requires the configuration of an API server and aggregate API server.
+3. E2E testing by deploying the webhook server to the cluster under test and submitting API requests. But see "Ease of Deployment" above.
+
+### Controller-tools
+
+1. Write unit test for `Webhook.Handle` or for `Validator.ValidateCreate` and `Validator.ValidateUpdate` interfaces.
+2. Integration testing tools are provided by Controller Runtime. See https://github.com/sky-uk/cassandra-operator/pull/147 for an example of how to use https://github.com/kubernetes-sigs/controller-runtime/tree/master/pkg/envtest
+3. E2E testing by deploying the webhook server to the cluster under test and submitting API requests. But see "Ease of Deployment" above.
+
 ## Discussion
 
 A summary of a discussion from #kubebuilder channel in Kubernetes Slack:
