@@ -53,6 +53,8 @@ Here is our evaluation / comparison:
 1. Requires certificate management (e.g. Cert-Manager) to be deployed to rotate webhook server certificates.
 2. API Server > Webhook server client authentication is handled for you by a well established token rotation system used for aggregate API servers.
 3. Also requires setting up RBAC policy for webhook server to make SubjectAccessReviews back to the API server.
+4. Requires the Kubernetes API server to be started with flags (configured) with certificates for use when communicating with aggregate API servers: https://kubernetes.io/docs/tasks/access-kubernetes-api/configure-aggregation-layer/#kubernetes-apiserver-client-authentication
+   But these certificates will usually have been deployed for you and Kubernetes deployment tools will perform this step automatically: https://kubernetes.io/docs/setup/best-practices/certificates/#all-certificates.
 
 ### Controller-tools
 
