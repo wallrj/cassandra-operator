@@ -23,8 +23,32 @@ var _ = Context("Cassandra resource validation", func() {
 	// because it will fail to Unmarshal the content.
 	// This is fixed in Kubernetes 1.15, which introduces a structural schema  validation step before the defaulting webhook is called.
 	// See: https://kubernetes.io/blog/2019/06/20/crd-structural-schema/
-	// Skip these tests for now.
-	XContext("openapi validation", func() {
+	// To work around this, we temporarily reconfigure the deployed webhook, giving it a non-matching namespaceSelector.
+	Context("openapi validation", func() {
+		BeforeEach(func() {
+			command, output, err := e2e.Kubectl(
+				"",
+				"patch",
+				"validatingwebhookconfigurations.admissionregistration.k8s.io",
+				"validating-webhook-configuration",
+				"--type=json",
+				"--patch",
+				`[{"op": "replace", "path": "/webhooks/0/namespaceSelector", "value": {"matchExpressions": [{"key": "admission.cassandras.core.sky.uk/enabled", "operator": "Exists"}]}}]`,
+			)
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)))
+		})
+		AfterEach(func() {
+			command, output, err := e2e.Kubectl(
+				"",
+				"patch",
+				"validatingwebhookconfigurations.admissionregistration.k8s.io",
+				"validating-webhook-configuration",
+				"--type=json",
+				"--patch",
+				`[{"op": "remove", "path": "/webhooks/0/namespaceSelector"}]`,
+			)
+			Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)))
+		})
 		It("should fail with an incomplete cassandra spec", func() {
 			command, output, err := e2e.Kubectl(e2e.Namespace, "apply", "-f", "testdata/incomplete-spec.yaml")
 			Expect(err).To(HaveOccurred(), fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)))
