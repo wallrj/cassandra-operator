@@ -9,7 +9,7 @@ require (
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/gofrs/flock v0.7.1 // indirect
 	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
-	github.com/google/go-cmp v0.2.0
+	github.com/google/go-cmp v0.3.0
 	github.com/googleapis/gnostic v0.2.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
@@ -46,4 +46,4 @@ replace k8s.io/client-go => k8s.io/client-go v11.0.0+incompatible
 
 replace k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190216013122-f05b8decd79c
 
-replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.0-beta.2
+replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.0-beta.3
