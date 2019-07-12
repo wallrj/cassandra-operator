@@ -29,6 +29,6 @@ replace k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190404173353-6a84e37
 
 replace github.com/sky-uk/cassandra-operator/cassandra-operator => ../cassandra-operator
 
-replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.0-beta.2
+replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.0-beta.3
 
-replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.2.0-beta.2
+replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.2.0-beta.3
