@@ -11,7 +11,7 @@ import (
 	"github.com/sky-uk/cassandra-operator/cassandra-operator/pkg/apis/cassandra/v1alpha1/validation"
 )
 
-// +kubebuilder:webhook:path=/validate-v1alpha1-cassandra,mutating=false,failurePolicy=fail,groups="core.sky.uk",resources=cassandras,verbs=create;update,versions=v1alpha1,name=vcass.core.sky.uk
+// +kubebuilder:webhook:path=/validate-v1alpha1-cassandra,mutating=false,failurePolicy=fail,groups="core.sky.uk",resources=cassandras,verbs=create;update,versions=v1alpha1,name=validator.admission.cassandras.core.sky.uk
 
 // CassandraValidator validates Cassandras
 type CassandraValidator struct {

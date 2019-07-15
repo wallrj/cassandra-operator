@@ -13,7 +13,7 @@ webhooks:
       namespace: system
       path: /mutate-v1alpha1-cassandra
   failurePolicy: Fail
-  name: vcass.core.sky.uk
+  name: defaulter.admission.cassandras.core.sky.uk
   rules:
   - apiGroups:
     - core.sky.uk
@@ -39,7 +39,7 @@ webhooks:
       namespace: system
       path: /validate-v1alpha1-cassandra
   failurePolicy: Fail
-  name: vcass.core.sky.uk
+  name: validator.admission.cassandras.core.sky.uk
   rules:
   - apiGroups:
     - core.sky.uk

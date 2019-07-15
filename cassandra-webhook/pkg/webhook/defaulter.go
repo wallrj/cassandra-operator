@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:path=/mutate-v1alpha1-cassandra,mutating=true,failurePolicy=fail,groups="core.sky.uk",resources=cassandras,verbs=create;update,versions=v1alpha1,name=vcass.core.sky.uk
+// +kubebuilder:webhook:path=/mutate-v1alpha1-cassandra,mutating=true,failurePolicy=fail,groups="core.sky.uk",resources=cassandras,verbs=create;update,versions=v1alpha1,name=defaulter.admission.cassandras.core.sky.uk
 
 // CassandraDefaulter applies defaults to Cassandras
 type CassandraDefaulter struct {

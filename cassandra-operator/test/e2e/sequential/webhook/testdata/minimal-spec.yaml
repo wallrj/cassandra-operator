@@ -1,0 +1,14 @@
+apiVersion: core.sky.uk/v1alpha1
+kind: Cassandra
+metadata:
+  name: minimalcluster
+spec:
+  useEmptyDir: true
+  pod:
+    image: "cassandra:3.11"
+    cpu: "200m"
+    memory: "1Gi"
+  racks:
+  - name: a
+    replicas: 1
+    zone: eu-west-1a

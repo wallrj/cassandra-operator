@@ -29,8 +29,30 @@ var _ = Context("webhook", func() {
 				fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)),
 			)
 			Expect(string(output)).To(
-				ContainSubstring(`admission webhook "vcass.core.sky.uk" denied the request`),
+				ContainSubstring(`admission webhook "validator.admission.cassandras.core.sky.uk" denied the request`),
 			)
+		})
+	})
+	Context("defaulting", func() {
+		BeforeEach(func() {
+			command, output, err := e2e.Kubectl(
+				e2e.Namespace, "apply", "-f", "testdata/minimal-spec.yaml",
+			)
+			Expect(err).ToNot(
+				HaveOccurred(),
+				fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)),
+			)
+		})
+		It("adds defaults for certain fields", func() {
+			command, output, err := e2e.Kubectl(
+				e2e.Namespace, "get", "cassandras", "minimalcluster", "--output=jsonpath={.spec.datacenter}",
+			)
+			Expect(err).ToNot(
+				HaveOccurred(),
+				fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)),
+			)
+			By("adding a default datacenter field")
+			Expect(string(output)).To(Equal("dc1"))
 		})
 	})
 })

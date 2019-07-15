@@ -24,17 +24,37 @@ func TestValidation(t *testing.T) {
 // This is fixed in Kubernetes 1.15, which introduces a structural schema  validation step before the defaulting webhook is called.
 // See: https://kubernetes.io/blog/2019/06/20/crd-structural-schema/
 // To work around this, we temporarily reconfigure the deployed webhook, giving it a non-matching namespaceSelector.
-var _ = e2e.SequentialTestBeforeSuite(func() {
-	command, output, err := e2e.Kubectl(
-		"",
-		"patch",
-		"validatingwebhookconfigurations.admissionregistration.k8s.io",
-		"validating-webhook-configuration",
-		"--type=json",
-		"--patch",
+func patchKubernetesResource(t, n, patch string) {
+	command, output, err := e2e.Kubectl("", "patch", t, n, "--type=json", "--patch", patch)
+	Expect(err).ToNot(
+		HaveOccurred(),
+		fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)),
+	)
+}
+
+func disableWebhook(t, n string) {
+	patchKubernetesResource(
+		t, n,
 		`[{"op": "replace", "path": "/webhooks/0/namespaceSelector", "value": {"matchExpressions": [{"key": "admission.cassandras.core.sky.uk/enabled", "operator": "Exists"}]}}]`,
 	)
-	Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)))
+}
+
+func enableWebhook(t, n string) {
+	patchKubernetesResource(
+		t, n,
+		`[{"op": "remove", "path": "/webhooks/0/namespaceSelector"}]`,
+	)
+}
+
+var _ = e2e.SequentialTestBeforeSuite(func() {
+	disableWebhook(
+		"mutatingwebhookconfigurations.admissionregistration.k8s.io",
+		"mutating-webhook-configuration",
+	)
+	disableWebhook(
+		"validatingwebhookconfigurations.admissionregistration.k8s.io",
+		"validating-webhook-configuration",
+	)
 	Eventually(func() error {
 		command, output, err := e2e.Kubectl(
 			e2e.Namespace,
@@ -45,16 +65,14 @@ var _ = e2e.SequentialTestBeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	command, output, err := e2e.Kubectl(
-		"",
-		"patch",
+	enableWebhook(
+		"mutatingwebhookconfigurations.admissionregistration.k8s.io",
+		"mutating-webhook-configuration",
+	)
+	enableWebhook(
 		"validatingwebhookconfigurations.admissionregistration.k8s.io",
 		"validating-webhook-configuration",
-		"--type=json",
-		"--patch",
-		`[{"op": "remove", "path": "/webhooks/0/namespaceSelector"}]`,
 	)
-	Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("Command was: %v \nOutput was %v", command, string(output)))
 	Eventually(func() error {
 		command, output, err := e2e.Kubectl(
 			e2e.Namespace,
